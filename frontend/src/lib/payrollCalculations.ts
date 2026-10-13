@@ -77,14 +77,14 @@ export function evaluateEmployeePayroll(
 
     if (check.isWorking) {
       if (!att) {
-        // Missing attendance on scheduled working day
+        // Missing attendance on scheduled working day -> treated as Absent
+        absentDays++;
         unrecordedDays++;
-        exceptionDetails.push(`Unrecorded attendance on ${dateStr}`);
       } else {
         consumedAttendanceDates.push(dateStr);
         if (att.status === 'MISSING_PUNCH' || att.isMissingPunch) {
+          absentDays++;
           missingPunchDays++;
-          exceptionDetails.push(`Missing Punch on ${dateStr} (In: ${att.checkIn || 'none'}, Out: ${att.checkOut || 'none'})`);
         } else if (att.status === 'ABSENT') {
           absentDays++;
         } else if (att.status === 'PAID_LEAVE') {
@@ -224,10 +224,7 @@ export function evaluateEmployeePayroll(
   let blockReason: string | undefined;
 
   const hasExceptions = exceptionDetails.length > 0;
-  if (hasExceptions) {
-    canFinalize = false;
-    blockReason = `Unresolved attendance exceptions: ${exceptionDetails.slice(0, 2).join('; ')}${exceptionDetails.length > 2 ? ` (+${exceptionDetails.length - 2} more)` : ''}`;
-  } else if (netPayable < 0) {
+  if (netPayable < 0) {
     canFinalize = false;
     blockReason = `Negative salary entitlement detected (PKR ${netPayable}). Deductions exceed gross earnings. Review penalties before finalization.`;
   }

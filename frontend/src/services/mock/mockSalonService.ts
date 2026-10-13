@@ -5973,6 +5973,77 @@ class MockSalonService implements SalonServiceContract {
       notes?: string;
     }>;
   }, _actor?: User): Promise<{ savedCount: number }> {
+    const store = mockStorage.getStore();
+    const clonedStore: StorageSchema = JSON.parse(JSON.stringify(store));
+    clonedStore.attendance = clonedStore.attendance || [];
+
+    for (const item of input.records) {
+      const staff = clonedStore.staff.find((s) => s.id === item.staffId);
+      if (!staff) continue;
+
+      const isOvernight = staff.isOvernightShift ?? false;
+      const status = item.status as AttendanceStatus;
+      let checkIn = item.checkIn?.trim() || '';
+      let checkOut = item.checkOut?.trim() || '';
+      let isLate = false;
+      let lateMinutes = 0;
+      let isEarlyExit = false;
+      let earlyExitMinutes = 0;
+      let workedHours = 0;
+
+      if (status === 'PRESENT' || status === 'HALF_DAY') {
+        if (checkIn) {
+          const lateRes = evaluateLateness(checkIn, staff.startTime, staff.lateGraceMinutes);
+          isLate = lateRes.isLate;
+          lateMinutes = lateRes.lateMinutes;
+        }
+        if (checkOut) {
+          const earlyRes = evaluateEarlyExit(checkOut, staff.endTime, staff.earlyGraceMinutes, isOvernight);
+          isEarlyExit = earlyRes.isEarlyExit;
+          earlyExitMinutes = earlyRes.earlyExitMinutes;
+        }
+        if (checkIn && checkOut) {
+          workedHours = calculateWorkedHours(checkIn, checkOut, isOvernight);
+        }
+      } else {
+        checkIn = status;
+        checkOut = status;
+      }
+
+      const existingIdx = clonedStore.attendance.findIndex(
+        (a) => a.staffId === staff.id && a.date === input.date
+      );
+
+      const record: AttendanceRecord = {
+        id: existingIdx >= 0 ? clonedStore.attendance[existingIdx].id : `att-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        staffId: staff.id,
+        staffName: staff.name,
+        employeeCode: staff.employeeCode,
+        designation: staff.designation || staff.roleTitle,
+        branchId: input.branchId,
+        date: input.date,
+        checkIn,
+        checkOut: checkOut || undefined,
+        scheduledHours: calculateScheduledHours(staff.startTime, staff.endTime, isOvernight),
+        workedHours,
+        status,
+        isLate,
+        lateMinutes,
+        isEarlyExit,
+        earlyExitMinutes,
+        isMissingPunch: !checkIn || !checkOut,
+        source: 'MANUAL',
+        notes: item.notes,
+      };
+
+      if (existingIdx >= 0) {
+        clonedStore.attendance[existingIdx] = record;
+      } else {
+        clonedStore.attendance.push(record);
+      }
+    }
+
+    mockStorage.saveStore(clonedStore);
     return { savedCount: input.records.length };
   }
 

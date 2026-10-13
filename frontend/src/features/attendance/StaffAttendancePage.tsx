@@ -152,8 +152,8 @@ export const StaffAttendancePage: React.FC = () => {
             designation: staff.designation || staff.roleTitle || 'Stylist',
             roleTitle: staff.roleTitle || '',
             compensationType: staff.compensationType || 'SALARY_ONLY',
-            startTime: '',
-            endTime: '',
+            startTime: defaultStart,
+            endTime: defaultEnd,
             lateGraceMinutes: staff.lateGraceMinutes ?? 15,
             earlyGraceMinutes: staff.earlyGraceMinutes ?? 15,
             isOvernightShift: !!staff.isOvernightShift,
@@ -176,8 +176,8 @@ export const StaffAttendancePage: React.FC = () => {
           designation: staff.designation || staff.roleTitle || 'Stylist',
           roleTitle: staff.roleTitle || '',
           compensationType: staff.compensationType || 'SALARY_ONLY',
-          startTime: '',
-          endTime: '',
+          startTime: defaultStart,
+          endTime: defaultEnd,
           lateGraceMinutes: staff.lateGraceMinutes ?? 15,
           earlyGraceMinutes: staff.earlyGraceMinutes ?? 15,
           isOvernightShift: !!staff.isOvernightShift,
@@ -319,7 +319,7 @@ export const StaffAttendancePage: React.FC = () => {
   // Helper: evaluate lateness for a row
   const getLateArrivalInfo = (r: EditableAttendanceRow) => {
     if (r.status !== 'PRESENT' && r.status !== 'HALF_DAY') return { text: '-', isLate: false };
-    if (!r.checkIn) return { text: 'Pending', isLate: false };
+    if (!r.checkIn) return { text: '-', isLate: false };
     const { isLate, lateMinutes } = evaluateLateness(r.checkIn, r.startTime, r.lateGraceMinutes);
     if (isLate) {
       return { text: `${lateMinutes}m Late`, isLate: true };
@@ -330,7 +330,7 @@ export const StaffAttendancePage: React.FC = () => {
   // Helper: evaluate early exit for a row
   const getEarlyExitInfo = (r: EditableAttendanceRow) => {
     if (r.status !== 'PRESENT' && r.status !== 'HALF_DAY') return { text: '-', isEarly: false };
-    if (!r.checkOut) return { text: 'Pending', isEarly: false };
+    if (!r.checkOut) return { text: '-', isEarly: false };
     const { isEarlyExit: isEarly, earlyExitMinutes } = evaluateEarlyExit(
       r.checkOut,
       r.endTime,
@@ -338,7 +338,7 @@ export const StaffAttendancePage: React.FC = () => {
       r.isOvernightShift
     );
     if (isEarly) {
-      return { text: `${earlyExitMinutes}m Early`, isEarly: true };
+      return { text: `${earlyExitMinutes}m Early Exit`, isEarly: true };
     }
     return { text: 'On Time', isEarly: false };
   };
@@ -701,9 +701,14 @@ export const StaffAttendancePage: React.FC = () => {
                           {row.phone}
                         </td>
 
-                        {/* Designation */}
+                        {/* Designation & Scheduled Shift */}
                         <td className="py-3.5 px-4 text-slate-700 font-medium">
-                          {row.designation}
+                          <div>{row.designation}</div>
+                          {row.startTime && row.endTime && (
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                              {row.startTime} - {row.endTime} (Grace: {row.lateGraceMinutes}m)
+                            </div>
+                          )}
                         </td>
 
                         {/* Attendance Status Dropdown */}

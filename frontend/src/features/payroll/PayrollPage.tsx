@@ -1113,38 +1113,38 @@ export const PayrollPage: React.FC = () => {
           {hasFiltered && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-800">Generated Salaries</h3>
-                <span className="px-4 py-1.5 bg-[#00bcd4] text-white text-xs font-bold rounded-full shadow-xs w-fit">
-                  {effectiveBranchName} - {periodLabel}
+                <h3 className="text-base font-bold text-slate-800">Generated Salaries</h3>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-[#0047AB] border border-blue-200 text-xs font-semibold rounded-lg w-fit">
+                  {effectiveBranchName} • {periodLabel}
                 </span>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[1100px]">
+                  <table className="w-full text-left border-collapse min-w-[1100px] text-xs">
                     <thead>
-                      <tr className="bg-[#f0f4f8] text-slate-700 text-xs font-semibold border-b border-slate-200">
-                        <th className="py-3 px-4">Staff</th>
-                        <th className="py-3 px-3 text-center">{runType === 'MONTHLY' ? 'Salary Month' : 'Period'}</th>
-                        <th className="py-3 px-3 text-center" title="Paid attendance days; each completed half day counts as 0.5">Present</th>
-                        <th className="py-3 px-3 text-center">Half Day</th>
-                        <th className="py-3 px-3 text-center">Paid Leave</th>
-                        <th className="py-3 px-3 text-center">Unpaid Leave</th>
-                        <th className="py-3 px-3 text-center">Absent</th>
-                        <th className="py-3 px-3 text-center">Late</th>
-                        <th className="py-3 px-3 text-center">Early Exit</th>
-                        <th className="py-3 px-4 text-center">Basic</th>
-                        <th className="py-3 px-4 text-center">Salary Generated</th>
-                        <th className="py-3 px-4 text-center">Amount Paid</th>
-                        <th className="py-3 px-4 text-center">Loan Repayment</th>
-                        <th className="py-3 px-3 text-center">Status</th>
-                        <th className="py-3 px-4 text-center">Actions</th>
+                      <tr className="bg-[#EAF2FB] text-[#475569] text-[11px] font-semibold border-b border-blue-100 uppercase tracking-wider">
+                        <th className="py-3 px-4 text-left whitespace-nowrap">Staff</th>
+                        <th className="py-3 px-3 text-center whitespace-nowrap">{runType === 'MONTHLY' ? 'Salary Month' : 'Period'}</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap" title="Paid attendance days; each completed half day counts as 0.5">Present</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap">Half Day</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap">Paid Leave</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap">Unpaid Leave</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap">Absent</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap">Late</th>
+                        <th className="py-3 px-2 text-center whitespace-nowrap">Early Exit</th>
+                        <th className="py-3 px-4 text-right whitespace-nowrap">Basic</th>
+                        <th className="py-3 px-4 text-right whitespace-nowrap">Salary Generated</th>
+                        <th className="py-3 px-4 text-right whitespace-nowrap">Amount Paid</th>
+                        <th className="py-3 px-4 text-right whitespace-nowrap">Loan Repayment</th>
+                        <th className="py-3 px-3 text-center whitespace-nowrap">Status</th>
+                        <th className="py-3 px-4 text-center whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-100 text-xs">
                       {generatedPayslipRows.length === 0 ? (
                         <tr>
-                          <td colSpan={15} className="py-12 text-center text-slate-400 text-sm">
+                          <td colSpan={15} className="py-12 text-center text-slate-400 text-xs">
                             No salaries generated for {effectiveBranchName} ({periodLabel}) yet. Select eligible staff above and click "Generate Salary".
                           </td>
                         </tr>
@@ -1163,65 +1163,61 @@ export const PayrollPage: React.FC = () => {
                               : 'full time';
 
                           return (
-                            <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                            <tr key={p.id} className="hover:bg-blue-50/20 transition-colors">
                               {/* Staff */}
-                              <td className="py-3.5 px-4">
-                                <div className="font-bold text-slate-900 text-sm">{p.staffName}</div>
-                                <div className="text-[11px] text-slate-400 capitalize">{p.employeeCode}</div>
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <div className="font-semibold text-slate-800">{p.staffName}</div>
+                                <div className="text-[11px] text-slate-400 font-mono">{p.employeeCode}</div>
                               </td>
 
                               {/* Salary Period */}
-                              <td className="py-3.5 px-3 text-center">
-                                <span className="px-2.5 py-1 bg-[#00bcd4] text-white text-xs font-semibold rounded-full shadow-xs">
-                                  {run.runType === 'DAILY' ? (run.startDate || run.month) : run.runType === 'CUSTOM_RANGE' ? `${run.startDate} to ${run.endDate}` : `${monthLabel} ${selectedYear}`}
-                                </span>
+                              <td className="py-3 px-3 text-center whitespace-nowrap font-medium text-slate-700">
+                                {run.runType === 'DAILY' ? (run.startDate || run.month) : run.runType === 'CUSTOM_RANGE' ? `${run.startDate} to ${run.endDate}` : `${monthLabel} ${selectedYear}`}
                               </td>
 
                               {/* Present */}
-                              <td className="py-3.5 px-3 text-center">
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#4caf50] text-white font-bold text-xs shadow-xs">
-                                  {p.presentDays ?? 0}
-                                </span>
+                              <td className="py-3 px-2 text-center whitespace-nowrap font-semibold text-emerald-700 tabular-nums">
+                                {p.presentDays ?? 0}
                               </td>
 
-                              <td className="py-3.5 px-3 text-center font-semibold text-amber-700">{p.halfDayDays ?? 'N/A'}</td>
-                              <td className="py-3.5 px-3 text-center font-semibold text-emerald-700">{p.paidLeaveDays ?? 0}</td>
-                              <td className="py-3.5 px-3 text-center font-semibold text-rose-600">{p.unpaidLeaveDays ?? 0}</td>
+                              <td className="py-3 px-2 text-center whitespace-nowrap text-slate-600 tabular-nums">{p.halfDayDays || 0}</td>
+                              <td className="py-3 px-2 text-center whitespace-nowrap text-slate-600 tabular-nums">{p.paidLeaveDays || 0}</td>
+                              <td className="py-3 px-2 text-center whitespace-nowrap text-slate-600 tabular-nums">{p.unpaidLeaveDays || 0}</td>
 
                               {/* Absent */}
-                              <td className="py-3.5 px-3 text-center">
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#f44336] text-white font-bold text-xs shadow-xs">
+                              <td className="py-3 px-2 text-center whitespace-nowrap tabular-nums">
+                                <span className={p.absentDays ? 'font-semibold text-rose-600' : 'text-slate-400'}>
                                   {p.absentDays ?? 0}
                                 </span>
                               </td>
 
                               {/* Late */}
-                              <td className="py-3.5 px-3 text-center">
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#ff9800] text-white font-bold text-xs shadow-xs">
-                                  {p.lateDays ?? 'N/A'}
+                              <td className="py-3 px-2 text-center whitespace-nowrap tabular-nums">
+                                <span className={p.lateDays ? 'font-semibold text-amber-600' : 'text-slate-400'}>
+                                  {p.lateDays || 0}
                                 </span>
                               </td>
 
                               {/* Early Exit */}
-                              <td className="py-3.5 px-3 text-center">
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#f44336] text-white font-bold text-xs shadow-xs">
-                                  {p.earlyExitDays ?? 'N/A'}
+                              <td className="py-3 px-2 text-center whitespace-nowrap tabular-nums">
+                                <span className={p.earlyExitDays ? 'font-semibold text-amber-600' : 'text-slate-400'}>
+                                  {p.earlyExitDays || 0}
                                 </span>
                               </td>
 
                               {/* Basic */}
-                              <td className="py-3.5 px-4 text-center">
-                                <div className="font-bold text-[#1976d2] text-sm">
+                              <td className="py-3 px-4 text-right whitespace-nowrap tabular-nums">
+                                <div className="font-medium text-slate-700">
                                   {((p.effectiveBaseSalary ?? p.baseEarnings) || 0).toLocaleString('en-US', {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
                                 </div>
-                                <div className="text-[10px] text-slate-400 font-medium">{compLabel}</div>
+                                <div className="text-[10px] text-slate-400 capitalize">{compLabel}</div>
                               </td>
 
                               {/* Salary Generated */}
-                              <td className="py-3.5 px-4 text-center font-bold text-[#2e7d32] text-sm">
+                              <td className="py-3 px-4 text-right whitespace-nowrap tabular-nums font-bold text-[#0047AB]">
                                 {(p.netPayable || 0).toLocaleString('en-US', {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
@@ -1229,7 +1225,7 @@ export const PayrollPage: React.FC = () => {
                               </td>
 
                               {/* Amount Paid */}
-                              <td className="py-3.5 px-4 text-center font-bold text-[#00bcd4] text-sm">
+                              <td className="py-3 px-4 text-right whitespace-nowrap tabular-nums font-semibold text-emerald-700">
                                 {(p.paidAmount || 0).toLocaleString('en-US', {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
@@ -1237,7 +1233,7 @@ export const PayrollPage: React.FC = () => {
                               </td>
 
                               {/* Loan Repayment */}
-                              <td className="py-3.5 px-4 text-center font-bold text-[#ff9800] text-sm">
+                              <td className="py-3 px-4 text-right whitespace-nowrap tabular-nums text-slate-600">
                                 {(p.advanceRecoveryAmount || 0).toLocaleString('en-US', {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
@@ -1245,12 +1241,12 @@ export const PayrollPage: React.FC = () => {
                               </td>
 
                               {/* Status */}
-                              <td className="py-3.5 px-3 text-center">
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
                                 <span
-                                  className={`px-2.5 py-1 text-xs font-semibold rounded-md ${
+                                  className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-md border ${
                                     isPaid
-                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                      : 'bg-[#ffe0b2] text-[#e65100] border border-[#ffcc80]'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-amber-50 text-amber-700 border-amber-200'
                                   }`}
                                 >
                                   {isPaid ? 'Paid' : 'Pending'}
@@ -1258,13 +1254,13 @@ export const PayrollPage: React.FC = () => {
                               </td>
 
                               {/* Actions */}
-                              <td className="py-3.5 px-4 text-center">
-                                <div className="flex items-center justify-center gap-1.5">
+                              <td className="py-3 px-4 text-center whitespace-nowrap">
+                                <div className="inline-flex items-center justify-center gap-1.5">
                                   <button
                                     type="button"
                                     onClick={() => openPaymentModal(run, p)}
                                     disabled={p.outstandingAmount <= 0}
-                                    className="px-3 py-1.5 bg-[#1976d2] hover:bg-[#1565c0] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-md shadow-xs transition-colors"
+                                    className="px-2.5 py-1 bg-[#0047AB] hover:bg-[#003882] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded shadow-2xs transition-colors whitespace-nowrap cursor-pointer"
                                   >
                                     Make Payment
                                   </button>
@@ -1273,7 +1269,7 @@ export const PayrollPage: React.FC = () => {
                                     onClick={() => openDeductionModal(run, p)}
                                     disabled={p.outstandingAmount <= 0}
                                     title="Apply Manual Deduction (e.g. missed punch, penalty)"
-                                    className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-md shadow-xs transition-colors flex items-center gap-1"
+                                    className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold rounded shadow-2xs transition-colors whitespace-nowrap flex items-center gap-1 cursor-pointer"
                                   >
                                     <MinusCircle className="w-3.5 h-3.5" />
                                     Deduct
@@ -1285,7 +1281,7 @@ export const PayrollPage: React.FC = () => {
                                       setShowCancelModal(true);
                                     }}
                                     title="Cancel Payroll Run"
-                                    className="p-1.5 bg-[#e53935] hover:bg-[#d32f2f] text-white rounded-md shadow-xs transition-colors"
+                                    className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -1299,21 +1295,21 @@ export const PayrollPage: React.FC = () => {
 
                     {generatedPayslipRows.length > 0 && (
                       <tfoot>
-                        <tr className="bg-slate-50 font-bold border-t border-slate-200">
-                          <td colSpan={9} className="py-3.5 px-4 text-right text-slate-800 text-sm">
+                        <tr className="bg-slate-50 font-bold border-t border-slate-200 text-xs text-slate-800">
+                          <td colSpan={9} className="py-3 px-4 text-right uppercase tracking-wider text-[11px]">
                             Total:
                           </td>
-                          <td className="py-3.5 px-4 text-center text-[#1976d2] text-sm">
-                            {generatedTotals.basic.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          <td className="py-3 px-4 text-right tabular-nums text-slate-800">
+                            {generatedTotals.basic.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3.5 px-4 text-center text-[#2e7d32] text-sm">
-                            {generatedTotals.salaryGenerated.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          <td className="py-3 px-4 text-right tabular-nums text-[#0047AB] font-bold">
+                            {generatedTotals.salaryGenerated.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3.5 px-4 text-center text-[#00bcd4] text-sm">
-                            {generatedTotals.amountPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          <td className="py-3 px-4 text-right tabular-nums text-emerald-700">
+                            {generatedTotals.amountPaid.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="py-3.5 px-4 text-center text-[#ff9800] text-sm">
-                            {generatedTotals.loanRepayment.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          <td className="py-3 px-4 text-right tabular-nums text-slate-600">
+                            {generatedTotals.loanRepayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td colSpan={2}></td>
                         </tr>
