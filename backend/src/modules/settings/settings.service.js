@@ -581,3 +581,57 @@ export const resetTestData = async (input = {}, actor) => {
   };
 };
 
+// ═══ ATTENDANCE POLICY ═════════════════════════════════════════════════════════
+
+const DEFAULT_ATTENDANCE_POLICY = (branchId) => ({
+  branchId,
+  autoMarkAbsentEnabled: true,
+  autoAbsentThresholdMinutes: 60, // 1 hour after shift start
+  defaultStartTime: '09:00',
+  defaultEndTime: '18:00',
+  lateGraceMinutes: 15,
+  earlyGraceMinutes: 15,
+  updatedAt: new Date().toISOString(),
+});
+
+export const getAttendancePolicy = async (actor, branchId) => {
+  const b = resolveReadBranch(actor, branchId);
+  const key = `attendance_policy_${b || 'default'}`;
+  const setting = await prisma.systemSetting.findUnique({ where: { key } });
+  if (!setting) {
+    return DEFAULT_ATTENDANCE_POLICY(b || 'default');
+  }
+  try {
+    const parsed = JSON.parse(setting.value);
+    return { ...DEFAULT_ATTENDANCE_POLICY(b || 'default'), ...parsed, branchId: b || 'default', updatedAt: setting.updatedAt };
+  } catch {
+    return DEFAULT_ATTENDANCE_POLICY(b || 'default');
+  }
+};
+
+export const updateAttendancePolicy = async (input, actor) => {
+  const branchId = resolveWriteBranch(actor, input.branchId, 'Access Denied: Cannot configure attendance policy for another branch.');
+  const key = `attendance_policy_${branchId || 'default'}`;
+  const current = await getAttendancePolicy(actor, branchId);
+  const updated = {
+    ...current,
+    autoMarkAbsentEnabled: input.autoMarkAbsentEnabled !== undefined ? Boolean(input.autoMarkAbsentEnabled) : current.autoMarkAbsentEnabled,
+    autoAbsentThresholdMinutes: input.autoAbsentThresholdMinutes !== undefined ? Number(input.autoAbsentThresholdMinutes) : current.autoAbsentThresholdMinutes,
+    defaultStartTime: input.defaultStartTime || current.defaultStartTime,
+    defaultEndTime: input.defaultEndTime || current.defaultEndTime,
+    lateGraceMinutes: input.lateGraceMinutes !== undefined ? Number(input.lateGraceMinutes) : current.lateGraceMinutes,
+    earlyGraceMinutes: input.earlyGraceMinutes !== undefined ? Number(input.earlyGraceMinutes) : current.earlyGraceMinutes,
+    updatedAt: new Date().toISOString(),
+    updatedByUserId: actor.id,
+  };
+
+  await prisma.systemSetting.upsert({
+    where: { key },
+    update: { value: JSON.stringify(updated) },
+    create: { key, value: JSON.stringify(updated) },
+  });
+
+  return updated;
+};
+
+

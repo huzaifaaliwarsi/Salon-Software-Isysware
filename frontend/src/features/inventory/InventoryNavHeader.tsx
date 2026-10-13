@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
-import { Boxes, ArrowDownRight, Truck, RefreshCw, Plus, Building2 } from 'lucide-react';
+import { Boxes, ArrowDownRight, Truck, RefreshCw, Plus, Building2, BookOpen } from 'lucide-react';
 
 interface InventoryNavHeaderProps {
   title: string;
@@ -52,6 +52,12 @@ export const InventoryNavHeader: React.FC<InventoryNavHeaderProps> = ({
       label: 'Suppliers & Vendors',
       href: '/operations/suppliers',
       icon: <Truck className="w-3.5 h-3.5" />,
+    },
+    {
+      id: 'supplier-ledger',
+      label: 'Supplier Ledger (Khata)',
+      href: '/operations/supplier-ledger',
+      icon: <BookOpen className="w-3.5 h-3.5" />,
     },
     {
       id: 'adjustments',

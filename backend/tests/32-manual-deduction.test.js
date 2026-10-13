@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import prisma from '../src/config/prisma.js';
 import { as } from './helpers.js';
 
-const MONTH = '2026-08';
+const MONTH = '2026-05';
 
 const augustAttendance = () => {
   const rows = [];
@@ -36,13 +36,10 @@ describe('Manual Salary Deductions on Generated Payslips', () => {
     await as('admin').post('/attendance/import-csv', { rows: augustAttendance() });
 
     // Generate preview
-    const previewRes = await as('admin').post('/payroll/preview', { month: MONTH });
+    const previewRes = await as('admin').post('/payroll/preview', { month: MONTH, staffId: 'staff-1' });
     expect(previewRes.status).toBe(201);
 
-    // Finalize run
-    const finalizeRes = await as('admin').post(`/payroll/runs/${previewRes.body.data.id}/finalize`);
-    expect(finalizeRes.status).toBe(200);
-    run = finalizeRes.body.data;
+    run = previewRes.body.data;
     payslip = run.payslips.find((p) => p.employeeCode === 'EMP-LHE-001');
     expect(payslip).toBeDefined();
     expect(payslip.netPayable).toBeGreaterThan(0);
@@ -128,7 +125,7 @@ describe('Manual Salary Deductions on Generated Payslips', () => {
     });
     expect(dbAdjustment).toBeDefined();
     expect(Number(dbAdjustment.amount)).toBe(deductionAmount);
-    expect(dbAdjustment.payrollRunId).toBe(run.id);
+    expect(dbAdjustment.payrollRunId).toBeNull();
 
     // Verify audit log
     const audit = await prisma.auditEvent.findFirst({
@@ -139,16 +136,25 @@ describe('Manual Salary Deductions on Generated Payslips', () => {
     });
     expect(audit).toBeDefined();
 
+    // Finalization recalculates from the persisted adjustment and freezes it.
+    const finalized = await as('admin').post(`/payroll/runs/${run.id}/finalize`);
+    expect(finalized.status, JSON.stringify(finalized.body)).toBe(200);
+    const frozen = finalized.body.data.payslips.find(p => p.staffId === payslip.staffId);
+    expect(frozen.netPayable).toBe(updatedPs.netPayable);
+    expect((await prisma.payrollAdjustment.findUnique({ where: { id: dbAdjustment.id } })).payrollRunId).toBe(run.id);
+    const lateChange = await as('admin').post(`/payroll/payslips/${frozen.id}/deductions`, { amount: 1, title: 'Late deduction' });
+    expect(lateChange.status).toBe(409);
+    expect(lateChange.body.error.code).toBe('PAYROLL_IMMUTABLE');
     // Now record payment on the remaining net amount
     const payRes = await as('admin').post('/payroll/payments', {
       payrollRunId: run.id,
-      payslipId: payslip.id,
+      payslipId: frozen.id,
       amount: updatedPs.outstandingAmount,
       method: 'ONLINE',
       onlineAccountId: 'acc-1',
       reference: 'Final cleared after manual deduction',
     }, { 'Idempotency-Key': 'pay-manual-ded-cleared' });
     expect(payRes.status).toBe(201);
-    expect(payRes.body.data.payrollRun.payslips.find((p) => p.id === payslip.id).outstandingAmount).toBe(0);
+    expect(payRes.body.data.payrollRun.payslips.find((p) => p.id === frozen.id).outstandingAmount).toBe(0);
   });
 });

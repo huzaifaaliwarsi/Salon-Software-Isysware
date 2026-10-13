@@ -82,7 +82,7 @@ export function evaluateEmployeePayroll(
         unrecordedDays++;
       } else {
         consumedAttendanceDates.push(dateStr);
-        if (att.status === 'MISSING_PUNCH' || att.isMissingPunch) {
+        if (att.status === 'MISSING_PUNCH' || (att.isMissingPunch && att.status !== 'PRESENT' && att.status !== 'HALF_DAY')) {
           absentDays++;
           missingPunchDays++;
         } else if (att.status === 'ABSENT') {
@@ -109,13 +109,13 @@ export function evaluateEmployeePayroll(
           paidLeaveDays++;
         } else if (att.status === 'UNPAID_LEAVE') {
           unpaidLeaveDays++;
-        } else if (!att.isMissingPunch && (
+        } else if (
           att.status === 'PRESENT' ||
           att.status === 'ON_TIME' ||
           att.status === 'LATE' ||
           att.status === 'HALF_DAY' ||
           att.status === 'COMPLETED'
-        )) {
+        ) {
           presentDays += att.status === 'HALF_DAY' ? 0.5 : 1;
         if (att.status === 'HALF_DAY') halfDayUnpaidDays += 0.5;
           if (att.calculationSnapshot?.totalDeductionAmount) {

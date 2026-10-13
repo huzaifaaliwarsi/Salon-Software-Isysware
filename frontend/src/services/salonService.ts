@@ -39,6 +39,7 @@ import {
   PayrollPreviewOptions,
   PayrollPayment,
   PayrollPolicyConfig,
+  AttendancePolicyConfig,
   PayslipRecord,
   RecordPayrollPaymentInput,
   StaffAllowance,
@@ -498,6 +499,8 @@ export interface SalonServiceContract {
   // --- PHASE 3E: PAYROLL & STAFF COMMISSION ---
   getPayrollPolicy(branchId: string): Promise<PayrollPolicyConfig>;
   updatePayrollPolicy(branchId: string, policy: Partial<PayrollPolicyConfig>, actor?: User): Promise<PayrollPolicyConfig>;
+  getAttendancePolicy(branchId: string): Promise<AttendancePolicyConfig>;
+  updateAttendancePolicy(branchId: string, policy: Partial<AttendancePolicyConfig>, actor?: User): Promise<AttendancePolicyConfig>;
   generatePayrollPreview(branchId: string, month: string, staffId?: string, actor?: User, options?: PayrollPreviewOptions): Promise<PayrollRun>;
   finalizePayroll(payrollRunId: string, actor?: User): Promise<PayrollRun>;
   recordPayrollPayment(input: RecordPayrollPaymentInput, actor?: User): Promise<{ payrollRun: PayrollRun; payment: PayrollPayment }>;

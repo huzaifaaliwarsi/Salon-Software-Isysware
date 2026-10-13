@@ -95,7 +95,7 @@ export const login = async ({ identifier, password, portal }, res) => {
     throw forbidden('ACCOUNT_DISABLED', `Account Disabled: The login credentials for '${user.email}' have been deactivated. Access denied.`);
   }
 
-  if (portal !== user.role) {
+  if (portal !== user.role && !(user.role === 'SUPER_ADMIN' && portal === 'ADMIN')) {
     throw forbidden(
       'PORTAL_MISMATCH',
       `Portal Mismatch: The account '${user.email}' is designated as a ${PORTAL_NAMES[user.role]}. ` +

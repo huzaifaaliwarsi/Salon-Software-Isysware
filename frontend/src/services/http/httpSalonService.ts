@@ -24,6 +24,7 @@ import {
   OvertimeRecord,
   PayrollPayment,
   PayrollPolicyConfig,
+  AttendancePolicyConfig,
   PayrollRun,
   StaffAllowance,
   PayrollAdjustment,
@@ -122,6 +123,9 @@ const liveMethods: SalonServiceContract = {
 
   getPayrollPolicy: (branchId) => api.get<PayrollPolicyConfig>('/payroll-policy', branchQuery(branchId)),
   updatePayrollPolicy: (branchId, policy) => api.put<PayrollPolicyConfig>('/payroll-policy', { ...policy, branchId }),
+
+  getAttendancePolicy: (branchId) => api.get<AttendancePolicyConfig>('/attendance-policy', branchQuery(branchId)),
+  updateAttendancePolicy: (branchId, policy) => api.put<AttendancePolicyConfig>('/attendance-policy', { ...policy, branchId }),
 
   // ── Step 5 · Staff ─────────────────────────────────────────────────────────
   getStaffMembers: (_actor, branchId) => api.get<StaffMember[]>('/staff', branchQuery(branchId)),

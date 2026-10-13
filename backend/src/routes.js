@@ -30,6 +30,7 @@ import {
   onlineAccountRoutes,
   expenseCategoryRoutes,
   payrollPolicyRoutes,
+  attendancePolicyRoutes,
   systemRoutes,
 } from './modules/settings/settings.routes.js';
 
@@ -54,6 +55,7 @@ router.use('/payment-accounts',   paymentAccountRoutes);  // Step 4
 router.use('/online-accounts',    onlineAccountRoutes);   // Step 4
 router.use('/expense-categories', expenseCategoryRoutes); // Step 4
 router.use('/payroll-policy',     payrollPolicyRoutes);   // Step 4
+router.use('/attendance-policy',  attendancePolicyRoutes); // Step 4
 router.use('/system',             systemRoutes);          // Step 4
 router.use('/staff',              staffRoutes);           // Step 5
 router.use('/service-categories', categoryRoutes);        // Step 6

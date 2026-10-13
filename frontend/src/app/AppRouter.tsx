@@ -21,6 +21,7 @@ import { ExpenseManagementPage } from '../features/expenses/ExpenseManagementPag
 import { MyBalanceSheetPage } from '../features/custody/MyBalanceSheetPage';
 import { AccountSettlementPage } from '../features/custody/AccountSettlementPage';
 import { StaffAttendancePage } from '../features/attendance/StaffAttendancePage';
+import { AttendanceSettingsPage } from '../features/attendance/AttendanceSettingsPage';
 import { LeaveManagementPage } from '../features/attendance/LeaveManagementPage';
 import { ManualOvertimePage } from '../features/overtime/ManualOvertimePage';
 import { PayrollPage } from '../features/payroll/PayrollPage';
@@ -129,6 +130,9 @@ export const AppRouter: React.FC = () => {
       pathname === '/admin/reset-data'
     ) {
       return <BranchSettingsPage />;
+    }
+    if (pathname === '/admin/attendance-settings') {
+      return <AttendanceSettingsPage />;
     }
     if (pathname === '/reports/payment-accounts') {
       return <PaymentAccountsReportPage />;
@@ -287,7 +291,9 @@ export const AppRouter: React.FC = () => {
     if (
       pathname === '/operations/suppliers' ||
       pathname === '/suppliers' ||
-      pathname === '/operations/vendors'
+      pathname === '/operations/vendors' ||
+      pathname === '/operations/supplier-ledger' ||
+      pathname === '/operations/supplier-khata'
     ) {
       return <SuppliersVendorsPage />;
     }

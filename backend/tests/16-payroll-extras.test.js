@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import prisma from '../src/config/prisma.js';
 import { as } from './helpers.js';
+import { setSystemDate } from '../src/modules/settings/settings.service.js';
 
 const MONTH = '2026-07';
 const key = (k) => ({ 'Idempotency-Key': `px-${k}` });
@@ -24,6 +25,7 @@ describe('Payroll extras · allowances, adjustments, advances', () => {
   let allowance, advance, run;
 
   beforeAll(async () => {
+    await setSystemDate('2026-12-31', { id: 'usr-super-01', name: 'Super Admin', role: 'SUPER_ADMIN' });
     const imp = await as('admin').post('/attendance/import-csv', { rows: julyRows() });
     expect(imp.body.data.rejectedRows).toBe(0);
   });

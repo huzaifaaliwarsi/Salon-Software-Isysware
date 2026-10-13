@@ -64,6 +64,7 @@ import {
   PayrollPreviewOptions,
   PayrollPayment,
   PayrollPolicyConfig,
+  AttendancePolicyConfig,
   PayslipRecord,
   RecordPayrollPaymentInput,
   CommissionRun,
@@ -6742,6 +6743,69 @@ class MockSalonService implements SalonServiceContract {
         config.nonWorkedHolidayPaid = policyData.nonWorkedHolidayPaid;
       }
       if (policyData.prorationMethod) config.prorationMethod = policyData.prorationMethod;
+      config.updatedAt = mockStorage.getSystemDate();
+      config.updatedByUserId = authenticatedActor.id;
+    }
+
+    mockStorage.saveStore(store);
+    return { ...config };
+  }
+
+  async getAttendancePolicy(branchId: string): Promise<AttendancePolicyConfig> {
+    const store = mockStorage.getStore();
+    const existing = ((store as any).attendancePolicyConfigs || []).find((p: AttendancePolicyConfig) => p.branchId === branchId);
+    if (existing) {
+      return { ...existing };
+    }
+    return {
+      id: `att-policy-${branchId}`,
+      branchId,
+      autoMarkAbsentEnabled: true,
+      autoAbsentThresholdMinutes: 60,
+      defaultStartTime: '09:00',
+      defaultEndTime: '18:00',
+      lateGraceMinutes: 15,
+      earlyGraceMinutes: 15,
+      updatedAt: mockStorage.getSystemDate(),
+      updatedByUserId: 'SYSTEM',
+    };
+  }
+
+  async updateAttendancePolicy(
+    branchId: string,
+    policyData: Partial<AttendancePolicyConfig>,
+    actor?: User
+  ): Promise<AttendancePolicyConfig> {
+    const store = mockStorage.getStore();
+    const authenticatedActor = actor || mockAuthService.getCurrentSession()?.user;
+    if (!authenticatedActor) {
+      throw new Error('Authentication required to modify attendance policy.');
+    }
+
+    (store as any).attendancePolicyConfigs = (store as any).attendancePolicyConfigs || [];
+    let config = (store as any).attendancePolicyConfigs.find((p: AttendancePolicyConfig) => p.branchId === branchId);
+
+    if (!config) {
+      config = {
+        id: `att-policy-${branchId}`,
+        branchId,
+        autoMarkAbsentEnabled: policyData.autoMarkAbsentEnabled ?? true,
+        autoAbsentThresholdMinutes: policyData.autoAbsentThresholdMinutes ?? 60,
+        defaultStartTime: policyData.defaultStartTime || '09:00',
+        defaultEndTime: policyData.defaultEndTime || '18:00',
+        lateGraceMinutes: policyData.lateGraceMinutes ?? 15,
+        earlyGraceMinutes: policyData.earlyGraceMinutes ?? 15,
+        updatedAt: mockStorage.getSystemDate(),
+        updatedByUserId: authenticatedActor.id,
+      };
+      (store as any).attendancePolicyConfigs.push(config);
+    } else {
+      if (policyData.autoMarkAbsentEnabled !== undefined) config.autoMarkAbsentEnabled = policyData.autoMarkAbsentEnabled;
+      if (policyData.autoAbsentThresholdMinutes !== undefined) config.autoAbsentThresholdMinutes = policyData.autoAbsentThresholdMinutes;
+      if (policyData.defaultStartTime) config.defaultStartTime = policyData.defaultStartTime;
+      if (policyData.defaultEndTime) config.defaultEndTime = policyData.defaultEndTime;
+      if (policyData.lateGraceMinutes !== undefined) config.lateGraceMinutes = policyData.lateGraceMinutes;
+      if (policyData.earlyGraceMinutes !== undefined) config.earlyGraceMinutes = policyData.earlyGraceMinutes;
       config.updatedAt = mockStorage.getSystemDate();
       config.updatedByUserId = authenticatedActor.id;
     }

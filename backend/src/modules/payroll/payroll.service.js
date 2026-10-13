@@ -94,7 +94,10 @@ const evaluateBranchMonth = async (tx, actor, branchId, month, staffId, options 
   const defaultStart = `${month}-01`;
   const defaultEnd = `${month}-${String(totalDays).padStart(2, '0')}`;
   const startDate = options.startDate || defaultStart;
-  const endDate = options.endDate || (options.runType === 'DAILY' ? startDate : defaultEnd);
+  const selectedEnd = options.endDate || (options.runType === 'DAILY' ? startDate : defaultEnd);
+  const today = await getBusinessDate(tx);
+  const endDate = selectedEnd > today ? today : selectedEnd;
+  if (startDate > endDate) throw badRequest('FUTURE_PAYROLL', 'Payroll cannot include future salary days. Select a period on or before the business date.');
   const runType = options.runType || (startDate === endDate ? 'DAILY' : (startDate !== defaultStart || endDate !== defaultEnd) ? 'CUSTOM_RANGE' : 'MONTHLY');
   const compensationType = options.compensationType;
   const staffIds = options.staffIds;
@@ -125,7 +128,9 @@ const evaluateBranchMonth = async (tx, actor, branchId, month, staffId, options 
       }
       const set = alreadyFinalizedByStaff.get(ps.staffId);
       const dCount = getCalendarDaysInMonth(fr.month);
-      getDatesInRange(fr.policySnapshot?.startDate || ps.snapshot?.startDate || `${fr.month}-01`, fr.policySnapshot?.endDate || ps.snapshot?.endDate || `${fr.month}-${String(dCount).padStart(2, '0')}`).forEach((d) => set.add(d));
+      getDatesInRange(fr.policySnapshot?.startDate || ps.snapshot?.startDate || `${fr.month}-01`, fr.policySnapshot?.endDate || ps.snapshot?.endDate || `${fr.month}-${String(dCount).padStart(2, '0')}`)
+        .filter((d) => (!ps.snapshot?.joiningDate || ps.snapshot.joiningDate <= d) && (!ps.snapshot?.exitDate || ps.snapshot.exitDate >= d))
+        .forEach((d) => set.add(d));
     }
   }
 
@@ -158,6 +163,7 @@ const evaluateBranchMonth = async (tx, actor, branchId, month, staffId, options 
   const results = [];
   for (const s of staffRows) {
     const dto = toStaffDTO(s);
+    if (dto.exitDate && dto.exitDate < startDate) continue;
     const lastDay = dto.exitDate && dto.exitDate < endDate ? dto.exitDate : endDate;
     const history = s.compensationHistory.map((h) => ({ effectiveDate: ymd(h.effectiveDate), snapshot: h.snapshot }));
     const terms = resolveTermsAt(dto, history, lastDay);
@@ -168,9 +174,7 @@ const evaluateBranchMonth = async (tx, actor, branchId, month, staffId, options 
     if (compensationType && compensationType !== 'ALL') {
       if (terms.compensationType !== compensationType) continue;
     }
-    if (runType === 'DAILY') {
-      if (!isDaily) continue;
-    } else if (runType === 'MONTHLY') {
+    if (runType === 'MONTHLY') {
       if (!isMonthly && !includeDaily) continue;
     }
 
@@ -225,7 +229,8 @@ export const generatePreview = async (actor, { branchId: requested, month: reqMo
   const branchId = resolveWriteBranch(actor, requested, 'Access Denied: Cannot generate payroll for another branch.');
   return prisma.$transaction(async (tx) => {
     await lockCommissionBranch(tx, branchId);
-    const month = reqMonth || (startDate ? startDate.slice(0, 7) : (await getBusinessDate(tx)).slice(0, 7));
+    const today = await getBusinessDate(tx);
+    const month = reqMonth || (startDate ? startDate.slice(0, 7) : today.slice(0, 7));
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw badRequest('INVALID_MONTH', 'Select a valid payroll month.');
     const totalDays = getCalendarDaysInMonth(month);
     const defaultStart = `${month}-01`;
@@ -243,6 +248,9 @@ export const generatePreview = async (actor, { branchId: requested, month: reqMo
       else effRunType = 'MONTHLY';
     }
     if (effRunType === 'MONTHLY' && (effStartDate !== defaultStart || effEndDate !== defaultEnd)) effRunType = 'CUSTOM_RANGE';
+    // Keep the monthly selection, but reserve and calculate only elapsed business days.
+    if (effEndDate > today) effEndDate = today;
+    if (effStartDate > effEndDate) throw badRequest('FUTURE_PAYROLL', 'Payroll cannot include future salary days. Select a period on or before the business date.');
 
     const { policy, results } = await evaluateBranchMonth(tx, actor, branchId, month, staffId, {
       startDate: effStartDate,
@@ -252,7 +260,7 @@ export const generatePreview = async (actor, { branchId: requested, month: reqMo
       staffIds,
       includeDaily: includeDaily ?? true,
     });
-    if (!results.length) throw badRequest('NO_ELIGIBLE_STAFF', 'No employees match this payroll period and compensation type. Daily payroll includes daily contracts; monthly payroll includes monthly contracts. Use a custom range for a mixed group.');
+    if (!results.length) throw badRequest('NO_ELIGIBLE_STAFF', 'No employees match this payroll period and compensation type.');
 
     const commissions = await payrollCommission(tx, actor, branchId, month, results.filter((r) => combinedContract(r.payslip.compensationType)).map((r) => r.staff.id), false, { startDate: effStartDate, endDate: effEndDate });
     // Replace only an equivalent draft; preserve drafts for other employees, types and periods.
@@ -262,6 +270,7 @@ export const generatePreview = async (actor, { branchId: requested, month: reqMo
       { policySnapshot: { path: ['runType'], equals: effRunType } },
       { policySnapshot: { path: ['compensationTypeFilter'], equals: compensationType || 'ALL' } },
       { policySnapshot: { path: ['staffIdFilter'], equals: staffId || null } },
+      { policySnapshot: { path: ['staffIdsFilter'], equals: staffIds || null } },
     ] } });
     const run = await tx.payrollRun.create({
       data: {
@@ -303,7 +312,7 @@ export const finalizeRun = async (actor, runId) => {
     if (draft.status !== 'DRAFT') throw conflict('NOT_DRAFT', `Payroll run is already in status '${draft.status}' and cannot be finalized.`);
 
     // Re-evaluate at finalization so the frozen snapshot reflects the latest approved data and period options.
-    const { policy, results, alreadyFinalizedByStaff } = await evaluateBranchMonth(
+    const { policy, results, alreadyFinalizedByStaff, startDate: actualStart, endDate: actualEnd } = await evaluateBranchMonth(
       tx,
       actor,
       draft.branchId,
@@ -320,6 +329,7 @@ export const finalizeRun = async (actor, runId) => {
       }
     );
 
+    if (!results.length) throw conflict('NO_ELIGIBLE_STAFF', 'No eligible employees remain in this payroll period.');
     const blocked = results.find((r) => !r.canFinalize);
     if (blocked) throw conflict('PAYROLL_BLOCKED', `Cannot finalize payroll: ${blocked.blockReason}`);
 
@@ -335,7 +345,7 @@ export const finalizeRun = async (actor, runId) => {
       }
     }
 
-    const commissions = await payrollCommission(tx, actor, draft.branchId, draft.month, results.filter((r) => combinedContract(r.payslip.compensationType)).map((r) => r.staff.id), true, draft.policySnapshot);
+    const commissions = await payrollCommission(tx, actor, draft.branchId, draft.month, results.filter((r) => combinedContract(r.payslip.compensationType)).map((r) => r.staff.id), true, { ...draft.policySnapshot, startDate: actualStart, endDate: actualEnd });
 
     const branch = await tx.branch.findUnique({ where: { id: draft.branchId } });
     await tx.payslip.deleteMany({ where: { runId } });
@@ -353,7 +363,8 @@ export const finalizeRun = async (actor, runId) => {
       }
       // Lock the overtime consumed by this payslip so it can never be paid twice.
       if (r.payslip.consumedOvertimeIds?.length) {
-        await tx.overtimeRecord.updateMany({ where: { id: { in: r.payslip.consumedOvertimeIds } }, data: { payrollRunId: runId } });
+        const claimed = await tx.overtimeRecord.updateMany({ where: { id: { in: r.payslip.consumedOvertimeIds }, status: 'APPROVED', payrollRunId: null }, data: { payrollRunId: runId } });
+        if (claimed.count !== r.payslip.consumedOvertimeIds.length) throw conflict('OVERTIME_ALREADY_CONSUMED', 'Approved overtime changed or was reserved by another payroll. Regenerate payroll.');
       }
       // Freeze one-off adjustments and book advance recoveries against this run.
       await lockPayrollExtras(tx, runId, draft.month, r.payslip);
@@ -365,11 +376,13 @@ export const finalizeRun = async (actor, runId) => {
         payrollNumber: await nextPeriodSequence(tx, branch.code, 'PAY', draft.month),
         policySnapshot: {
           ...policy,
-          startDate: draft.policySnapshot?.startDate,
-          endDate: draft.policySnapshot?.endDate,
+          startDate: actualStart,
+          endDate: actualEnd,
           runType: draft.policySnapshot?.runType,
           compensationTypeFilter: draft.policySnapshot?.compensationTypeFilter,
           staffIdFilter: draft.policySnapshot?.staffIdFilter,
+          staffIdsFilter: draft.policySnapshot?.staffIdsFilter,
+          includeDaily: draft.policySnapshot?.includeDaily,
         },
         finalizedAt: new Date(),
         finalizedByUserId: actor.id,
@@ -512,6 +525,9 @@ export const reversePayment = async (actor, paymentId, reason) => {
 export const applyManualDeduction = async (actor, payslipId, { amount: rawAmount, title, notes }) => {
   noAccountant(actor);
   return prisma.$transaction(async (tx) => {
+    const header = await tx.payslip.findUnique({ where: { id: payslipId }, include: { run: true } });
+    if (!header) throw notFound('PAYSLIP_NOT_FOUND', `Payslip '${payslipId}' not found.`);
+    await lockCommissionBranch(tx, header.run.branchId);
     await tx.$executeRaw`SELECT 1 FROM "Payslip" WHERE id = ${payslipId} FOR UPDATE`;
     const ps = await tx.payslip.findUnique({
       where: { id: payslipId },
@@ -519,8 +535,8 @@ export const applyManualDeduction = async (actor, payslipId, { amount: rawAmount
     });
     if (!ps) throw notFound('PAYSLIP_NOT_FOUND', `Payslip '${payslipId}' not found.`);
     assertBranchAccess(actor, ps.run.branchId, 'Access Denied: Cannot deduct from payslip of another branch.');
-    if (ps.run.status === 'CANCELLED') {
-      throw conflict('RUN_CANCELLED', 'Cannot apply deduction to a cancelled payroll run.');
+    if (ps.run.status !== 'DRAFT') {
+      throw conflict('PAYROLL_IMMUTABLE', 'Finalized payroll history is immutable. Add deductions before finalization.');
     }
 
     const amount = round2(rawAmount);
@@ -529,7 +545,7 @@ export const applyManualDeduction = async (actor, payslipId, { amount: rawAmount
     }
 
     const currentSlip = toPayslipDTO(ps, ps.run);
-    if (amount.greaterThan(currentSlip.outstandingAmount)) {
+    if (amount.greaterThan(ps.netPayable)) {
       throw badRequest('EXCEEDS_OUTSTANDING', `Deduction amount (Rs. ${amount}) exceeds unpaid outstanding payslip balance (Rs. ${currentSlip.outstandingAmount}).`);
     }
 
@@ -543,7 +559,7 @@ export const applyManualDeduction = async (actor, payslipId, { amount: rawAmount
         title: title.trim(),
         amount,
         notes: notes ? notes.trim() : null,
-        payrollRunId: ps.runId,
+        payrollRunId: null,
         status: 'ACTIVE',
         createdByUserId: actor.id,
         createdByName: actor.name,

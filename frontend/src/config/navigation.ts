@@ -370,6 +370,14 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         description: 'Branch profile, hours, default tax rules and payment accounts',
       },
       {
+        id: 'attendance-settings',
+        label: 'Attendance Settings',
+        href: '/admin/attendance-settings',
+        iconName: 'Clock',
+        allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+        description: 'Auto-mark absent cutoff threshold, shift timings & grace rules',
+      },
+      {
         id: 'data-reset',
         label: 'Reset Data (Testing)',
         href: '/admin/data-reset',

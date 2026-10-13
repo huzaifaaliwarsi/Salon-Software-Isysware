@@ -2,9 +2,10 @@
 // Focused regression test suite for Staff Loans -> Payroll -> Payslip flow.
 import { describe, it, expect, beforeAll } from 'vitest';
 import prisma from '../src/config/prisma.js';
-import { evaluateEmployeePayroll } from '../src/lib/calculations/payrollCalculations.js';
+import { evaluateEmployeePayroll, getDatesInRange } from '../src/lib/calculations/payrollCalculations.js';
 import { issueAdvance, reverseAdvance, listAdvances } from '../src/modules/payroll/payroll.extras.service.js';
 import { generatePreview, finalizeRun, cancelRun } from '../src/modules/payroll/payroll.service.js';
+import { setSystemDate } from '../src/modules/settings/settings.service.js';
 
 const POLICY = {
   monthlyAbsenceDivisor: 30,
@@ -30,10 +31,9 @@ describe('Staff Loans Flow · Pure Engine Calculations', () => {
     effectiveDate: '2026-10-07',
   };
 
-  const attendanceOct = [
-    { staffId: 'staff-huzaifa', date: '2026-10-07', status: 'PRESENT' },
-    { staffId: 'staff-huzaifa', date: '2026-10-08', status: 'PAID_LEAVE' },
-  ];
+  const attendanceOct = getDatesInRange('2026-10-07', '2026-10-31').map(date => ({
+    staffId: 'staff-huzaifa', date, status: date === '2026-10-08' ? 'PAID_LEAVE' : 'PRESENT',
+  }));
 
   const overtimeOct = [
     { id: 'ot-1', staffId: 'staff-huzaifa', date: '2026-10-07', status: 'APPROVED', approvedMinutes: 30, hourlyRate: 500, amount: 250 },
@@ -95,7 +95,8 @@ describe('Staff Loans Flow · Pure Engine Calculations', () => {
         { id: 'adv-3k', advanceNumber: 'ADV-LOW', recoveryPerMonth: 3000, balance: 10000 },
       ],
     };
-    const res = evaluateEmployeePayroll(lowBaseStaff, '2026-10', POLICY, [], [], [], extras);
+    const fullAttendance = getDatesInRange('2026-10-01', '2026-10-31').map(date => ({ staffId: lowBaseStaff.id, date, status: 'PRESENT' }));
+    const res = evaluateEmployeePayroll(lowBaseStaff, '2026-10', POLICY, fullAttendance, [], [], extras);
     expect(res.payslip.grossPayable).toBe(2000);
     expect(res.payslip.advanceRecoveryAmount).toBe(2000); // Capped at room
     expect(res.payslip.netPayable).toBe(0); // Never negative
@@ -119,6 +120,7 @@ describe('Staff Loans Flow · Backend Integration with Prisma', () => {
   let testStaff, testAccount, testAdvance;
 
   beforeAll(async () => {
+    await setSystemDate('2026-11-30', actor);
     testStaff = await prisma.staff.findFirst({ where: { branchId: 'branch-1', isActive: true } });
     testAccount = await prisma.paymentAccount.findFirst({ where: { branchId: 'branch-1', isActive: true } });
     // Ensure test account has enough funds for loan issuance even after preceding test runs

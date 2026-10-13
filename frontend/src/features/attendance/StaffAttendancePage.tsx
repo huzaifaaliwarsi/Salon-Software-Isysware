@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useRouter } from '../../context/RouterContext';
 import { salonService } from '../../services';
 import {
   AttendanceRecord,
@@ -7,9 +8,11 @@ import {
   Branch,
   CSVAttendanceImportRow,
   CSVAttendanceImportResult,
+  AttendancePolicyConfig,
 } from '../../types/salon';
 import {
   Clock,
+  ClockAlert,
   Calendar,
   Filter,
   Check,
@@ -26,6 +29,8 @@ import {
   HelpCircle,
   Loader2,
   ChevronDown,
+  Sliders,
+  Sparkles,
 } from 'lucide-react';
 import {
   formatMinutesToTime,
@@ -69,10 +74,12 @@ interface EditableAttendanceRow {
   checkOut: string;  // "18:00"
   notes: string;
   isModified: boolean;
+  isAutoAbsent?: boolean;
 }
 
 export const StaffAttendancePage: React.FC = () => {
   const { user, activeBranchId, allBranches, demoDate } = useAuth();
+  const { navigate } = useRouter();
 
   // Role guard: Super Admin and Admin only
   if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN')) {
@@ -97,6 +104,7 @@ export const StaffAttendancePage: React.FC = () => {
   const [rawStaffList, setRawStaffList] = useState<StaffMember[]>([]);
   const [rawAttendanceList, setRawAttendanceList] = useState<AttendanceRecord[]>([]);
   const [rows, setRows] = useState<EditableAttendanceRow[]>([]);
+  const [attendancePolicy, setAttendancePolicy] = useState<AttendancePolicyConfig | null>(null);
 
   // Modals state (EOD finalize & CSV import)
   const [showFinalizeModal, setShowFinalizeModal] = useState<boolean>(false);
@@ -113,14 +121,16 @@ export const StaffAttendancePage: React.FC = () => {
     if (!branchIdToLoad) return;
     try {
       setLoading(true);
-      const [allStaff, attRecords] = await Promise.all([
+      const [allStaff, attRecords, attPolicy] = await Promise.all([
         salonService.getStaff(branchIdToLoad),
         salonService.getAttendance(branchIdToLoad, dateToLoad, undefined, user || undefined),
+        salonService.getAttendancePolicy(branchIdToLoad).catch(() => null),
       ]);
 
       const activeStaff = allStaff.filter((s) => s.isActive);
       setRawStaffList(activeStaff);
       setRawAttendanceList(attRecords);
+      setAttendancePolicy(attPolicy);
 
       // Build initial editable rows map
       const attMap = new Map<string, AttendanceRecord>();
@@ -128,10 +138,16 @@ export const StaffAttendancePage: React.FC = () => {
         attMap.set(a.staffId, a);
       });
 
+      const policyEnabled = attPolicy?.autoMarkAbsentEnabled ?? true;
+      const thresholdMins = attPolicy?.autoAbsentThresholdMinutes ?? 60;
+      const todayStr = demoDate || new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const currentDayMinutes = now.getHours() * 60 + now.getMinutes();
+
       const initialRows: EditableAttendanceRow[] = activeStaff.map((staff) => {
         const existing = attMap.get(staff.id);
-        const defaultStart = staff.startTime ? formatTo24Hour(staff.startTime) : '09:00';
-        const defaultEnd = staff.endTime ? formatTo24Hour(staff.endTime) : '18:00';
+        const defaultStart = staff.startTime ? formatTo24Hour(staff.startTime) : (attPolicy?.defaultStartTime || '09:00');
+        const defaultEnd = staff.endTime ? formatTo24Hour(staff.endTime) : (attPolicy?.defaultEndTime || '18:00');
 
         if (existing) {
           let mappedStatus: EditableAttendanceRow['status'] = 'PRESENT';
@@ -154,8 +170,8 @@ export const StaffAttendancePage: React.FC = () => {
             compensationType: staff.compensationType || 'SALARY_ONLY',
             startTime: defaultStart,
             endTime: defaultEnd,
-            lateGraceMinutes: staff.lateGraceMinutes ?? 15,
-            earlyGraceMinutes: staff.earlyGraceMinutes ?? 15,
+            lateGraceMinutes: staff.lateGraceMinutes ?? (attPolicy?.lateGraceMinutes ?? 15),
+            earlyGraceMinutes: staff.earlyGraceMinutes ?? (attPolicy?.earlyGraceMinutes ?? 15),
             isOvernightShift: !!staff.isOvernightShift,
 
             recordId: existing.id,
@@ -164,10 +180,34 @@ export const StaffAttendancePage: React.FC = () => {
             checkOut: existing.checkOut && existing.checkOut !== 'ABSENT' && !existing.checkOut.includes('LEAVE') ? formatTo24Hour(existing.checkOut) : '',
             notes: existing.notes || '',
             isModified: false,
+            isAutoAbsent: false,
           };
         }
 
-        // New unrecorded row for this day
+        // New unrecorded row for this day — apply Auto-Mark Absent rule if threshold passed
+        let newStatus: EditableAttendanceRow['status'] = 'SELECT_STATUS';
+        let newNotes = '';
+        let isAutoMarked = false;
+
+        if (policyEnabled) {
+          if (dateToLoad < todayStr) {
+            // Past day with no check-in -> auto-mark absent
+            newStatus = 'ABSENT';
+            newNotes = 'Auto-marked absent: Day ended without check-in';
+            isAutoMarked = true;
+          } else if (dateToLoad === todayStr) {
+            // Today: check if current time has passed (shiftStart + threshold)
+            const shiftStartMins = parseTimeToMinutes(defaultStart);
+            const cutoffMins = shiftStartMins + thresholdMins;
+
+            if (currentDayMinutes >= cutoffMins) {
+              newStatus = 'ABSENT';
+              newNotes = `Auto-marked absent: Not checked in within ${thresholdMins}m of shift start (${defaultStart})`;
+              isAutoMarked = true;
+            }
+          }
+        }
+
         return {
           staffId: staff.id,
           employeeCode: staff.employeeCode || `EMP-${staff.id.slice(0, 4)}`,
@@ -178,16 +218,17 @@ export const StaffAttendancePage: React.FC = () => {
           compensationType: staff.compensationType || 'SALARY_ONLY',
           startTime: defaultStart,
           endTime: defaultEnd,
-          lateGraceMinutes: staff.lateGraceMinutes ?? 15,
-          earlyGraceMinutes: staff.earlyGraceMinutes ?? 15,
+          lateGraceMinutes: staff.lateGraceMinutes ?? (attPolicy?.lateGraceMinutes ?? 15),
+          earlyGraceMinutes: staff.earlyGraceMinutes ?? (attPolicy?.earlyGraceMinutes ?? 15),
           isOvernightShift: !!staff.isOvernightShift,
 
           recordId: undefined,
-          status: 'SELECT_STATUS',
+          status: newStatus,
           checkIn: '',
           checkOut: '',
-          notes: '',
-          isModified: false,
+          notes: newNotes,
+          isModified: isAutoMarked,
+          isAutoAbsent: isAutoMarked,
         };
       });
 
@@ -281,6 +322,7 @@ export const StaffAttendancePage: React.FC = () => {
           checkIn: cIn,
           checkOut: cOut,
           isModified: true,
+          isAutoAbsent: false,
         };
       })
     );
@@ -464,6 +506,15 @@ export const StaffAttendancePage: React.FC = () => {
 
           {/* Secondary tools */}
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/attendance-settings')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition-colors cursor-pointer"
+              title="Configure auto-absent cutoff threshold and shift grace"
+            >
+              <Sliders className="w-3.5 h-3.5 text-blue-600" />
+              <span>Attendance Settings</span>
+            </button>
             <button
               type="button"
               onClick={() => setShowImportModal(true)}
@@ -749,6 +800,16 @@ export const StaffAttendancePage: React.FC = () => {
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5 pointer-events-none" />
                           </div>
+                          {row.isAutoAbsent && row.status === 'ABSENT' && (
+                            <div className="mt-1">
+                              <span
+                                className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded shadow-2xs"
+                                title={row.notes}
+                              >
+                                Auto-Absent (&gt;{attendancePolicy?.autoAbsentThresholdMinutes || 60}m)
+                              </span>
+                            </div>
+                          )}
                         </td>
 
                         {/* Arrival Timing */}

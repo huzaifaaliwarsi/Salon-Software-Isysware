@@ -619,6 +619,7 @@ export const StaffDirectoryPage: React.FC = () => {
           phone: formData.phone.trim(),
           email: formData.email.trim() || undefined,
           designation: formData.designation.trim(),
+          joiningDate: formData.joiningDate,
           compensationType: formData.compensationType,
           baseSalary: Number(formData.baseSalary),
           dailySalaryRate: Number(formData.dailySalaryRate),

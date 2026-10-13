@@ -31,6 +31,7 @@ import {
   X,
   CreditCard,
   Building2,
+  BookOpen,
 } from 'lucide-react';
 
 const formatPKR = (amt: number) => {
@@ -529,7 +530,20 @@ export const StockInPurchasesPage: React.FC = () => {
                       {formatDate(p.purchaseDate)}
                     </td>
                     <td className="py-3.5 px-4 text-slate-900 font-medium">
-                      {p.supplierName}
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{p.supplierName}</span>
+                        {p.supplierId && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/operations/supplier-ledger?supplierId=${p.supplierId}`)}
+                            className="text-[11px] font-semibold text-[#0047AB] bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded cursor-pointer transition-colors flex items-center gap-1 shrink-0"
+                            title="View Supplier Khata Ledger"
+                          >
+                            <BookOpen className="w-2.5 h-2.5" />
+                            <span>Ledger</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-center text-slate-700 whitespace-nowrap">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-800 font-semibold">

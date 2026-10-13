@@ -17,6 +17,72 @@ let serial = 0;
 const slipOf = (run, f) => run.payslips.find((p) => p.staffId === f.staff.id);
 const balance = async (f) => Number((await accountBalances([f.account.id])).get(f.account.id));
 
+describe('Payroll generation safety regressions', () => {
+  it('cuts the current monthly run at today, clips joining/leaving dates and excludes future attendance and OT', async () => {
+    const f = await fixture('MONTHLY_SALARY');
+    await setSystemDate('2026-10-13', actor);
+    await prisma.staff.update({ where: { id: f.staff.id }, data: { baseSalary: 30000, joiningDate: new Date('2026-10-13') } });
+    const original = await prisma.staff.findUnique({ where: { id: f.staff.id } });
+    const { id, createdAt, updatedAt, ...data } = original;
+    const mid = await prisma.staff.create({ data: { ...data, employeeCode: `${data.employeeCode}-MID`, joiningDate: new Date('2026-10-08') } });
+    const left = await prisma.staff.create({ data: { ...data, employeeCode: `${data.employeeCode}-LEFT`, joiningDate: new Date('2026-10-08'), exitDate: new Date('2026-10-10'), isActive: false } });
+    for (const staff of [f.staff, mid, left]) {
+      const dates = staff.id === f.staff.id ? ['2026-10-13'] : ['2026-10-08','2026-10-09','2026-10-10','2026-10-11','2026-10-12','2026-10-13'];
+      await prisma.attendanceRecord.createMany({ data: [...dates, '2026-10-14'].map(date => ({ branchId: f.branch.id, staffId: staff.id, workDate: new Date(date), checkIn: '09:00 AM', checkOut: '06:00 PM', status: date === '2026-10-14' ? 'MISSING_PUNCH' : 'PRESENT', isFinalized: true })) });
+    }
+    await prisma.overtimeRecord.create({ data: { branchId: f.branch.id, staffId: f.staff.id, workDate: new Date('2026-10-14'), overtimeNumber: `FUTURE-${serial}`, minutes: 60, approvedMinutes: 60, hourlyRate: 300, amount: 300, status: 'APPROVED', reason: 'Future test', enteredByUserId: actor.id, enteredByName: actor.name } });
+    const input = { branchId: f.branch.id, month: '2026-10', runType: 'MONTHLY' };
+    const preview = await payroll.generatePreview(actor, input);
+    expect(preview).toMatchObject({ startDate: '2026-10-01', endDate: '2026-10-13', runType: 'MONTHLY' });
+    expect(slipOf(preview, f)).toMatchObject({ startDate: '2026-10-13', endDate: '2026-10-13', baseEarnings: 1000, netPayable: 1000, approvedOvertimeAmount: 0, hasExceptions: false, canFinalize: true });
+    expect(preview.payslips.find(p => p.staffId === mid.id)).toMatchObject({ startDate: '2026-10-08', endDate: '2026-10-13', baseEarnings: 6000 });
+    expect(preview.payslips.find(p => p.staffId === left.id)).toMatchObject({ startDate: '2026-10-08', endDate: '2026-10-10', baseEarnings: 3000 });
+    // A draft created before the cutoff fix must be revalidated at finalization too.
+    const draft = await prisma.payrollRun.findUnique({ where: { id: preview.id } });
+    await prisma.payrollRun.update({ where: { id: preview.id }, data: { policySnapshot: { ...draft.policySnapshot, endDate: '2026-10-31' } } });
+    const finalized = await payroll.finalizeRun(actor, preview.id);
+    expect(finalized.endDate).toBe('2026-10-13');
+    expect(slipOf(finalized, f).netPayable).toBe(1000);
+    const overlap = await payroll.generatePreview(actor, input);
+    await expect(payroll.finalizeRun(actor, overlap.id)).rejects.toMatchObject({ code: 'PAYROLL_BLOCKED' });
+    await expect(payroll.generatePreview(actor, { branchId: f.branch.id, month: '2026-11' })).rejects.toMatchObject({ code: 'FUTURE_PAYROLL' });
+  });
+
+  it('blocks an unresolved punch today while ignoring future missing punches', async () => {
+    const f = await fixture('MONTHLY_SALARY');
+    await setSystemDate('2026-10-13', actor);
+    await prisma.staff.update({ where: { id: f.staff.id }, data: { baseSalary: 30000, joiningDate: new Date('2026-10-13') } });
+    await prisma.attendanceRecord.createMany({ data: ['2026-10-13', '2026-10-14'].map(date => ({ branchId: f.branch.id, staffId: f.staff.id, workDate: new Date(date), checkIn: '', checkOut: '', status: 'MISSING_PUNCH', isFinalized: true })) });
+    const preview = await payroll.generatePreview(actor, { branchId: f.branch.id, month: '2026-10', runType: 'MONTHLY' });
+    expect(slipOf(preview, f).exceptionDetails).toEqual(['Missing Punch on 2026-10-13.']);
+    await expect(payroll.finalizeRun(actor, preview.id)).rejects.toMatchObject({ code: 'PAYROLL_BLOCKED' });
+  });
+
+  it('loads mixed staff without selection for a single day and atomically rejects concurrent overlaps', async () => {
+    const f = await fixture();
+    const original = await prisma.staff.findUnique({ where: { id: f.staff.id } });
+    const { id, createdAt, updatedAt, ...data } = original;
+    const monthly = await prisma.staff.create({ data: { ...data, name: 'Monthly colleague', employeeCode: `${data.employeeCode}-M`, compensationType: 'MONTHLY_SALARY', baseSalary: 30000 } });
+    await prisma.attendanceRecord.create({ data: { branchId: f.branch.id, staffId: monthly.id, workDate: new Date(DAY), checkIn: '09:00 AM', checkOut: '06:00 PM', status: 'PRESENT', isFinalized: true } });
+    const input = { branchId: f.branch.id, month: MONTH, runType: 'DAILY', startDate: DAY };
+    const a = await payroll.generatePreview(actor, input);
+    expect(a.payslips.map(p => p.staffId).sort()).toEqual([f.staff.id, monthly.id].sort());
+    expect(a.payslips.find(p => p.staffId === monthly.id).baseEarnings).toBe(1000);
+    const b = await payroll.generatePreview(actor, { ...input, staffIds: [monthly.id, f.staff.id] });
+    expect(await prisma.payrollRun.findUnique({ where: { id: a.id } })).not.toBeNull();
+    const outcomes = await Promise.allSettled([payroll.finalizeRun(actor, a.id), payroll.finalizeRun(actor, b.id)]);
+    expect(outcomes.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    const finalized = outcomes.find(r => r.status === 'fulfilled').value;
+    const frozen = await prisma.payslip.findUnique({ where: { id: finalized.payslips[0].id } });
+    await expect(payroll.applyManualDeduction(actor, frozen.id, { amount: 1, title: 'Late change' })).rejects.toMatchObject({ code: 'PAYROLL_IMMUTABLE' });
+    expect((await prisma.payslip.findUnique({ where: { id: frozen.id } })).snapshot).toEqual(frozen.snapshot);
+    await payroll.cancelRun(actor, finalized.id, 'Release reservations');
+    const retry = await payroll.generatePreview(actor, input);
+    expect(retry.payslips.find(p => p.staffId === f.staff.id)).toMatchObject({ approvedOvertimeAmount: 150, commissionPayable: 100 });
+    await payroll.finalizeRun(actor, retry.id);
+  });
+});
+
 // Each case owns a branch, account and real POS sale: no dependency on other tests' balances/events.
 async function fixture(type = 'DAILY_PLUS_COMMISSION') {
   const n = ++serial;
@@ -39,12 +105,22 @@ async function fixture(type = 'DAILY_PLUS_COMMISSION') {
     cartItems: [{ type: 'SERVICE', item: { id: service.id, price: 1250 }, quantity: 1, staffId: staff.id }],
     payments: [{ method: 'ONLINE_ACCOUNT', paymentAccountId: account.id, amount: 1660, billAllocation: 1160, tipAllocation: 500 }],
   }, actor, `pc-sale-${n}`);
+  // Existing full-month cases exercise a closed month, rather than a future projection.
+  await setSystemDate('2026-06-30', actor);
   const previewInput = { branchId: branch.id, month: MONTH, staffId: staff.id, ...(isMonthly ? {} : { startDate: DAY, endDate: DAY, runType: 'DAILY' }) };
   const preview = () => payroll.generatePreview(actor, previewInput);
   const finalize = async () => payroll.finalizeRun(actor, (await preview()).id);
   const pay = (run, amount, key) => payroll.recordPayment(actor, { payrollRunId: run.id, payslipId: slipOf(run, { staff }).id, amount, method: 'ONLINE', onlineAccountId: account.id, idempotencyKey: key });
   const cPreview = (startDate = DAY, endDate = DAY) => commission.generatePreview(actor, { branchId: branch.id, startDate, endDate });
-  const refund = () => refundInvoice({ invoiceId: invoice.id, type: 'VOID', reason: 'Customer refund', refundMethod: 'ONLINE_ACCOUNT', paymentAccountId: account.id }, actor);
+  const refund = async () => {
+    // Refund scenarios target the sale day; restore the closed payroll month afterwards.
+    await setSystemDate(DAY, actor);
+    try {
+      return await refundInvoice({ invoiceId: invoice.id, type: 'VOID', reason: 'Customer refund', refundMethod: 'ONLINE_ACCOUNT', paymentAccountId: account.id }, actor);
+    } finally {
+      await setSystemDate('2026-06-30', actor);
+    }
+  };
   return { branch, account, staff, invoice, preview, finalize, pay, cPreview, refund };
 }
 

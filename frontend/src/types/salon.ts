@@ -1529,6 +1529,19 @@ export interface PayrollPolicyConfig {
   updatedByUserId?: string;
 }
 
+export interface AttendancePolicyConfig {
+  id?: string;
+  branchId: string;
+  autoMarkAbsentEnabled: boolean; // default true
+  autoAbsentThresholdMinutes: number; // default 60 (1 hour after shift start)
+  defaultStartTime: string; // default "09:00"
+  defaultEndTime: string; // default "18:00"
+  lateGraceMinutes: number; // default 15
+  earlyGraceMinutes: number; // default 15
+  updatedAt?: string;
+  updatedByUserId?: string;
+}
+
 export type PayrollRunStatus = 'DRAFT' | 'FINALIZED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
 
 export interface PayrollPayment {

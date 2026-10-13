@@ -8,7 +8,7 @@ import { nextSequence } from '../../lib/sequence.js';
 export const lockCommissionBranch = (tx, branchId) =>
   tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`commission:${branchId}`}::text))`;
 
-export const combinedContract = (type) => ['DAILY_PLUS_COMMISSION', 'MONTHLY_PLUS_COMMISSION'].includes(type);
+export const combinedContract = (type) => ['DAILY_PLUS_COMMISSION', 'MONTHLY_PLUS_COMMISSION', 'COMMISSION_ONLY'].includes(type);
 export const completedAmount = (payments) => round2(payments.filter((p) => p.status === 'COMPLETED').reduce((s, p) => s.plus(p.amount), toDec(0)));
 
 // Net lifetime earnings also carry refund debt across periods. Never pay a clamped estimate.

@@ -79,11 +79,12 @@ import {
   Database,
   AlertTriangle,
   RefreshCw,
+  Clock,
 } from 'lucide-react';
 
 export const BranchSettingsPage: React.FC = () => {
   const { user, activeBranchId, allBranches, refreshBranches } = useAuth();
-  const { pathname } = useRouter();
+  const { pathname, navigate } = useRouter();
 
   // Role guard: Only SUPER_ADMIN and ADMIN
   if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN')) {
@@ -660,6 +661,16 @@ export const BranchSettingsPage: React.FC = () => {
           </TabsList>
 
           <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 text-xs font-semibold gap-1.5"
+              leftIcon={<Clock className="w-3.5 h-3.5 text-indigo-600" />}
+              onClick={() => navigate('/admin/attendance-settings')}
+            >
+              Attendance Settings (Auto-Absent)
+            </Button>
+
             <Button
               variant="outline"
               size="sm"

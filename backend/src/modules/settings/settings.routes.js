@@ -48,6 +48,12 @@ payrollPolicyRoutes.use(authenticate, authorize(...ADMINS));
 payrollPolicyRoutes.get('/', validate(v.branchQuery, 'query'), c.getPayrollPolicy);
 payrollPolicyRoutes.put('/', validate(v.updatePayrollPolicySchema), c.updatePayrollPolicy);
 
+// ── /attendance-policy (Accountant excluded) ─────────────────────────────────
+export const attendancePolicyRoutes = Router();
+attendancePolicyRoutes.use(authenticate, authorize(...ADMINS));
+attendancePolicyRoutes.get('/', c.getAttendancePolicy);
+attendancePolicyRoutes.put('/', c.updateAttendancePolicy);
+
 // ── /system/date (business date used as "today") ────────────────────────────
 export const systemRoutes = Router();
 systemRoutes.use(authenticate);

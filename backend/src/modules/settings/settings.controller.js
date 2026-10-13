@@ -32,6 +32,10 @@ export const toggleExpenseCategory  = send((req) => s.toggleExpenseCategory(req.
 export const getPayrollPolicy    = send((req) => s.getPayrollPolicy(req.user, req.query.branchId));
 export const updatePayrollPolicy = send((req) => s.updatePayrollPolicy(req.body, req.user));
 
+// Attendance policy
+export const getAttendancePolicy    = send((req) => s.getAttendancePolicy(req.user, req.query.branchId));
+export const updateAttendancePolicy = send((req) => s.updateAttendancePolicy(req.body, req.user));
+
 // System date
 export const getSystemDate = send(async () => ({ date: await s.getSystemDate() }));
 export const setSystemDate = send(async (req) => ({ date: await s.setSystemDate(req.body.date, req.user) }));

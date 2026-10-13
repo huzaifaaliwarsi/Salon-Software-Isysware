@@ -48,7 +48,8 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
 
   // Period range:
   const periodStartDate = options.startDate || startDateStr;
-  const periodEndDate = options.endDate || endDateStr;
+  const selectedEndDate = options.endDate || endDateStr;
+  const periodEndDate = options.asOfDate && selectedEndDate > options.asOfDate ? options.asOfDate : selectedEndDate;
   const isPeriodRun = periodStartDate !== startDateStr || periodEndDate !== endDateStr;
   const runType = options.runType || (periodStartDate === periodEndDate ? 'DAILY' : isPeriodRun ? 'CUSTOM_RANGE' : 'MONTHLY');
 
@@ -77,6 +78,7 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
   let presentDays = 0, paidLeaveDays = 0, unpaidLeaveDays = 0, absentDays = 0, missingPunchDays = 0, unrecordedDays = 0;
   let paidHolidayDays = 0, paidWeeklyOffDays = 0;
   const exceptionDetails = [];
+  const overlapDates = [];
   const consumedAttendanceDates = [];
   let attendancePenaltyDeductions = 0;
 
@@ -85,7 +87,7 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
 
     // Check if this date was ALREADY finalized in another payroll run
     if (options.alreadyFinalizedDates?.has(dateStr)) {
-      exceptionDetails.push(`Attendance on ${dateStr} has already been paid in an earlier finalized payroll run.`);
+      overlapDates.push(dateStr);
       continue;
     }
 
@@ -95,12 +97,14 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
       if (!att) {
         absentDays++;
         unrecordedDays++;
+        exceptionDetails.push(`Attendance not recorded on ${dateStr}.`);
         continue;
       }
       consumedAttendanceDates.push(dateStr);
-      if (att.status === "MISSING_PUNCH" || att.isMissingPunch) {
+      if (att.status === "MISSING_PUNCH" || (att.isMissingPunch && att.status !== 'PRESENT' && att.status !== 'HALF_DAY')) {
         absentDays++;
         missingPunchDays++;
+        exceptionDetails.push(`Missing Punch on ${dateStr}.`);
       } else if (att.status === "ABSENT") absentDays++;
       else if (att.status === "PAID_LEAVE") paidLeaveDays++;
       else if (att.status === "UNPAID_LEAVE") unpaidLeaveDays++;
@@ -131,6 +135,7 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
   const empOvertime = overtimeRecords.filter((ot) => {
     if (ot.staffId !== staff.id) return false;
     if (ot.status !== "APPROVED" || ot.payrollId || ot.payrollRunId) return false;
+    if (!employed(ot.date)) return false;
     if (options.alreadyFinalizedOvertimeIds?.has(ot.id)) return false;
     if (isPeriodRun) {
       return ot.date >= periodStartDate && ot.date <= periodEndDate;
@@ -165,6 +170,8 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
   const joinedMidMonth = !!staff.joiningDate && staff.joiningDate > startDateStr && staff.joiningDate <= endDateStr;
   const leftMidMonth = !!exitDate && exitDate >= startDateStr && exitDate < endDateStr;
   const employedDates = datesToEvaluate.filter(employed);
+  const effectiveStartDate = employedDates[0] || periodStartDate;
+  const effectiveEndDate = employedDates.at(-1) || periodEndDate;
   const prorationDivisor = 30;
   const payableDays = employedDates.length;
   const excludedAttendanceDays = empAttendance.filter((a) => !employed(a.date)).length;
@@ -238,6 +245,13 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
     } else {
       planned = Math.min(maxMonthlyAllowance, Number(adv.balance));
     }
+    if (isPeriodRun && options.alreadyFinalizedDates?.size) {
+      const covered = new Set([...options.alreadyFinalizedDates, ...employedDates].filter((d) => d.startsWith(month) && employed(d)));
+      const complete = allMonthDates.every((d) => !employed(d) || covered.has(d));
+      const scheduled = complete ? Number(adv.recoveryPerMonth)
+        : roundCurrency(Number(adv.recoveryPerMonth) / 30 * covered.size);
+      planned = Math.min(Math.max(0, scheduled - recoveredThisMonth), maxMonthlyAllowance, Number(adv.balance));
+    }
 
     const amt = roundCurrency(Math.min(planned, room));
     if (amt > 0) {
@@ -258,7 +272,15 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
   const attendanceImpact = roundCurrency(-(absenceDeductions + attendancePenaltyDeductions));
 
   let canFinalize = true, blockReason;
+  if (overlapDates.length) {
+    canFinalize = false;
+    blockReason = `Salary days have already been paid or reserved in an earlier finalized payroll run: ${overlapDates.join(', ')}.`;
+  }
   const hasExceptions = exceptionDetails.length > 0;
+  if (hasExceptions) {
+    canFinalize = false;
+    blockReason = `Unresolved attendance exceptions: ${exceptionDetails.join(' ')}`;
+  }
   if (netPayable < 0) {
     canFinalize = false;
     blockReason = `Negative salary entitlement detected (PKR ${netPayable}). Deductions exceed gross earnings. Review penalties/adjustments before finalization.`;
@@ -284,10 +306,10 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
       designation: staff.designation || staff.roleTitle,
       branchId: staff.branchId,
       month,
-      startDate: periodStartDate,
-      endDate: periodEndDate,
+      startDate: effectiveStartDate,
+      endDate: effectiveEndDate,
       runType,
-      daysInPeriod,
+      daysInPeriod: employedDates.length,
       compensationType: staff.compensationType,
       effectiveBaseSalary: staff.baseSalary || 0,
       effectiveDailyRate: staff.dailySalaryRate || 0,
@@ -348,8 +370,8 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
         prorationFormula: isMonthly ? prorationFormula : void 0,
         dailyRateUsed: isDaily ? (staff.dailySalaryRate || 0) : roundCurrency((staff.baseSalary || 0) / divisorUsed),
         periodType: runType,
-        startDate: periodStartDate,
-        endDate: periodEndDate,
+        startDate: effectiveStartDate,
+        endDate: effectiveEndDate,
         policyNotes: `Policy Divisor: /${divisorUsed}. Daily Leave Eligible: ${policy.dailyStaffPaidLeaveEligibility}. Holiday Paid (daily): ${!!policy.nonWorkedHolidayPaid}. Weekly Off Paid (daily): ${!!policy.nonWorkedWeeklyOffPaid}. Proration: ${isMonthly ? "FIXED_30_WITH_MONTHLY_RECONCILIATION" : policy.prorationMethod}.`
       }
     }

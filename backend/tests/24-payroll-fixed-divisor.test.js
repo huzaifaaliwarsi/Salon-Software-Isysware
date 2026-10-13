@@ -7,6 +7,31 @@ const run = (month, startDate, endDate, priorDates = new Set(), priorBase = 0, o
   return evaluateEmployeePayroll({ ...staff, ...overrides }, month, policy, attendance, [], [], {}, { startDate, endDate, alreadyFinalizedDates: priorDates, alreadyFinalizedBaseEarnings: priorBase });
 };
 describe('fixed 30-day monthly base', () => {
+  it('flags missing punches only in employment and excludes overtime outside employment', () => {
+    const r = evaluateEmployeePayroll({ ...staff, joiningDate: '2026-10-08', exitDate: '2026-10-09' }, '2026-10', policy,
+      [{ staffId: 's', date: '2026-10-08', status: 'PRESENT' }, { staffId: 's', date: '2026-10-09', status: 'MISSING_PUNCH' }],
+      [{ id: 'outside', staffId: 's', date: '2026-10-07', status: 'APPROVED', amount: 500 }]);
+    expect(r.payslip.unrecordedDays).toBe(0);
+    expect(r.payslip.missingPunchDays).toBe(1);
+    expect(r.payslip.exceptionDetails).toEqual(['Missing Punch on 2026-10-09.']);
+    expect(r.payslip.approvedOvertimeAmount).toBe(0);
+    expect(r.canFinalize).toBe(false);
+  });
+  it('reconciles February loan installments across daily runs and never repeats monthly recovery', () => {
+    let dates = new Set(), base = 0, recovered = 0;
+    for (const date of getDatesInRange('2026-02-01', '2026-02-28')) {
+      const r = evaluateEmployeePayroll(staff, '2026-02', policy, [{ staffId: 's', date, status: 'PRESENT' }], [], [], {
+        advances: [{ id: 'loan', recoveryPerMonth: 3000, balance: 10000 - recovered, recoveredThisMonth: recovered }],
+      }, { startDate: date, endDate: date, alreadyFinalizedDates: dates, alreadyFinalizedBaseEarnings: base });
+      expect(r.canFinalize).toBe(true);
+      expect(r.payslip.netPayable).toBeGreaterThanOrEqual(0);
+      recovered += r.payslip.advanceRecoveryAmount;
+      base += r.payslip.baseEarnings;
+      dates.add(date);
+    }
+    expect(base).toBe(30000);
+    expect(recovered).toBe(3000);
+  });
   it('pays 2,000 for two eligible days and overrides legacy divisor policies', () => {
     const r = run('2026-10', '2026-10-08', '2026-10-09', new Set(), 0, { joiningDate: '2026-10-08' });
     expect(r.payslip.baseEarnings).toBe(2000);

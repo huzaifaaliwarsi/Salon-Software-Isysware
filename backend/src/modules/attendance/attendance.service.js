@@ -80,17 +80,19 @@ const resolveStaffFilter = (actor, staffId) => {
 
 /** Lateness, early exit, worked hours and deduction preview for one day. */
 const evaluateDay = (staffDTO, checkIn, checkOut, isOvernight) => {
-  if (checkOut && !isOvernight && parseTimeToMinutes(checkOut) < parseTimeToMinutes(checkIn)) {
+  if (checkOut && !isOvernight && checkIn && parseTimeToMinutes(checkOut) < parseTimeToMinutes(checkIn)) {
     throw badRequest('INVALID_PUNCH', 'Check-out time cannot be earlier than check-in time unless marked as an overnight shift.');
   }
   const { isLate, lateMinutes } = evaluateLateness(checkIn, staffDTO.startTime, staffDTO.lateGraceMinutes);
   const early = checkOut ? evaluateEarlyExit(checkOut, staffDTO.endTime, staffDTO.earlyGraceMinutes, isOvernight) : { isEarlyExit: false, earlyExitMinutes: 0 };
+  const sched = calculateScheduledHours(staffDTO.startTime, staffDTO.endTime, isOvernight);
+  const worked = (checkIn && checkOut) ? calculateWorkedHours(checkIn, checkOut, isOvernight) : sched;
   return {
     isLate, lateMinutes, isEarlyExit: early.isEarlyExit, earlyExitMinutes: early.earlyExitMinutes,
-    workedHours: checkOut ? calculateWorkedHours(checkIn, checkOut, isOvernight) : 0,
-    scheduledHours: calculateScheduledHours(staffDTO.startTime, staffDTO.endTime, isOvernight),
+    workedHours: worked,
+    scheduledHours: sched,
     calculationSnapshot: calculateDeductionSnapshot(staffDTO, isLate, lateMinutes, early.isEarlyExit, early.earlyExitMinutes),
-    isMissingPunch: !checkIn || !checkOut,
+    isMissingPunch: Boolean(checkIn && !checkOut),
   };
 };
 
@@ -134,7 +136,7 @@ export const createAttendance = async (input, actor) => {
     const record = await tx.attendanceRecord.create({
       data: {
         branchId, staffId: staff.id, workDate: dateOnly(input.date), checkIn: input.checkIn, checkOut: input.checkOut || null,
-        ...day, status: input.checkOut ? 'PRESENT' : 'MISSING_PUNCH', source, isOvernightShift: isOvernight, notes: input.notes || null,
+        ...day, status: input.status || (input.checkIn && !input.checkOut ? 'MISSING_PUNCH' : 'PRESENT'), source, isOvernightShift: isOvernight, notes: input.notes || null,
         punches: {
           create: [
             { type: 'CHECK_IN', timestamp: input.checkIn, source },
@@ -170,7 +172,7 @@ export const correctAttendance = async (id, input, actor) =>
       where: { id },
       data: {
         checkIn: input.checkIn, checkOut: input.checkOut || null, ...day, scheduledHours: undefined,
-        status: input.status || (input.checkOut ? 'PRESENT' : 'MISSING_PUNCH'),
+        status: input.status || record.status || (input.checkIn && !input.checkOut ? 'MISSING_PUNCH' : 'PRESENT'),
         ...(input.notes ? { notes: input.notes } : {}),
       },
       include: recordInclude,
@@ -208,7 +210,7 @@ export const finalizeDay = async ({ branchId: requested, date }, actor) => {
       } else {
         await tx.attendanceRecord.update({
           where: { id: rec.id },
-          data: { isFinalized: true, ...(!rec.checkOut && rec.status === 'PRESENT' ? { status: 'MISSING_PUNCH', isMissingPunch: true } : {}) },
+          data: { isFinalized: true, ...(rec.checkIn && rec.checkIn !== 'ABSENT' && !rec.checkOut && rec.status === 'PRESENT' ? { status: 'MISSING_PUNCH', isMissingPunch: true } : {}) },
         });
       }
       finalizedCount += 1;
@@ -352,7 +354,7 @@ export const bulkSaveAttendance = async ({ branchId: requested, date, records },
         lateMinutes = day.lateMinutes;
         isEarlyExit = day.isEarlyExit;
         earlyExitMinutes = day.earlyExitMinutes;
-        workedHours = day.workedHours;
+        workedHours = status === 'HALF_DAY' ? roundCurrency(day.workedHours / 2) : day.workedHours;
         scheduledHours = day.scheduledHours;
         calculationSnapshot = day.calculationSnapshot;
         isMissingPunch = day.isMissingPunch;

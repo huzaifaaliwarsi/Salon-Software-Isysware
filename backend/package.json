@@ -16,6 +16,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:isolated": "node scripts/run-isolated-tests.js",
+    "test:payroll": "node scripts/run-isolated-tests.js --config vitest.payroll-integration.config.js",
     "lint": "echo 'No linter configured'",
     "db:new-migration": "node scripts/new-migration.js",
     "db:deploy": "prisma migrate deploy"
