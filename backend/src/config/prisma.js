@@ -4,8 +4,16 @@
 import { PrismaClient } from '@prisma/client';
 import { env } from './env.js';
 
-const prisma = new PrismaClient({
-  log: env.isDev ? ['error', 'warn'] : ['error'],
-});
+const globalForPrisma = globalThis;
+
+const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: env.isDev ? ['error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV === 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 export default prisma;

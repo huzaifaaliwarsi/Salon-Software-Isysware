@@ -65,12 +65,25 @@ export function canAccessRoute(user: User | null, routePath: string): boolean {
       ? '/reports/inventory-movement'
       : path === '/reports/cogs' || path === '/reports/cogs-report'
       ? '/reports/operating-profit'
+      : path === '/accounts/payroll'
+      ? '/accounts/salary/generate'
+      : path === '/accounts/staff-loans'
+      ? '/accounts/salary/loans'
+      : path === '/accounts/commission'
+      ? '/accounts/salary/commission'
       : path;
 
   for (const group of NAVIGATION_GROUPS) {
     for (const item of group.items) {
       if (item.href === normalizedPath || item.href === path) {
         return item.allowedRoles.includes(user.role);
+      }
+      if (item.children) {
+        for (const child of item.children) {
+          if (child.href === normalizedPath || child.href === path) {
+            return child.allowedRoles.includes(user.role);
+          }
+        }
       }
     }
   }

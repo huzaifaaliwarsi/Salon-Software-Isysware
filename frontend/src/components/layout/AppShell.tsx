@@ -41,7 +41,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
     // Capitalize and format leaf title
     const leaf = parts[parts.length - 1];
-    const leafTitle = leaf
+    const specialTitles: Record<string, string> = {
+      generate: 'Generate Salary',
+      manage: 'Manage Salaries',
+      allowances: 'Allowances & Adjustments',
+      loans: 'Loan Management',
+      commission: 'Staff Commission',
+      payroll: 'Generate Salary',
+      'staff-loans': 'Loan Management',
+    };
+    const leafTitle = specialTitles[leaf] || leaf
       .split('-')
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');

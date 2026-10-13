@@ -41,7 +41,9 @@ import {
 } from 'lucide-react';
 import { roundCurrency } from '../../lib/taxCalculations';
 import { AccessDeniedView } from '../scaffold/AccessDeniedView';
-import { PayrollExtrasPanel, PayrollExtrasView } from './PayrollExtrasPanel';
+import { PayrollExtrasPanel } from './PayrollExtrasPanel';
+import { useRouter } from '../../context/RouterContext';
+import { toast } from '../../context/ToastContext';
 
 // Payslip parts added with allowances/adjustments/advances (absent on older payslips → 0).
 const plusExtras = (p: PayslipRecord) => (p.allowancesTotal ?? 0) + (p.holidayEarnings ?? 0);
@@ -58,13 +60,6 @@ const BaseExplanation = ({ payslip: p }: { payslip: PayslipRecord }) => (
     {p.employmentNotes?.map((note) => <div key={note} className="text-amber-700">{note}</div>)}
   </div>
 );
-
-const VIEW_TABS: { id: 'GENERATE' | 'RUNS' | PayrollExtrasView; label: string }[] = [
-  { id: 'GENERATE', label: 'Generate Salary' },
-  { id: 'RUNS', label: 'Manage Salaries' },
-  { id: 'SUMMARY', label: 'Monthly Summary (Salary + Commission)' },
-  { id: 'INPUTS', label: 'Allowances & Adjustments' },
-];
 
 const MONTHS = [
   { value: '01', label: 'January' },
@@ -83,8 +78,13 @@ const MONTHS = [
 
 const YEARS = ['2024', '2025', '2026', '2027', '2028'];
 
-export const PayrollPage: React.FC = () => {
+interface PayrollPageProps {
+  mode?: 'GENERATE' | 'MANAGE' | 'ALLOWANCES';
+}
+
+export const PayrollPage: React.FC<PayrollPageProps> = ({ mode = 'GENERATE' }) => {
   const { user, activeBranchId, allBranches, demoDate } = useAuth();
+  const { navigate } = useRouter();
 
   // Role guard: Super Admin and Admin only
   if (!user || (user.role !== 'SUPER_ADMIN' && user.role !== 'ADMIN')) {
@@ -118,7 +118,6 @@ export const PayrollPage: React.FC = () => {
   const [staffFilter, setStaffFilter] = useState<string>('ALL');
   const [compTypeFilter, setCompTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [view, setView] = useState<'GENERATE' | 'RUNS' | PayrollExtrasView>('GENERATE');
 
   // Active Draft Run (preview currently being inspected / generated)
   const [activeDraft, setActiveDraft] = useState<PayrollRun | null>(null);
@@ -204,7 +203,7 @@ export const PayrollPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [effectiveBranchId, selectedMonth]);
+  }, [effectiveBranchId, selectedMonth, mode]);
 
   useEffect(() => {
     setSelectedStaffIds([]);
@@ -308,6 +307,7 @@ export const PayrollPage: React.FC = () => {
     payrollRuns
       .filter((r) => r.status !== 'CANCELLED' && r.status !== 'DRAFT' && r.month === targetMonth)
       .filter((r) => {
+        if (mode === 'MANAGE') return true;
         if (runType === 'DAILY') return r.runType === 'DAILY' && r.startDate === startDate;
         if (runType === 'CUSTOM_RANGE') return r.runType === 'CUSTOM_RANGE' && r.startDate === startDate && r.endDate === endDate;
         return r.runType === 'MONTHLY' || !r.runType;
@@ -327,7 +327,7 @@ export const PayrollPage: React.FC = () => {
         });
       });
     return Array.from(map.values());
-  }, [payrollRuns, runType, selectedYear, selectedMonthNum, startDate, endDate]);
+  }, [payrollRuns, runType, selectedYear, selectedMonthNum, startDate, endDate, mode]);
 
   const generatedTotals = useMemo(() => {
     let basic = 0;
@@ -429,20 +429,17 @@ export const PayrollPage: React.FC = () => {
           includeDaily: true,
         }
       );
-      setActiveDraft(preview);
-      setShowPreviewModal(true);
-      const [runs, staff, advances] = await Promise.all([
-        salonService.getPayrollRuns(effectiveBranchId, targetMonth, user),
-        salonService.getStaff(effectiveBranchId),
-        salonService.getSalaryAdvances(effectiveBranchId),
-      ]);
-      setPayrollRuns(runs);
-      setStaffList(staff);
-      setSalaryAdvances(advances || []);
-      setHasFiltered(true);
-      setSelectedStaffIds([]);
+      // Immediately finalize payroll (no preview box modal!)
+      const finalized = await salonService.finalizePayroll(preview.id, user);
+      setPayrollRuns((runs) => [finalized, ...runs.filter((run) => run.id !== finalized.id)]);
+
+      toast.success(`Salary ${finalized.payrollNumber} successfully generated for ${finalized.employeeCount} staff!`);
+
+      // Immediately navigate to Manage Salaries page
+      navigate('/accounts/salary/manage');
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message || 'Failed to generate salary.' });
+      toast.error(err.message || 'Failed to generate salary.');
     } finally {
       setActionLoading(false);
     }
@@ -487,13 +484,14 @@ export const PayrollPage: React.FC = () => {
       setActionLoading(true);
       setFeedback(null);
       const finalized = await salonService.finalizePayroll(activeDraft.id, user);
+      setPayrollRuns((runs) => [finalized, ...runs.filter((run) => run.id !== finalized.id)]);
       setFeedback({
         type: 'success',
         message: `Payroll ${finalized.payrollNumber} successfully finalized! Total payable: Rs. ${finalized.totalPayable.toLocaleString()}. Inputs are now locked.`,
       });
       setShowPreviewModal(false);
       setActiveDraft(null);
-      setView('RUNS');
+      navigate('/accounts/salary/manage');
       await loadData();
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message || 'Failed to finalize payroll.' });
@@ -754,28 +752,31 @@ export const PayrollPage: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Generate Salary</h1>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+            {mode === 'MANAGE'
+              ? 'Manage Salaries'
+              : mode === 'ALLOWANCES'
+              ? 'Allowances & Adjustments'
+              : 'Generate Salary'}
+          </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Select branch, month and year to filter and generate staff salaries.
+            {mode === 'MANAGE'
+              ? 'Review finalized salary disbursements, payslips, and payment records.'
+              : mode === 'ALLOWANCES'
+              ? 'Staff bonuses, allowances, and compensation adjustments.'
+              : 'Select branch, month and year to filter and generate staff salaries.'}
           </p>
         </div>
-
-        {/* View Switcher Tabs - Minimal & Clean */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-          {VIEW_TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setView(t.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                view === t.id
-                  ? 'bg-[#0a3871] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {mode === 'MANAGE' && (
+          <button
+            type="button"
+            onClick={() => navigate('/accounts/salary/generate')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#0047AB] hover:bg-blue-700 text-white font-medium rounded-xl text-xs transition-colors cursor-pointer shadow-xs"
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>Generate Salary</span>
+          </button>
+        )}
       </div>
 
       {/* Feedback Alerts */}
@@ -802,7 +803,7 @@ export const PayrollPage: React.FC = () => {
       )}
 
       {/* GENERATE SALARY VIEW */}
-      {view === 'GENERATE' && (
+      {mode === 'GENERATE' && (
         <div className="space-y-6">
           {/* Top Form & Staff Selection */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1128,9 +1129,9 @@ export const PayrollPage: React.FC = () => {
         </div>
       )}
 
-      {view !== 'RUNS' && view !== 'GENERATE' && (
+      {mode === 'ALLOWANCES' && (
         <PayrollExtrasPanel
-          view={view}
+          view="INPUTS"
           branchId={effectiveBranchId}
           month={selectedMonth}
           staffList={staffList}
@@ -1141,7 +1142,7 @@ export const PayrollPage: React.FC = () => {
       )}
 
       {/* MANAGE SALARIES VIEW */}
-      {view === 'RUNS' && (
+      {mode === 'MANAGE' && (
         <div className="space-y-4">
           {/* Top Bar for Manage Salaries */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1201,7 +1202,7 @@ export const PayrollPage: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setView('GENERATE')}
+              onClick={() => navigate('/accounts/salary/generate')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0047AB] hover:bg-blue-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors self-start md:self-auto cursor-pointer"
             >
               <Briefcase className="w-3.5 h-3.5" />
@@ -1384,7 +1385,7 @@ export const PayrollPage: React.FC = () => {
                 Salary has not been generated for this period yet. Click below to select staff and generate salaries.
               </p>
               <button
-                onClick={() => setView('GENERATE')}
+                onClick={() => navigate('/accounts/salary/generate')}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#0047AB] hover:bg-blue-700 text-white font-medium rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Go to Generate Salary
@@ -1432,7 +1433,7 @@ export const PayrollPage: React.FC = () => {
                   <div className="space-y-1">
                     <h4 className="font-bold text-rose-900">Finalization Blocked by Actionable Exceptions</h4>
                     <p className="text-rose-700">
-                      One or more employees have unresolved attendance issues (missing punches or unrecorded days) or negative net
+                      One or more employees have unresolved missing punches, overlapping salary days, or negative net
                       salary entitlement. Resolve attendance records or adjust policies before finalizing.
                     </p>
                   </div>

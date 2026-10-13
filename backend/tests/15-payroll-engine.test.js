@@ -118,12 +118,27 @@ describe('Payroll engine · monthly', () => {
     expect(small.canFinalize).toBe(true);
   });
 
-  it('S12 missing punch / unrecorded day blocks finalization', () => {
+  it('S12 missing punch blocks finalization while unrecorded days count as absences', () => {
     const att = attendance('2026-09', { special: { '2026-09-01': { status: 'MISSING_PUNCH' } } }).filter((a) => a.date !== '2026-09-02');
     const r = run(staff(), '2026-09', att);
     expect(r.canFinalize).toBe(false);
     expect(r.blockReason).toContain('2026-09-01');
     expect(r.payslip.unrecordedDays).toBe(1);
+    expect(r.payslip.exceptionDetails).toEqual(['Missing Punch on 2026-09-01.']);
+  });
+
+  it('unrecorded working days deduct salary without blocking finalization', () => {
+    const att = attendance('2026-09').filter(a => a.date !== '2026-09-01' && a.date !== '2026-09-02');
+    const r = run(staff(), '2026-09', att);
+    expect(r.payslip).toMatchObject({ unrecordedDays: 2, absentDays: 2, absenceDeductions: 4000, netPayable: 56000, hasExceptions: false });
+    expect(r.canFinalize).toBe(true);
+    expect(r.blockReason).toBeUndefined();
+  });
+
+  it('daily staff earn zero for an unrecorded working day without blocking finalization', () => {
+    const r = evaluateEmployeePayroll(staff({ compensationType: 'DAILY_SALARY', dailySalaryRate: 1000 }), '2026-10', POLICY, [], [], [], {}, { startDate: '2026-10-13', endDate: '2026-10-13' });
+    expect(r.payslip).toMatchObject({ absentDays: 1, unrecordedDays: 1, netPayable: 0, hasExceptions: false });
+    expect(r.canFinalize).toBe(true);
   });
 
   it('S13 deductions greater than gross block finalization', () => {

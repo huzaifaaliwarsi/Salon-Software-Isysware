@@ -8,6 +8,12 @@ export interface NavItem {
   allowedRoles: Role[];
   badge?: string;
   description?: string;
+  children?: {
+    id: string;
+    label: string;
+    href: string;
+    allowedRoles: Role[];
+  }[];
 }
 
 export interface NavGroup {
@@ -180,28 +186,44 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         description: 'Cash drawer disbursements & bank expense vouchers',
       },
       {
-        id: 'payroll',
-        label: 'Payroll Generation',
-        href: '/accounts/payroll',
-        iconName: 'BadgeDollarSign',
+        id: 'salary-and-loan',
+        label: 'Salary and Loan Management',
+        href: '/accounts/salary/generate',
+        iconName: 'Banknote',
         allowedRoles: ['SUPER_ADMIN', 'ADMIN'], // Accountant excluded
-        description: 'Base pay calculation with verified attendance & manual overtime',
-      },
-      {
-        id: 'staff-loans',
-        label: 'Staff Loans',
-        href: '/accounts/staff-loans',
-        iconName: 'Wallet',
-        allowedRoles: ['SUPER_ADMIN', 'ADMIN'], // Accountant excluded (same as payroll)
-        description: 'Salary advances paid from drawer/account, recovered through payroll',
-      },
-      {
-        id: 'commission',
-        label: 'Staff Commission',
-        href: '/accounts/commission',
-        iconName: 'PieChart',
-        allowedRoles: ['SUPER_ADMIN', 'ADMIN'], // Accountant excluded
-        description: 'Tiered service commission separate from gratuity',
+        description: 'Salary generation, disbursements, allowances, commission & loans',
+        children: [
+          {
+            id: 'generate-salary',
+            label: 'Generate Salary',
+            href: '/accounts/salary/generate',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+          {
+            id: 'manage-salaries',
+            label: 'Manage Salaries',
+            href: '/accounts/salary/manage',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+          {
+            id: 'loan-management',
+            label: 'Loan Management',
+            href: '/accounts/salary/loans',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+          {
+            id: 'allowances-adjustments',
+            label: 'Allowances & Adjustments',
+            href: '/accounts/salary/allowances',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+          {
+            id: 'staff-commission',
+            label: 'Staff Commission',
+            href: '/accounts/salary/commission',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+        ],
       },
       {
         id: 'tips-management',

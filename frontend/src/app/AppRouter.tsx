@@ -213,11 +213,17 @@ export const AppRouter: React.FC = () => {
       return <AttendanceOvertimeReportPage />;
     }
 
-    // 10. Payroll & Salary Reports
-    if (pathname === '/accounts/payroll') {
-      return <PayrollPage />;
+    // 10. Salary and Loan Management
+    if (pathname === '/accounts/salary/generate' || pathname === '/accounts/payroll') {
+      return <PayrollPage mode="GENERATE" />;
     }
-    if (pathname === '/accounts/staff-loans') {
+    if (pathname === '/accounts/salary/manage') {
+      return <PayrollPage mode="MANAGE" />;
+    }
+    if (pathname === '/accounts/salary/allowances') {
+      return <PayrollPage mode="ALLOWANCES" />;
+    }
+    if (pathname === '/accounts/salary/loans' || pathname === '/accounts/staff-loans') {
       return <StaffLoansPage />;
     }
     if (pathname === '/reports/staff-salary') {
@@ -225,7 +231,7 @@ export const AppRouter: React.FC = () => {
     }
 
     // 11. Staff Commission & Commission Reports
-    if (pathname === '/accounts/commission') {
+    if (pathname === '/accounts/salary/commission' || pathname === '/accounts/commission') {
       return <StaffCommissionPage />;
     }
     if (pathname === '/reports/staff-commission') {

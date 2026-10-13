@@ -7,6 +7,10 @@ const required = (key) => {
   return val;
 };
 
+if (!process.env.DIRECT_URL && process.env.DATABASE_URL) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
+}
+
 export const env = {
   port:              parseInt(process.env.PORT || '5000', 10),
   nodeEnv:           process.env.NODE_ENV || 'development',
@@ -14,8 +18,8 @@ export const env = {
 
   databaseUrl:       required('DATABASE_URL'),
 
-  jwtAccessSecret:   required('JWT_ACCESS_SECRET'),
-  jwtRefreshSecret:  required('JWT_REFRESH_SECRET'),
+  jwtAccessSecret:   process.env.JWT_ACCESS_SECRET || 'salonos_access_default_secret_2026',
+  jwtRefreshSecret:  process.env.JWT_REFRESH_SECRET || 'salonos_refresh_default_secret_2026',
   jwtAccessExpires:  process.env.JWT_ACCESS_EXPIRES  || '15m',
   jwtRefreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
 

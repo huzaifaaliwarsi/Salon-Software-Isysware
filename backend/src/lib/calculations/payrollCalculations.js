@@ -97,7 +97,7 @@ function evaluateEmployeePayroll(staff, month, policy, attendanceRecords, overti
       if (!att) {
         absentDays++;
         unrecordedDays++;
-        exceptionDetails.push(`Attendance not recorded on ${dateStr}.`);
+        // No attendance record is an absence; only incomplete recorded punches need resolution.
         continue;
       }
       consumedAttendanceDates.push(dateStr);

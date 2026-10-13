@@ -18,6 +18,20 @@ const slipOf = (run, f) => run.payslips.find((p) => p.staffId === f.staff.id);
 const balance = async (f) => Number((await accountBalances([f.account.id])).get(f.account.id));
 
 describe('Payroll generation safety regressions', () => {
+  it('finalizes monthly payroll with unrecorded working days treated as deducted absences', async () => {
+    const f = await fixture('MONTHLY_PLUS_COMMISSION');
+    await setSystemDate('2026-10-13', actor);
+    await prisma.staff.update({ where: { id: f.staff.id }, data: { baseSalary: 30000, joiningDate: new Date('2026-10-05') } });
+    await prisma.attendanceRecord.createMany({ data: [
+      ['2026-10-06', 'PRESENT'], ['2026-10-07', 'PRESENT'],
+      ['2026-10-08', 'PAID_LEAVE'], ['2026-10-09', 'PAID_LEAVE'], ['2026-10-13', 'ABSENT'],
+    ].map(([date, status]) => ({ branchId: f.branch.id, staffId: f.staff.id, workDate: new Date(date), checkIn: '09:00 AM', checkOut: '06:00 PM', status, isFinalized: true })) });
+    const preview = await payroll.generatePreview(actor, { branchId: f.branch.id, month: '2026-10', runType: 'MONTHLY' });
+    expect(slipOf(preview, f)).toMatchObject({ baseEarnings: 9000, presentDays: 2, paidLeaveDays: 2, absentDays: 4, unrecordedDays: 3, absenceDeductions: 4000, netPayable: 5000, canFinalize: true, hasExceptions: false });
+    const finalized = await payroll.finalizeRun(actor, preview.id);
+    expect(slipOf(finalized, f)).toMatchObject({ netPayable: 5000, status: 'FINALIZED' });
+  });
+
   it('cuts the current monthly run at today, clips joining/leaving dates and excludes future attendance and OT', async () => {
     const f = await fixture('MONTHLY_SALARY');
     await setSystemDate('2026-10-13', actor);

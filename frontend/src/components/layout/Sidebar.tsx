@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from '../../context/RouterContext';
 import { NAVIGATION_GROUPS } from '../../config/navigation';
 import { NavIcon } from './NavIcon';
-import { Scissors, AlertCircle, Building2, ChevronRight } from 'lucide-react';
+import { Scissors, AlertCircle, Building2, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -18,6 +18,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, activeBranchId, allBranches } = useAuth();
   const { pathname, navigate } = useRouter();
+  const [expandedMenus, setExpandedMenus] = React.useState<Record<string, boolean>>({});
+
+  const toggleSubMenu = (itemId: string, defaultOpen: boolean) => {
+    setExpandedMenus((prev) => ({
+      ...prev,
+      [itemId]: prev[itemId] !== undefined ? !prev[itemId] : !defaultOpen,
+    }));
+  };
 
   if (!user) return null;
 
@@ -109,38 +117,82 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </p>
               )}
               {group.items.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleItemClick(item.href)}
-                    title={isCollapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer group text-left ${isActive
-                      ? 'bg-blue-50 text-[#2254E1] font-semibold shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                      }`}
-                  >
-                    <div
-                      className={`p-1 rounded-md shrink-0 transition-colors ${isActive
-                        ? 'bg-[#2254E1] text-white'
-                        : 'text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-200/60'
-                        }`}
-                    >
-                      <NavIcon name={item.iconName} className="w-3.5 h-3.5" />
-                    </div>
+                const hasChildren = Boolean(item.children && item.children.length > 0);
+                const isChildActive = hasChildren && item.children!.some((c) => pathname === c.href);
+                const isExpanded = expandedMenus[item.id] !== undefined
+                  ? expandedMenus[item.id]
+                  : (isChildActive || pathname.startsWith('/accounts/salary') || pathname === '/accounts/payroll');
+                const isActive = (!hasChildren && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))) || (hasChildren && isChildActive);
 
-                    {!isCollapsed && (
-                      <div className="flex-1 flex items-center justify-between overflow-hidden">
-                        <span className="truncate">{item.label}</span>
-                        {item.badge && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-100 text-[#2254E1]">
-                            {item.badge}
-                          </span>
-                        )}
+                return (
+                  <div key={item.id} className="space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (hasChildren && !isCollapsed) {
+                          toggleSubMenu(item.id, isChildActive);
+                        } else {
+                          handleItemClick(item.href);
+                        }
+                      }}
+                      title={isCollapsed ? item.label : undefined}
+                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer group text-left ${
+                        isActive && !hasChildren
+                          ? 'bg-blue-50 text-[#2254E1] font-semibold shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                      }`}
+                    >
+                      <div
+                        className={`p-1 rounded-md shrink-0 transition-colors ${
+                          isActive
+                            ? 'bg-[#2254E1] text-white'
+                            : 'text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-200/60'
+                        }`}
+                      >
+                        <NavIcon name={item.iconName} className="w-3.5 h-3.5" />
+                      </div>
+
+                      {!isCollapsed && (
+                        <div className="flex-1 flex items-center justify-between overflow-hidden">
+                          <span className="truncate font-semibold text-slate-800">{item.label}</span>
+                          {hasChildren ? (
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 text-blue-600 transition-transform duration-200 shrink-0 ${
+                                isExpanded ? 'rotate-180' : ''
+                              }`}
+                            />
+                          ) : item.badge ? (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-100 text-[#2254E1]">
+                              {item.badge}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Submenu Accordion Dropdown */}
+                    {hasChildren && isExpanded && !isCollapsed && (
+                      <div className="ml-5 pl-4 border-l-2 border-slate-300 space-y-1.5 py-1 my-1">
+                        {item.children!.map((child) => {
+                          const isCurrent = pathname === child.href;
+                          return (
+                            <button
+                              key={child.id}
+                              type="button"
+                              onClick={() => handleItemClick(child.href)}
+                              className={`w-full text-left py-1 px-2 rounded-md text-xs transition-colors cursor-pointer block truncate ${
+                                isCurrent
+                                  ? 'text-[#0a3871] font-bold bg-blue-50/70'
+                                  : 'text-slate-600 hover:text-slate-900 font-medium'
+                              }`}
+                            >
+                              {child.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
