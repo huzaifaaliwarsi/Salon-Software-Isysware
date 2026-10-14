@@ -16,7 +16,7 @@ export const DEMO_CREDENTIALS: DemoCredential[] = [
     label: 'Super Administrator',
     roleName: 'Global Executive Admin',
     email: 'superadmin@isysware.com',
-    password: 'Super@Salon2026',
+    password: 'admin123',
     branchName: 'All Branches (Consolidated View)',
     description: 'Consolidated oversight, branch management, and full system audit.',
     user: {
@@ -37,7 +37,7 @@ export const DEMO_CREDENTIALS: DemoCredential[] = [
     label: 'Warsi Salon Admin',
     roleName: 'Warsi Salon General Manager',
     email: 'huzaifawarsi2006@gmail.com',
-    password: 'Temp@7369',
+    password: 'admin123',
     branchName: 'Warsi Salon (Karachi)',
     description: 'Branch administrator for Warsi Salon: appointments, billing, staff and finances.',
     user: {

@@ -51,7 +51,7 @@ const formatDate = (dateStr: string) => {
 
 export const SuppliersVendorsPage: React.FC = () => {
   const { user, activeBranchId, allBranches } = useAuth();
-  const { pathname, navigate } = useRouter();
+  const { pathname, navigate, currentRoute } = useRouter();
 
   if (!user || user.role === 'STAFF') {
     return <AccessDeniedView attemptedPath="/operations/suppliers" />;
@@ -352,9 +352,12 @@ export const SuppliersVendorsPage: React.FC = () => {
     }
   }, [pathname]);
 
-  // Synchronize supplier from URL query if present
+  // Synchronize single supplier from URL query if present (or fallback to first debtor)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const query = currentRoute.includes('?')
+      ? currentRoute.split('?')[1]
+      : (typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '');
+    const urlParams = new URLSearchParams(query);
     const suppId = urlParams.get('supplierId');
     if (suppId && suppliers.length > 0) {
       const match = suppliers.find((s) => s.id === suppId);
@@ -369,7 +372,7 @@ export const SuppliersVendorsPage: React.FC = () => {
       setLedgerSupplier(defaultSupp);
       fetchSupplierLedger(defaultSupp.id, selectedBranchId, ledgerStartDate, ledgerEndDate);
     }
-  }, [suppliers, activeTab, selectedBranchId, fetchSupplierLedger]);
+  }, [currentRoute, suppliers, activeTab, selectedBranchId, fetchSupplierLedger]);
 
   // View Khata Ledger in Modal
   const handleOpenLedger = async (s: Supplier) => {
@@ -1392,18 +1395,51 @@ export const SuppliersVendorsPage: React.FC = () => {
               )}
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+            <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div className="text-xs font-bold text-slate-900">
                 Current Khata Balance:{' '}
                 <span className="text-rose-700">PKR {formatPKR(ledgerSupplier.currentPayable ?? ledgerSupplier.currentBalance ?? 0)}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsLedgerModalOpen(false)}
-                className="px-4 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrintLedger}
+                  disabled={ledgerEntries.length === 0}
+                  className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLedgerModalOpen(false);
+                    handleOpenPayModal(ledgerSupplier);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Banknote className="w-3.5 h-3.5" />
+                  <span>Pay</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLedgerModalOpen(false);
+                    setActiveTab('LEDGER');
+                    navigate(`/operations/supplier-ledger?supplierId=${ledgerSupplier.id}`);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold bg-[#0047AB] hover:bg-[#003785] text-white rounded-lg cursor-pointer"
+                >
+                  Open Full Statement →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLedgerModalOpen(false)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

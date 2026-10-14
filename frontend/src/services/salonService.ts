@@ -107,6 +107,7 @@ import {
   COGSReportSummary,
   ItemType,
   CreatePurchaseInput,
+  CreateInventoryItemInput,
   PaySupplierInput,
   CreateSupplierReturnInput,
   CreateManualStockOutInput,
@@ -612,7 +613,7 @@ export interface SalonServiceContract {
   ): Promise<InventoryItem[]>;
   getInventoryItem(id: string, actor?: User): Promise<InventoryItem>;
   createInventoryItem(
-    input: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>,
+    input: CreateInventoryItemInput,
     actor?: User
   ): Promise<InventoryItem>;
   updateInventoryItem(id: string, input: Partial<InventoryItem>, actor?: User): Promise<InventoryItem>;

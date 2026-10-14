@@ -31,6 +31,11 @@ const itemFields = {
   nearExpiryAlertDays: z.number().int().min(0).default(60),
   isActive:            z.boolean().optional(),
   branchAvailability:  z.array(z.string()).default(['ALL']),
+  openingStock:        nonNeg('Opening stock').optional().default(0),
+  openingQuantity:     nonNeg('Opening quantity').optional().default(0),
+  openingCost:         nonNeg('Opening cost').optional(),
+  branchId:            z.string().optional(),
+  supplierId:          z.string().optional(),
 };
 
 export const createItemSchema = z.object(itemFields).passthrough();

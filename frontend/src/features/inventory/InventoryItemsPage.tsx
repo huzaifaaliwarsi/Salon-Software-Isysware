@@ -73,6 +73,8 @@ export const InventoryItemsPage: React.FC = () => {
     defaultPurchaseCost: number;
     sellingPrice: number;
     minStockLevel: number;
+    openingStock: number;
+    openingCost: number;
   }>({
     name: '',
     sku: '',
@@ -84,6 +86,8 @@ export const InventoryItemsPage: React.FC = () => {
     defaultPurchaseCost: 0,
     sellingPrice: 0,
     minStockLevel: 5,
+    openingStock: 0,
+    openingCost: 0,
   });
 
   const loadData = useCallback(async (bId: string) => {
@@ -201,6 +205,8 @@ export const InventoryItemsPage: React.FC = () => {
       defaultPurchaseCost: 0,
       sellingPrice: 0,
       minStockLevel: 5,
+      openingStock: 0,
+      openingCost: 0,
     });
     setIsModalOpen(true);
   };
@@ -218,6 +224,8 @@ export const InventoryItemsPage: React.FC = () => {
       defaultPurchaseCost: item.defaultPurchaseCost,
       sellingPrice: item.sellingPrice,
       minStockLevel: item.minStockLevel,
+      openingStock: 0,
+      openingCost: 0,
     });
     setIsModalOpen(true);
   };
@@ -249,6 +257,9 @@ export const InventoryItemsPage: React.FC = () => {
         );
         setSuccessMessage(`Product "${formData.name}" updated successfully.`);
       } else {
+        const openingStock = Math.max(0, Number(formData.openingStock) || 0);
+        const openingCost = Number(formData.openingCost || formData.defaultPurchaseCost || 0);
+
         await salonService.createInventoryItem(
           {
             branchAvailability: [selectedBranchId],
@@ -264,6 +275,10 @@ export const InventoryItemsPage: React.FC = () => {
             sellingPrice: Number(formData.sellingPrice) || 0,
             price: Number(formData.sellingPrice) || 0,
             minStockLevel: Number(formData.minStockLevel) || 5,
+            openingStock,
+            openingQuantity: openingStock,
+            openingCost,
+            branchId: selectedBranchId,
             taxTreatment: 'BRANCH_DEFAULT',
             trackBatch: true,
             trackExpiry: true,
@@ -272,7 +287,8 @@ export const InventoryItemsPage: React.FC = () => {
           },
           user
         );
-        setSuccessMessage(`New product "${formData.name}" added to catalogue.`);
+        const stockNote = openingStock > 0 ? ` with opening stock of ${openingStock} ${formData.purchaseUnit}` : '';
+        setSuccessMessage(`New product "${formData.name}" added to catalogue${stockNote}.`);
       }
       setIsModalOpen(false);
       loadData(selectedBranchId);
@@ -654,10 +670,29 @@ export const InventoryItemsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Purchase Cost (PKR)
+                    Unit
+                  </label>
+                  <select
+                    value={formData.purchaseUnit}
+                    onChange={(e) => setFormData({ ...formData, purchaseUnit: e.target.value as any, issueUnit: e.target.value as any })}
+                    className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden"
+                  >
+                    <option value="BOTTLE">Bottle</option>
+                    <option value="PIECE">Piece</option>
+                    <option value="BOX">Box</option>
+                    <option value="JAR">Jar</option>
+                    <option value="TUBE">Tube</option>
+                    <option value="PACKET">Packet</option>
+                    <option value="ML">ML</option>
+                    <option value="GRAM">Gram</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Cost (PKR)
                   </label>
                   <input
                     type="number"
@@ -670,7 +705,7 @@ export const InventoryItemsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Retail Price (PKR)
+                    Retail (PKR)
                   </label>
                   <input
                     type="number"
@@ -683,7 +718,7 @@ export const InventoryItemsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Min Alert Level
+                    Alert Level
                   </label>
                   <input
                     type="number"
@@ -694,6 +729,56 @@ export const InventoryItemsPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {!editingItem && (
+                <div className="bg-gradient-to-r from-blue-50/80 to-slate-50 border border-blue-200/90 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#0B2545] flex items-center gap-1.5">
+                      <Boxes className="w-3.5 h-3.5 text-[#0047AB]" />
+                      <span>Opening Stock on Hand (Initial Inventory)</span>
+                    </span>
+                    <span className="text-[10px] font-semibold text-[#0047AB] bg-white px-2 py-0.5 rounded-md border border-blue-200">
+                      Auto-initializes Stock
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Opening Quantity ({formData.purchaseUnit}) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0 (Units on shelf)"
+                        value={formData.openingStock === 0 ? '' : formData.openingStock}
+                        onChange={(e) => setFormData({ ...formData, openingStock: Math.max(0, Number(e.target.value) || 0) })}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white font-semibold text-slate-900 focus:outline-hidden focus:ring-1 focus:ring-[#0047AB]"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        How many units are currently in stock?
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Opening Unit Cost (PKR)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder={String(formData.defaultPurchaseCost || 0)}
+                        value={formData.openingCost === 0 ? '' : formData.openingCost}
+                        onChange={(e) => setFormData({ ...formData, openingCost: Number(e.target.value) || 0 })}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-[#0047AB]"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Unit purchase value (Default: PKR {formatPKR(formData.defaultPurchaseCost || 0)})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                 <button

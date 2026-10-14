@@ -415,11 +415,16 @@ export const InventoryPage: React.FC = () => {
             trackExpiry: Boolean(itemFormData.trackExpiry),
             nearExpiryAlertDays: Number(itemFormData.nearExpiryAlertDays) || 60,
             branchAvailability: itemFormData.branchAvailability || ['ALL'],
+            openingStock: Number(itemFormData.openingStock) || 0,
+            openingQuantity: Number(itemFormData.openingStock) || 0,
+            openingCost: Number(itemFormData.openingCost || itemFormData.defaultPurchaseCost) || 0,
+            branchId: selectedBranchId,
             isActive: true,
           },
           user
         );
-        setActionSuccess(`Created item '${itemFormData.name}' with initial stock = 0.`);
+        const opStock = Number(itemFormData.openingStock) || 0;
+        setActionSuccess(`Created item '${itemFormData.name}'${opStock > 0 ? ` with opening stock of ${opStock} units` : ''}.`);
       }
       setIsItemModalOpen(false);
       loadInventoryData(selectedBranchId);
@@ -1931,6 +1936,45 @@ export const InventoryPage: React.FC = () => {
                 className="text-xs h-8 font-mono"
               />
             </div>
+
+            {!editingItem && (
+              <div className="sm:col-span-2 p-3 bg-blue-50/70 border border-blue-200 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0B2545]">Opening Stock on Hand</span>
+                  <span className="text-[10px] text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">
+                    Initial Stock Count
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                      Available Stock Quantity ({itemFormData.purchaseUnit || 'Units'})
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={itemFormData.openingStock === 0 ? '' : itemFormData.openingStock}
+                      onChange={(e) => setItemFormData((prev) => ({ ...prev, openingStock: Math.max(0, Number(e.target.value) || 0) }))}
+                      className="text-xs h-8 font-mono bg-white font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                      Opening Cost (PKR)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder={String(itemFormData.defaultPurchaseCost || 0)}
+                      value={itemFormData.openingCost === 0 ? '' : itemFormData.openingCost}
+                      onChange={(e) => setItemFormData((prev) => ({ ...prev, openingCost: Number(e.target.value) || 0 }))}
+                      className="text-xs h-8 font-mono bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="sm:col-span-2 flex items-center gap-6 pt-2 border-t border-slate-100">
               <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">

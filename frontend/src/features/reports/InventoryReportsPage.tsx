@@ -12,7 +12,9 @@ import {
   InventoryConsumptionRow,
   InventoryExpiryRow,
   Branch,
+  Supplier,
 } from '@/types/salon';
+import { useRouter } from '@/context/RouterContext';
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
 import {
   Filter,
@@ -62,6 +64,8 @@ export const InventoryReportsPage: React.FC = () => {
   const businessDate = demoDate || new Date().toISOString().slice(0, 10);
   const defaultMonth = resolvePreset('THIS_MONTH', businessDate)!;
 
+  const { navigate } = useRouter();
+
   // Sub-report type
   const [activeTab, setActiveTab] = useState<InventorySubReportType>('valuation');
 
@@ -75,6 +79,17 @@ export const InventoryReportsPage: React.FC = () => {
   const [customFrom, setCustomFrom] = useState<string>(defaultMonth.from);
   const [customTo, setCustomTo] = useState<string>(defaultMonth.to);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Suppliers for Single Supplier Ledger Selection
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('ALL');
+
+  useEffect(() => {
+    salonService
+      .getSuppliers(selectedBranch || 'ALL', user)
+      .then((res) => setSuppliers(res || []))
+      .catch(() => setSuppliers([]));
+  }, [selectedBranch, user]);
 
   // Page state: Only fetch when user explicitly clicks Filter ("filter karna sa aae default nhi")
   const [hasFiltered, setHasFiltered] = useState<boolean>(false);
@@ -122,11 +137,13 @@ export const InventoryReportsPage: React.FC = () => {
     setHasFiltered(true);
 
     const targetTab = overrideTab || activeTab;
+    const isLedger = targetTab === 'supplier-ledger' || activeTab === 'supplier-ledger';
     const query: InventoryReportQuery = {
       branchId: selectedBranch,
       type: targetTab,
       categoryId: selectedCategory !== 'ALL' ? selectedCategory : undefined,
       itemType: selectedItemType !== 'ALL' ? selectedItemType : undefined,
+      supplierId: isLedger && selectedSupplierId !== 'ALL' ? selectedSupplierId : undefined,
       preset: selectedPreset,
       from: customFrom || undefined,
       to: customTo || undefined,
@@ -216,37 +233,57 @@ export const InventoryReportsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Category */}
-            <div>
-              <label className={labelClass}>Category</label>
-              <select
-                className={selectClass}
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="ALL">All Categories</option>
-                {(reportData?.categories || []).map((c: string) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {activeTab === 'supplier-ledger' ? (
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Vendor / Supplier (Single or All)</label>
+                <select
+                  className={selectClass}
+                  value={selectedSupplierId}
+                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                >
+                  <option value="ALL">All Suppliers (Combined)</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.companyName || 'Vendor'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <>
+                {/* Category */}
+                <div>
+                  <label className={labelClass}>Category</label>
+                  <select
+                    className={selectClass}
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                  >
+                    <option value="ALL">All Categories</option>
+                    {(reportData?.categories || []).map((c: string) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Item Type */}
-            <div>
-              <label className={labelClass}>Item Type</label>
-              <select
-                className={selectClass}
-                value={selectedItemType}
-                onChange={(e) => setSelectedItemType(e.target.value)}
-              >
-                <option value="ALL">All Types</option>
-                <option value="RETAIL">Retail Products</option>
-                <option value="CONSUMABLE">Salon Consumables</option>
-                <option value="EQUIPMENT">Equipment / Assets</option>
-              </select>
-            </div>
+                {/* Item Type */}
+                <div>
+                  <label className={labelClass}>Item Type</label>
+                  <select
+                    className={selectClass}
+                    value={selectedItemType}
+                    onChange={(e) => setSelectedItemType(e.target.value)}
+                  >
+                    <option value="ALL">All Types</option>
+                    <option value="RETAIL">Retail Products</option>
+                    <option value="CONSUMABLE">Salon Consumables</option>
+                    <option value="EQUIPMENT">Equipment / Assets</option>
+                  </select>
+                </div>
+              </>
+            )}
 
             {/* Date Preset */}
             <div>
@@ -611,43 +648,123 @@ export const InventoryReportsPage: React.FC = () => {
             )}
 
             {activeTab === 'supplier-ledger' && (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
-                <thead>
-                  <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
-                    <th className="py-3.5 px-4">Date</th>
-                    <th className="py-3.5 px-4">Type</th>
-                    <th className="py-3.5 px-4">Ref #</th>
-                    <th className="py-3.5 px-4">Supplier</th>
-                    <th className="py-3.5 px-4 text-right">Debit (Payments)</th>
-                    <th className="py-3.5 px-4 text-right">Credit (Bills)</th>
-                    <th className="py-3.5 px-4 text-right">Running Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dashed divide-slate-200">
-                  {(!reportData?.rows || reportData.rows.length === 0) ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400">
-                        No supplier ledger records found for the selected criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    (reportData.rows as InventorySupplierLedgerRow[]).map((r, i) => (
-                      <tr key={r.id || i} className="hover:bg-blue-50/20 transition-colors border-b border-dashed border-slate-200">
-                        <td className="py-3.5 px-4 text-slate-600">{r.date}</td>
-                        <td className="py-3.5 px-4">
-                          <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
-                            {r.entryType}
+              <>
+                {selectedSupplierId !== 'ALL' && (
+                  <div className="bg-gradient-to-r from-blue-50/90 to-white border border-blue-200/90 rounded-xl p-4 mb-4 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <h3 className="text-sm font-bold text-[#0B2545]">
+                          Single Supplier Khata: {suppliers.find((s) => s.id === selectedSupplierId)?.name || 'Selected Vendor'}
+                        </h3>
+                        {suppliers.find((s) => s.id === selectedSupplierId)?.companyName && (
+                          <span className="text-xs text-slate-500">
+                            ({suppliers.find((s) => s.id === selectedSupplierId)?.companyName})
                           </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                        <span>Contact: {suppliers.find((s) => s.id === selectedSupplierId)?.contactPerson || '—'}</span>
+                        <span>Phone: {suppliers.find((s) => s.id === selectedSupplierId)?.phone || '—'}</span>
+                        <span>Period: {customFrom} to {customTo}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSupplierId('ALL');
+                          const query: InventoryReportQuery = {
+                            branchId: selectedBranch,
+                            type: 'supplier-ledger',
+                            preset: selectedPreset,
+                            from: customFrom || undefined,
+                            to: customTo || undefined,
+                            search: searchQuery.trim() || undefined,
+                          };
+                          fetchReport(query);
+                        }}
+                        className="px-3 py-1.5 text-xs text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg cursor-pointer"
+                      >
+                        View All Suppliers
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/operations/supplier-ledger?supplierId=${selectedSupplierId}`)}
+                        className="px-3 py-1.5 text-xs font-semibold text-white bg-[#0047AB] hover:bg-[#003785] rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Open Operational Khata</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+                  <thead>
+                    <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
+                      <th className="py-3.5 px-4">Date</th>
+                      <th className="py-3.5 px-4">Type</th>
+                      <th className="py-3.5 px-4">Ref #</th>
+                      <th className="py-3.5 px-4">Supplier</th>
+                      <th className="py-3.5 px-4 text-right">Debit (Payments)</th>
+                      <th className="py-3.5 px-4 text-right">Credit (Bills)</th>
+                      <th className="py-3.5 px-4 text-right">Running Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-dashed divide-slate-200">
+                    {(!reportData?.rows || reportData.rows.length === 0) ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                          No supplier ledger records found for the selected criteria.
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">{r.referenceNumber}</td>
-                        <td className="py-3.5 px-4 font-semibold text-[#0B2545]">{r.supplierName}</td>
-                        <td className="py-3.5 px-4 text-right text-slate-700 font-medium">{formatPKR(r.debit)}</td>
-                        <td className="py-3.5 px-4 text-right font-medium text-[#0047AB]">{formatPKR(r.credit)}</td>
-                        <td className="py-3.5 px-4 text-right font-bold text-[#0B2545]">{formatPKR(r.runningBalance)}</td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
+                    ) : (
+                      (reportData.rows as InventorySupplierLedgerRow[]).map((r, i) => (
+                        <tr key={r.id || i} className="hover:bg-blue-50/20 transition-colors border-b border-dashed border-slate-200">
+                          <td className="py-3.5 px-4 text-slate-600">{r.date}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
+                              {r.entryType}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">{r.referenceNumber}</td>
+                          <td className="py-3.5 px-4 font-semibold text-[#0B2545]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (r.supplierId) {
+                                  setSelectedSupplierId(r.supplierId);
+                                  const query: InventoryReportQuery = {
+                                    branchId: selectedBranch,
+                                    type: 'supplier-ledger',
+                                    supplierId: r.supplierId,
+                                    preset: selectedPreset,
+                                    from: customFrom || undefined,
+                                    to: customTo || undefined,
+                                    search: searchQuery.trim() || undefined,
+                                  };
+                                  fetchReport(query);
+                                }
+                              }}
+                              className="hover:text-[#0047AB] hover:underline text-left cursor-pointer flex items-center gap-1.5"
+                              title="Filter ledger for this single supplier"
+                            >
+                              <span>{r.supplierName}</span>
+                              {selectedSupplierId === 'ALL' && (
+                                <span className="text-[10px] text-[#0047AB] bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded font-normal">
+                                  Single View
+                                </span>
+                              )}
+                            </button>
+                          </td>
+                          <td className="py-3.5 px-4 text-right text-slate-700 font-medium">{formatPKR(r.debit)}</td>
+                          <td className="py-3.5 px-4 text-right font-medium text-[#0047AB]">{formatPKR(r.credit)}</td>
+                          <td className="py-3.5 px-4 text-right font-bold text-[#0B2545]">{formatPKR(r.runningBalance)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
                 {totals && reportData && reportData.rows.length > 0 && (
                   <tfoot className="bg-[#F8FAFC] font-bold text-[#0B2545] border-t-2 border-slate-200 text-[13px]">
                     <tr>
@@ -662,7 +779,8 @@ export const InventoryReportsPage: React.FC = () => {
                   </tfoot>
                 )}
               </table>
-            )}
+            </>
+          )}
 
             {activeTab === 'consumption' && (
               <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">

@@ -108,6 +108,56 @@ export const createItem = async (input, actor) =>
       data: { branchAvailability: ['ALL'], ...itemData(input), sku, name: input.name, category: input.category || 'General', itemType: input.itemType },
     });
     await audit(tx, actor, 'INVENTORY_ITEM_CREATED', 'InventoryItem', item.id, null, item);
+
+    const openingQty = Number(input.openingStock ?? input.openingQuantity ?? 0);
+    if (openingQty > 0) {
+      const branchId = input.branchId || actor.branchId || (await tx.branch.findFirst({ select: { id: true } }))?.id;
+      if (branchId) {
+        const branch = await tx.branch.findUnique({ where: { id: branchId } });
+        if (branch) {
+          const unitCost = input.openingCost !== undefined && input.openingCost !== null && !isNaN(Number(input.openingCost))
+            ? Number(input.openingCost)
+            : (Number(item.defaultPurchaseCost) || 0);
+
+          let supplierName = null;
+          if (input.supplierId) {
+            const supp = await tx.supplier.findUnique({ where: { id: input.supplierId } });
+            if (supp) supplierName = supp.name;
+          }
+
+          const batchNumber = `BATCH-OPN-${sku}`;
+          const batch = await tx.inventoryBatch.create({
+            data: {
+              itemId: item.id,
+              branchId: branch.id,
+              batchNumber,
+              supplierId: input.supplierId || null,
+              supplierName: supplierName || null,
+              receivedDate: new Date(),
+              initialQuantity: openingQty,
+              remainingQuantity: 0,
+              unitCost,
+            },
+          });
+
+          await postStockMovement(tx, {
+            branchCode: branch.code,
+            branchId: branch.id,
+            itemId: item.id,
+            batch,
+            movementType: 'OPENING_STOCK',
+            quantity: openingQty,
+            unitCost,
+            sourceReferenceType: 'OPENING',
+            sourceReferenceId: batch.id,
+            sourceReferenceNumber: `OPN-${batch.batchNumber}`,
+            reason: 'Opening stock balance on product creation',
+            actor,
+          });
+        }
+      }
+    }
+
     return toItemDTO(item);
   });
 

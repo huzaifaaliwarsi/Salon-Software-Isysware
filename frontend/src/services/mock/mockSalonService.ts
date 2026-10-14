@@ -10331,6 +10331,58 @@ class MockSalonService implements SalonServiceContract {
 
     if (!store.inventoryItems) store.inventoryItems = [];
     store.inventoryItems.push(newItem);
+
+    const openingQty = Number((input as any).openingStock || (input as any).openingQuantity || 0);
+    if (openingQty > 0) {
+      if (!store.inventoryBatches) store.inventoryBatches = [];
+      const branchId = (input as any).branchId || (store.branches?.[0]?.id || 'branch-1');
+      const unitCost = Number((input as any).openingCost || input.defaultPurchaseCost || 0);
+      const batchId = `batch-opn-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+      const batch: InventoryBatch = {
+        id: batchId,
+        itemId: newItem.id,
+        itemName: newItem.name,
+        itemSku: newItem.sku,
+        branchId,
+        batchNumber: `BATCH-OPN-${newItem.sku}`,
+        initialQuantity: openingQty,
+        purchasedQuantity: openingQty,
+        remainingQuantity: openingQty,
+        unitCostSnapshot: unitCost,
+        unitPurchaseCost: unitCost,
+        receivedDate: now.slice(0, 10),
+        status: 'VALID',
+        createdAt: now,
+        updatedAt: now,
+      };
+      store.inventoryBatches.push(batch);
+
+      if (!store.stockMovements) store.stockMovements = [];
+      const sm: StockMovement = {
+        id: `sm-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+        movementNumber: `SM-OPN-${Date.now().toString().slice(-5)}`,
+        branchId,
+        itemId: newItem.id,
+        itemName: newItem.name,
+        itemSku: newItem.sku,
+        batchId,
+        batchNumber: batch.batchNumber,
+        movementType: 'OPENING_STOCK',
+        quantity: openingQty,
+        unitCostSnapshot: unitCost,
+        totalCostImpact: roundCurrency(openingQty * unitCost),
+        direction: 'IN',
+        sourceReferenceType: 'OPENING',
+        sourceReferenceId: batchId,
+        sourceReferenceNumber: `OPN-${batch.batchNumber}`,
+        reason: 'Opening stock balance',
+        createdById: authenticatedActor.id,
+        createdByName: authenticatedActor.name,
+        createdAt: now,
+      };
+      store.stockMovements.push(sm);
+    }
+
     mockStorage.saveStore(store);
 
     return { ...newItem };

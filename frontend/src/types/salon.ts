@@ -567,7 +567,13 @@ export interface COGSReportSummary {
   serviceContributionBeforeExpenses: number;
 }
 
-export type CreateInventoryItemInput = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'>;
+export type CreateInventoryItemInput = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> & {
+  openingStock?: number;
+  openingQuantity?: number;
+  openingCost?: number;
+  branchId?: string;
+  supplierId?: string;
+};
 
 export interface CreatePurchaseInput {
   branchId: string;
