@@ -49,6 +49,7 @@ import { IncomeExpenseReportPage } from '../features/reports/IncomeExpenseReport
 import { TaxReportPage } from '../features/reports/TaxReportPage';
 import { PaymentAccountsReportPage } from '../features/reports/PaymentAccountsReportPage';
 import { CashDrawerLogsReportPage } from '../features/reports/CashDrawerLogsReportPage';
+import { DebitCreditStatementPage } from '../features/reports/DebitCreditStatementPage';
 import { DetailedExpensesReportPage } from '../features/reports/DetailedExpensesReportPage';
 import { StaffSalaryReportPage } from '../features/reports/StaffSalaryReportPage';
 import { StaffCommissionReportPage } from '../features/reports/StaffCommissionReportPage';
@@ -170,6 +171,12 @@ export const AppRouter: React.FC = () => {
       pathname === '/reports/settlement-history'
     ) {
       return <AccountSettlementPage />;
+    }
+    if (pathname === '/reports/debit-credit' || pathname === '/reports/debit-credit-statement') {
+      return <DebitCreditStatementPage />;
+    }
+    if (pathname === '/reports/payment-accounts') {
+      return <PaymentAccountsReportPage />;
     }
     if (pathname === '/reports/cash-drawer') {
       return <CashDrawerLogsReportPage />;

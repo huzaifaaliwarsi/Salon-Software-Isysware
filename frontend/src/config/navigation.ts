@@ -297,6 +297,14 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         description: 'Posted bills, discounts, tax, tips, payments and refunds',
       },
       {
+        id: 'rep-debit-credit',
+        label: 'Debit / Credit Statement',
+        href: '/reports/debit-credit',
+        iconName: 'ArrowRightLeft',
+        allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],
+        description: 'Universal double-entry ledger across Payment Accounts and Cash Drawer',
+      },
+      {
         id: 'rep-payment-accounts',
         label: 'Payment Accounts',
         href: '/reports/payment-accounts',

@@ -2103,6 +2103,8 @@ export type IncomeExpenseItemType =
   | 'INVENTORY_WRITEOFF';
 
 export interface IncomeExpenseReportRow {
+  collectionAmount?: number;
+  paymentEventType?: string;
   cashFlow?: number;
   id: string;
   date: string;
@@ -2124,6 +2126,7 @@ export interface IncomeExpenseReportRow {
 }
 
 export interface IncomeExpenseReportKPIs {
+  totalCollections?: number;
   totalRecognizedIncome: number;
   cogs?: number;
   grossContribution?: number;
@@ -2169,6 +2172,7 @@ export interface IncomeExpenseReport {
   kpis: IncomeExpenseReportKPIs;
   rows: IncomeExpenseReportRow[];
   totals: {
+    collections?: number;
     income: number;
     expense: number;
     paid?: number;
@@ -2852,7 +2856,7 @@ export interface CashDrawerReportRow {
   totalCashOut: number;
   expectedCash: number;
   countedCash: number | null;
-  variance: number;
+  variance: number | null;
   onlineTotal: number;
   onlineBreakdown: { accountName: string; amount: number }[];
   latestSettlement?: {

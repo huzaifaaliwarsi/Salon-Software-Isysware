@@ -205,7 +205,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
         r.branchName || '—',
         r.description || r.reference || '—',
         r.status || 'PAID',
-        isIncome ? `+${r.income.toFixed(2)}` : `-${r.expense.toFixed(2)}`,
+        (isIncome ? r.income : r.expense) === 0 ? '0.00' : isIncome ? `+${r.income.toFixed(2)}` : `-${r.expense.toFixed(2)}`,
         r.cashFlow !== undefined ? `${r.cashFlow >= 0 ? '+' : '-'}${Math.abs(r.cashFlow).toFixed(2)}` : isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${paidVal.toFixed(2)}` : `-${paidVal.toFixed(2)}`,
         (r.discount || 0).toFixed(2),
         remainingVal.toFixed(2),
@@ -274,7 +274,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
         r.branchName || '—',
         r.description || r.reference || '—',
         r.status || 'PAID',
-        isIncome ? `+${r.income.toFixed(2)}` : `-${r.expense.toFixed(2)}`,
+        (isIncome ? r.income : r.expense) === 0 ? '0.00' : isIncome ? `+${r.income.toFixed(2)}` : `-${r.expense.toFixed(2)}`,
         r.cashFlow !== undefined ? `${r.cashFlow >= 0 ? '+' : '-'}${Math.abs(r.cashFlow).toFixed(2)}` : isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${paidVal.toFixed(2)}` : `-${paidVal.toFixed(2)}`,
         (r.discount || 0).toFixed(2),
         remainingVal.toFixed(2),
@@ -312,7 +312,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
     return reportData.rows.reduce((acc, r) => {
       const isIncome = r.income > 0 || r.type === 'INCOME';
       const isAccruedComm = r.type === 'COMMISSION_EXPENSE' && (r.status === 'ACCRUED' || !r.paid);
-      const paidVal = isAccruedComm ? 0 : isIncome ? (r.paid ?? r.income) : (r.paid ?? r.expense);
+      const paidVal = isAccruedComm ? 0 : isIncome ? (r.collectionAmount ?? r.paid ?? r.income) : (r.paid ?? r.expense);
       return r.cashFlow !== undefined ? acc + r.cashFlow : isIncome ? acc + paidVal : acc - paidVal;
     }, 0);
   }, [reportData]);
@@ -347,7 +347,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
         r.branchName || '—',
         r.description || r.reference || '—',
         r.status || 'PAID',
-        isIncome ? `+${formatPKR(r.income)}` : `-${formatPKR(r.expense)}`,
+        (isIncome ? r.income : r.expense) === 0 ? '0.00' : isIncome ? `+${formatPKR(r.income)}` : `-${formatPKR(r.expense)}`,
         r.cashFlow !== undefined ? `${r.cashFlow >= 0 ? '+' : '-'}${formatPKR(Math.abs(r.cashFlow))}` : isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${formatPKR(paidVal)}` : `-${formatPKR(paidVal)}`,
         formatPKR(r.discount || 0),
         formatPKR(remainingVal),
@@ -615,7 +615,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
                   <th className="py-3.5 px-4 font-medium text-[#475569] min-w-[220px]">Title</th>
                   <th className="py-3.5 px-4 font-medium text-[#475569] text-center w-24">Status</th>
                   <th className="py-3.5 px-4 font-medium text-[#475569] text-right whitespace-nowrap">Amount</th>
-                  <th className="py-3.5 px-4 font-medium text-[#475569] text-right whitespace-nowrap">Paid</th>
+                  <th className="py-3.5 px-4 font-medium text-[#475569] text-right whitespace-nowrap">Total Paid / Collection</th>
                   <th className="py-3.5 px-4 font-medium text-[#475569] text-right whitespace-nowrap">Discount</th>
                   <th className="py-3.5 px-4 font-medium text-[#475569] text-right whitespace-nowrap">Remaining</th>
                   <th className="py-3.5 px-4 font-medium text-[#475569] whitespace-nowrap">Date</th>
@@ -655,7 +655,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
                         {/* 3. Source */}
                         <td className="py-3.5 px-4 whitespace-nowrap text-[#475569] text-[13px] font-normal">
-                          {row.source || (isIncome ? 'Fee Collection' : 'Expense')}
+                          {row.paymentEventType ? row.paymentEventType.replaceAll('_', ' ') : row.source || (isIncome ? 'Fee Collection' : 'Expense')}
                         </td>
 
                         {/* 4. User */}
@@ -701,7 +701,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
                         {/* 8. Amount (Recognized) */}
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <span className={`text-[13px] font-semibold tabular-nums ${isIncome ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                            {isIncome ? `+${formatPKR(amountValue)}` : `-${formatPKR(amountValue)}`}
+                            {amountValue === 0 ? '0.00' : formatPKR(amountValue * (isIncome ? 1 : -1), true)}
                           </span>
                         </td>
 
@@ -753,6 +753,13 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
               {/* Integrated Table Footer */}
               <tfoot className="bg-[#F8FAFC] border-t-2 border-slate-200 font-['Inter',sans-serif] text-[13px]">
+                {reportData?.totals.collections !== undefined && (
+                  <tr className="border-b border-slate-200/70">
+                    <td colSpan={7} className="py-3 px-4 text-right font-medium text-slate-700">Total Collections (Net Client Payments)</td>
+                    <td colSpan={4} className="py-3 px-4 text-right font-bold tabular-nums">{formatPKR(reportData.totals.collections, true)}</td>
+                    <td colSpan={2} />
+                  </tr>
+                )}
                 {/* Row 1: TOTALS (PKR) */}
                 <tr className="border-b border-slate-200/70">
                   <td colSpan={7} className="py-3.5 px-4 text-right font-bold text-slate-800 tracking-wide">

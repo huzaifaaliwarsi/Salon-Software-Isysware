@@ -615,7 +615,7 @@ export const incomeExpenseReport = async (actor, query = {}) => {
         lifecycle: true,
         processedByName: true,
         notes: true,
-        payments: { where: { kind: 'POS', reversedAt: null }, select: { billAmountAllocated: true } },
+        payments: { where: { reversedAt: null }, select: { kind: true, billAmountAllocated: true } },
       },
     }),
     // 2. Sales Refunds (Dated Reversal Events reducing recognized income)
@@ -778,10 +778,12 @@ export const incomeExpenseReport = async (actor, query = {}) => {
       income: n(net),
       expense: 0,
       paid: n(paidAmt),
+      // Invoice paid is cumulative; collection events contribute separately to cash flow.
+      collectionAmount: n(inv.payments.filter((p) => p.kind === 'POS').reduce((sum, p) => sum.plus(p.billAmountAllocated), toDec(0))),
       discount: n(toDec(inv.discount || 0)),
       remaining: n(due),
       paymentMethod: inv.paymentMethod || 'CASH',
-      status: inv.status,
+      status: due.isZero() ? 'PAID' : paidAmt.gt(0) ? 'PARTIAL' : 'UNPAID',
     });
   }
 
@@ -1020,7 +1022,7 @@ export const incomeExpenseReport = async (actor, query = {}) => {
       id: movement.id, date: toDateString(movement.createdAt), type: 'SETTLEMENT', category: movement.sourceModule === 'POS' ? 'Client Collections' : 'Supplier Payments',
       source: movement.sourceModule, reference: movement.reference, branchId: movement.branchId, branchName: branchMap.get(movement.branchId),
       userOrPayee: movement.userName, description: movement.description, income: 0, expense: 0, paid: 0, discount: 0, remaining: 0,
-      cashFlow: n(toDec(movement.amount).times(movement.direction === 'IN' ? 1 : -1)), paymentMethod: method, status: movement.type,
+      cashFlow: n(toDec(movement.amount).times(movement.direction === 'IN' ? 1 : -1)), paymentMethod: method, paymentEventType: movement.type, status: 'POSTED',
     });
   }
   const typeFilter = query.type && query.type !== 'ALL' ? query.type : null;
@@ -1100,7 +1102,7 @@ export const incomeExpenseReport = async (actor, query = {}) => {
     }
     if (r.paid) {
       if (isIncome) {
-        totalPaidIncome = totalPaidIncome.plus(r.paid);
+        totalPaidIncome = totalPaidIncome.plus(r.collectionAmount ?? r.paid);
       } else {
         totalPaidExpense = totalPaidExpense.plus(r.paid);
       }
@@ -1130,6 +1132,8 @@ export const incomeExpenseReport = async (actor, query = {}) => {
   const netOperatingPosition = round2(grossContribution.minus(totalOperatingExpenses));
 
   const settlementCashFlow = filteredRows.reduce((sum, row) => sum.plus(row.cashFlow || 0), toDec(0));
+  const totalCollections = filteredRows.reduce((sum, row) => row.type === 'SETTLEMENT' && row.source === 'POS'
+    ? sum.plus(row.cashFlow || 0) : sum, totalPaidIncome);
   const totalPaid = totalPaidIncome.minus(totalPaidExpense).plus(settlementCashFlow);
   const operatingMarginPercent = totalIncome.greaterThan(0)
     ? round2(netOperatingPosition.dividedBy(totalIncome).times(100)).toNumber()
@@ -1140,6 +1144,7 @@ export const incomeExpenseReport = async (actor, query = {}) => {
 
   const kpis = {
     totalRecognizedIncome: n(totalIncome),
+    totalCollections: n(totalCollections),
     cogs: n(totalCogs),
     retailCogs: n(retailCogs),
     consumableUsage: n(consumableUsage),
@@ -1160,6 +1165,7 @@ export const incomeExpenseReport = async (actor, query = {}) => {
     grossContribution: n(grossContribution),
     expense: n(totalOperatingExpenses),
     paid: n(totalPaid),
+    collections: n(totalCollections),
     discount: n(totalDiscount),
     remaining: n(totalRemaining),
     net: n(netOperatingPosition),
@@ -1930,7 +1936,9 @@ export const cashDrawerReport = async (actor, query = {}) => {
     where: {
       ...branchFilter,
       OR: [{ date: dateRange }, { reversalDate: dateRange }],
-      ...(actor.role === 'ACCOUNTANT' ? { processedByUserId: actor.id } : {}),
+      ...(actor.role === 'ACCOUNTANT'
+        ? { processedByUserId: actor.id }
+        : (query.custodianUserId && query.custodianUserId !== 'ALL' ? { processedByUserId: query.custodianUserId } : {})),
     },
     select: {
       id: true,
@@ -1958,7 +1966,8 @@ export const cashDrawerReport = async (actor, query = {}) => {
     credit: movement.direction === 'OUT' ? n(toDec(movement.amount)) : 0,
     cashIn: movement.direction === 'IN' ? n(toDec(movement.amount)) : 0,
     cashOut: movement.direction === 'OUT' ? n(toDec(movement.amount)) : 0,
-    actor: movement.userName, description: movement.description,
+    actor: movement.userName, actorUserId: movement.userId, branchId: drawer.branchId,
+    custodianUserId: drawer.custodianUserId, paymentMethod: 'CASH', description: movement.description,
   }))).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
 
   // Fetch active payment accounts for this scope to list all accounts (even if 0)
@@ -2078,11 +2087,11 @@ export const cashDrawerReport = async (actor, query = {}) => {
     const countedCash =
       d.lastCountedCash !== null && d.lastCountedCash !== undefined
         ? toDec(d.lastCountedCash)
-        : (d.status === 'SETTLED' ? expectedCash : null);
+        : null;
     const variance =
-      d.lastVariance !== null && d.lastVariance !== undefined
+      countedCash !== null && d.lastVariance !== null && d.lastVariance !== undefined
         ? toDec(d.lastVariance)
-        : (countedCash !== null ? countedCash.minus(expectedCash) : toDec(0));
+        : (countedCash !== null ? countedCash.minus(expectedCash) : null);
 
     totalOpeningFloat = totalOpeningFloat.plus(openingFloat);
     totalCashSales = totalCashSales.plus(cashSales);
@@ -2096,7 +2105,7 @@ export const cashDrawerReport = async (actor, query = {}) => {
     totalCashOut = totalCashOut.plus(cashOut);
     totalExpectedCash = totalExpectedCash.plus(expectedCash);
     if (countedCash !== null) totalCountedCash = totalCountedCash.plus(countedCash);
-    totalVariance = totalVariance.plus(variance);
+    if (variance !== null) totalVariance = totalVariance.plus(variance);
 
     // Online breakdown for this drawer
     const onlineInfo = onlineByDrawer.get(d.id) || onlineByDrawer.get(`${d.custodianUserId}_${ymd(d.date)}`);
@@ -2132,7 +2141,7 @@ export const cashDrawerReport = async (actor, query = {}) => {
       totalCashOut: n(cashOut),
       expectedCash: n(expectedCash),
       countedCash: countedCash !== null ? n(countedCash) : null,
-      variance: n(variance),
+      variance: variance !== null ? n(variance) : null,
       onlineTotal: n(drawerOnlineTotal),
       onlineBreakdown: drawerOnlineBreakdown,
       latestSettlement: latestSettlement

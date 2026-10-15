@@ -1,3 +1,4 @@
+import { drawerDebits, drawerMoney } from './cashDrawerUtils';
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { salonService } from '@/services';
@@ -140,9 +141,9 @@ export const CashDrawerLogsReportPage: React.FC = () => {
       'Campus',
       'Status',
       'Opening Float',
-      'Sales Cash In',
-      'Expenses Out',
-      'Tips Paid Out',
+      'Debits (Cash In)',
+      'Credits (Cash Out)',
+      'Tips Collected (Included in Debits)',
       'Expected Cash',
       'Counted Cash',
       'Discrepancy',
@@ -155,12 +156,12 @@ export const CashDrawerLogsReportPage: React.FC = () => {
       r.branchName,
       r.status,
       r.openingFloat.toFixed(2),
-      r.cashSales.toFixed(2),
-      r.cashExpenses.toFixed(2),
+      drawerDebits(r).toFixed(2),
+      r.totalCashOut.toFixed(2),
       r.cashTips.toFixed(2),
       r.expectedCash.toFixed(2),
-      (r.countedCash ?? 0).toFixed(2),
-      r.variance.toFixed(2),
+      r.countedCash == null ? '\u2014' : r.countedCash.toFixed(2),
+      r.variance == null ? '\u2014' : r.variance.toFixed(2),
     ]);
 
     downloadReportExcel('Cash_Drawer_Report', meta, [{ headers, rows }]);
@@ -183,9 +184,9 @@ export const CashDrawerLogsReportPage: React.FC = () => {
       'Campus',
       'Status',
       'Opening Float',
-      'Sales Cash In',
-      'Expenses Out',
-      'Tips Paid Out',
+      'Debits (Cash In)',
+      'Credits (Cash Out)',
+      'Tips Collected (Included in Debits)',
       'Expected Cash',
       'Counted Cash',
       'Discrepancy',
@@ -198,12 +199,12 @@ export const CashDrawerLogsReportPage: React.FC = () => {
       r.branchName,
       r.status,
       r.openingFloat.toFixed(2),
-      r.cashSales.toFixed(2),
-      r.cashExpenses.toFixed(2),
+      drawerDebits(r).toFixed(2),
+      r.totalCashOut.toFixed(2),
       r.cashTips.toFixed(2),
       r.expectedCash.toFixed(2),
-      (r.countedCash ?? 0).toFixed(2),
-      r.variance.toFixed(2),
+      r.countedCash == null ? '\u2014' : r.countedCash.toFixed(2),
+      r.variance == null ? '\u2014' : r.variance.toFixed(2),
     ]);
 
     downloadReportCsv('Cash_Drawer_Report', meta, [{ headers, rows }]);
@@ -219,10 +220,10 @@ export const CashDrawerLogsReportPage: React.FC = () => {
       ['From Date', fromDate || reportData.meta.from || '—'],
       ['To Date', toDate || reportData.meta.to || '—'],
       ['Expected Closing Cash', formatPKR(reportData.totals.expectedCash)],
-      ['Counted Cash', formatPKR(reportData.totals.countedCash)],
-      ['Total Discrepancy', formatPKR(reportData.totals.variance)],
+      ['Counted Cash', reportData.rows.some(r => r.countedCash != null) ? drawerMoney(reportData.totals.countedCash) : '\u2014'],
+      ['Total Discrepancy', reportData.rows.some(r => r.countedCash != null) ? drawerMoney(reportData.totals.variance) : '\u2014'],
     ];
-    const headers = ['#', 'Date', 'Custodian', 'Campus', 'Status', 'Opening Float', 'Sales Cash', 'Expected Cash', 'Counted Cash', 'Variance'];
+    const headers = ['#', 'Date', 'Custodian', 'Campus', 'Status', 'Opening Float', 'Debits (Cash In)', 'Credits (Cash Out)', 'Expected Cash', 'Counted Cash', 'Variance'];
     const rows = reportData.rows.map((r, i) => [
       i + 1,
       formatDateDisplay(r.date),
@@ -230,10 +231,10 @@ export const CashDrawerLogsReportPage: React.FC = () => {
       r.branchName,
       r.status,
       formatPKR(r.openingFloat),
-      formatPKR(r.cashSales),
+      drawerMoney(drawerDebits(r)),
       formatPKR(r.expectedCash),
-      formatPKR(r.countedCash ?? 0),
-      formatPKR(r.variance),
+      drawerMoney(r.countedCash),
+      drawerMoney(r.variance),
     ]);
 
     printReportWindow({
@@ -426,7 +427,7 @@ export const CashDrawerLogsReportPage: React.FC = () => {
                   <th className="py-3.5 px-4 text-right">Opening Float</th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">Debits (Cash In)</th>
                   <th className="py-3.5 px-4 text-right whitespace-nowrap">Credits (Cash Out)</th>
-                  <th className="py-3.5 px-4 text-right">Tips Paid</th>
+                  <th className="py-3.5 px-4 text-right">Tips Collected</th>
                   <th className="py-3.5 px-4 text-right">Expected Cash</th>
                   <th className="py-3.5 px-4 text-right">Counted Cash</th>
                   <th className="py-3.5 px-4 text-right">Variance</th>
@@ -436,7 +437,7 @@ export const CashDrawerLogsReportPage: React.FC = () => {
                 {reportData && reportData.rows.length > 0 ? (
                   reportData.rows.map((row: CashDrawerReportRow, idx: number) => {
                     const isSettled = row.status === 'SETTLED';
-                    const hasDiscrepancy = Math.abs(row.variance) > 0.01;
+                    const hasDiscrepancy = Math.abs(row.variance ?? 0) > 0.01;
                     const dateParts = formatDateParts(row.date);
 
                     return (
@@ -482,17 +483,17 @@ export const CashDrawerLogsReportPage: React.FC = () => {
 
                         {/* 7. Sales Cash In */}
                         <td className="py-3.5 px-4 text-right tabular-nums font-semibold text-[#10B981] whitespace-nowrap">
-                          +{formatPKR(row.cashSales)}
+                          {drawerMoney(drawerDebits(row), true)}
                         </td>
 
                         {/* 8. Expenses Out */}
                         <td className="py-3.5 px-4 text-right tabular-nums font-medium text-[#EF4444] whitespace-nowrap">
-                          -{formatPKR(row.cashExpenses)}
+                          {drawerMoney(-row.totalCashOut, true)}
                         </td>
 
                         {/* 9. Tips Paid */}
                         <td className="py-3.5 px-4 text-right tabular-nums font-medium text-slate-600 whitespace-nowrap">
-                          -{formatPKR(row.cashTips)}
+                          {drawerMoney(row.cashTips)}
                         </td>
 
                         {/* 10. Expected Cash */}
@@ -508,12 +509,10 @@ export const CashDrawerLogsReportPage: React.FC = () => {
                         {/* 12. Variance */}
                         <td
                           className={`py-3.5 px-4 text-right tabular-nums font-semibold whitespace-nowrap ${
-                            hasDiscrepancy ? (row.variance > 0 ? 'text-[#10B981]' : 'text-[#EF4444]') : 'text-slate-500'
+                            hasDiscrepancy ? ((row.variance ?? 0) > 0 ? 'text-[#10B981]' : 'text-[#EF4444]') : 'text-slate-500'
                           }`}
                         >
-                          {row.variance >= 0
-                            ? `+${formatPKR(row.variance)}`
-                            : `-${formatPKR(Math.abs(row.variance))}`}
+                          {drawerMoney(row.variance, true)}
                         </td>
                       </tr>
                     );
@@ -538,12 +537,10 @@ export const CashDrawerLogsReportPage: React.FC = () => {
                     {formatPKR(reportData?.totals?.expectedCash ?? 0)}
                   </td>
                   <td className="py-3.5 px-4 text-right tabular-nums font-bold text-[#0047AB]">
-                    {formatPKR(reportData?.totals?.countedCash ?? 0)}
+                    {reportData?.rows.some(r => r.countedCash != null) ? drawerMoney(reportData.totals.countedCash) : '\u2014'}
                   </td>
                   <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-800">
-                    {(reportData?.totals?.variance ?? 0) >= 0
-                      ? `+${formatPKR(reportData?.totals?.variance ?? 0)}`
-                      : `-${formatPKR(Math.abs(reportData?.totals?.variance ?? 0))}`}
+                    {reportData?.rows.some(r => r.countedCash != null) ? drawerMoney(reportData.totals.variance, true) : '\u2014'}
                   </td>
                 </tr>
 
@@ -553,7 +550,7 @@ export const CashDrawerLogsReportPage: React.FC = () => {
                     Net Physical Cash Collected
                   </td>
                   <td colSpan={3} className="py-3 px-4 text-right tabular-nums font-bold text-[#0047AB] text-sm">
-                    +{formatPKR(reportData?.totals?.countedCash ?? 0)}
+                    {drawerMoney(reportData?.tenderBreakdown.totalCash)}
                   </td>
                 </tr>
               </tfoot>

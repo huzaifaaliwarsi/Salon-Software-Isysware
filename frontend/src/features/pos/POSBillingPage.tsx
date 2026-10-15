@@ -2493,18 +2493,6 @@ export const POSBillingPage: React.FC = () => {
               >
                 50% Partial ({formatCurrency(Math.round(calculations.fullInvoiceTotal / 2))})
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCashTenderedInput(0);
-                  setOnlineAmountInput(0);
-                  setSplitCashAmount(0);
-                  setSplitCashTendered(0);
-                }}
-                className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer"
-              >
-                Unpaid / Credit Khata (PKR 0)
-              </button>
             </div>
 
             {/* Real-time Status Card */}

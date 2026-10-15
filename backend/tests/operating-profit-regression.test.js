@@ -61,6 +61,25 @@ describe('Signed report exports', () => {
 });
 
 describe('Operating Profit recognition', () => {
+  it.each([['CASH', 'drawerMovement'], ['ONLINE_ACCOUNT', 'accountMovement']])('reconciles partial invoice and dues collection via %s once', async (method, model) => {
+    for (const table of Object.values(db)) table.findMany.mockResolvedValue([]);
+    db.invoice.findMany.mockResolvedValue([{
+      id: 'partial', invoiceNumber: 'INV-0002', date: new Date('2026-10-01'),
+      branchId: actor.branchId, netSales: 1000, subtotal: 1000, discount: 0,
+      amountDue: 0, status: 'PARTIAL', paymentMethod: method,
+      payments: [{ kind: 'POS', billAmountAllocated: 400 }, { kind: 'DUES_COLLECTION', billAmountAllocated: 600 }],
+    }]);
+    db[model].findMany.mockResolvedValue([{
+      id: 'collection', createdAt: new Date('2026-10-15'), branchId: actor.branchId,
+      sourceModule: 'POS', type: 'DUES_COLLECTION', direction: 'IN', amount: 600,
+    }]);
+    const report = await incomeExpenseReport(actor, query);
+    expect(report.rows.find(r => r.reference === 'INV-0002')).toMatchObject({ income: 1000, paid: 1000, remaining: 0, status: 'PAID', collectionAmount: 400 });
+    expect(report.rows.find(r => r.id === 'collection')).toMatchObject({ income: 0, expense: 0, cashFlow: 600, paymentEventType: 'DUES_COLLECTION', status: 'POSTED' });
+    expect(report.totals).toMatchObject({ income: 1000, paid: 1000, collections: 1000, remaining: 0, net: 1000 });
+    expect(db.invoice.findMany.mock.calls[0][0].select.payments.where).toEqual({ reversedAt: null });
+  });
+
   it('keeps stored salary intact in Income & Expense when commission is reported separately', async () => {
     db.invoice.findMany.mockResolvedValue([]);
     db.expense.findMany.mockResolvedValue([]);
