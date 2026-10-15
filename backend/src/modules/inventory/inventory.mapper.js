@@ -171,6 +171,11 @@ export const toPurchaseDTO = (p, accountName) => ({
 export const toSupplierPaymentDTO = (p, supplierName, accountName) => ({
   id:                 p.id,
   paymentNumber:      p.paymentNumber,
+  allocations: p.allocations,
+  reversedAt: p.reversedAt ? iso(p.reversedAt) : undefined,
+  reversedByName: p.reversedByName,
+  reversalReason: p.reversalReason,
+  reversalDate: p.reversalDate ? ymd(p.reversalDate) : undefined,
   supplierId:         p.supplierId,
   supplierName,
   branchId:           p.branchId,

@@ -33,6 +33,8 @@ import {
   StaffSalaryReport,
   StaffCommissionReport,
   SalesInvoicesReport,
+  DetailedIncomeReport,
+  DetailedIncomeReportQuery,
   IncomeExpenseReport,
   TaxReport,
   OperatingProfitReport,
@@ -190,7 +192,17 @@ const liveMethods: SalonServiceContract = {
       },
       appointments: [...appointments].sort((a, b) => b.date.localeCompare(a.date)),
       invoices,
-      receipts: invoices.flatMap((i) => i.payments || []),
+      receipts: invoices
+        .flatMap((i) =>
+          (i.payments || []).map((p) => ({
+            ...p,
+            invoiceNumber: i.invoiceNumber,
+            invoiceId: i.id,
+            clientName: i.clientName,
+            invoiceTotal: i.total,
+          }))
+        )
+        .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || '')),
       outstandingInvoices,
       visitCount: sorted.length,
       lastVisitDate: sorted[sorted.length - 1],
@@ -246,8 +258,10 @@ const liveMethods: SalonServiceContract = {
     const range = dateRangeOrActor && !('role' in dateRangeOrActor) ? dateRangeOrActor : {};
     return api.get(`/suppliers/${supplierId}/ledger`, { ...branchQuery(branchId), ...range });
   },
-  paySupplier: (input) => api.post(`/suppliers/${input.supplierId}/payments`, input, newIdempotencyKey()),
-  recordSupplierPayment: (input) => api.post(`/suppliers/${input.supplierId}/payments`, input, newIdempotencyKey()),
+  reverseSupplierPayment: (supplierId, paymentId, input) => api.post(`/suppliers/${supplierId}/payments/${paymentId}/reverse`, input, input.idempotencyKey),
+  reverseCollection: (invoiceId, paymentId, input) => api.post<Invoice>(`/invoices/${invoiceId}/payments/${paymentId}/reverse`, input, input.idempotencyKey),
+  paySupplier: (input) => api.post(`/suppliers/${input.supplierId}/payments`, input, input.idempotencyKey || newIdempotencyKey()),
+  recordSupplierPayment: (input) => api.post(`/suppliers/${input.supplierId}/payments`, input, input.idempotencyKey || newIdempotencyKey()),
 
   getPurchases: (branchId, _actor, dateRange) => api.get<Purchase[]>('/purchases', { ...branchQuery(branchId), ...(dateRange || {}) }),
   getPurchase: (id) => api.get<Purchase>(`/purchases/${id}`),
@@ -344,6 +358,7 @@ const liveMethods: SalonServiceContract = {
   getStaffSalaryReport: (q) => api.get<StaffSalaryReport>('/reports/staff-salary', q as Record<string, any>),
   getStaffCommissionReport: (q) => api.get<StaffCommissionReport>('/reports/staff-commission', q as Record<string, any>),
   getSalesInvoicesReport: (q) => api.get<SalesInvoicesReport>('/reports/sales-invoices', q as Record<string, any>),
+  getDetailedIncomeReport: (q) => api.get<DetailedIncomeReport>('/reports/detailed-income', q as Record<string, any>),
   getIncomeExpenseReport: (q) => api.get<IncomeExpenseReport>('/reports/income-expense', q as Record<string, any>),
   getTaxReport: (q) => api.get<TaxReport>('/reports/tax', q as Record<string, any>),
   getOperatingProfitReport: (q) => api.get<OperatingProfitReport>('/reports/operating-profit', q as Record<string, any>),

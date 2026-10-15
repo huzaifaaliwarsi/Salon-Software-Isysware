@@ -713,7 +713,7 @@ export const SalesInvoicesPage: React.FC = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={17} className="py-16 text-center text-slate-400 font-medium">
+                    <td colSpan={19} className="py-16 text-center text-slate-400 font-medium">
                       No sales invoices found for the selected campus, dates, and filters.
                     </td>
                   </tr>

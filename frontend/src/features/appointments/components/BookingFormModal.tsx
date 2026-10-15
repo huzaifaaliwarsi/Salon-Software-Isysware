@@ -220,8 +220,6 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   // Add Item to Booking
   const handleAddItem = (type: 'SERVICE' | 'PACKAGE', itemId: string) => {
     const lineInstanceId = `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-    const defaultStaffId = branchStaff[0]?.id || '';
-
     if (type === 'SERVICE') {
       setSelectedItems((prev) => [
         ...prev,
@@ -229,7 +227,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
           lineInstanceId,
           type: 'SERVICE',
           itemId,
-          staffId: defaultStaffId,
+          staffId: '',
         },
       ]);
     } else {
@@ -797,10 +795,15 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
                           <div className="flex items-center gap-2">
                             <Label className="text-[11px] text-slate-500 whitespace-nowrap">Assigned Stylist:</Label>
                             <select
-                              value={item.staffId}
+                              value={item.staffId || ''}
                               onChange={(e) => handleServiceStaffChange(item.lineInstanceId, e.target.value)}
-                              className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
+                              className={`px-2.5 py-1.5 bg-white border rounded-lg text-xs font-medium ${
+                                !item.staffId
+                                  ? 'border-amber-400 text-amber-800 bg-amber-50/60 font-semibold'
+                                  : 'border-slate-200 text-slate-800'
+                              }`}
                             >
+                              <option value="">-- Select Staff --</option>
                               {branchStaff.map((st) => (
                                 <option key={st.id} value={st.id}>
                                   {st.name} ({st.designation})

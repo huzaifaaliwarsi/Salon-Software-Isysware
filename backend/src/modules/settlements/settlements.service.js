@@ -87,6 +87,7 @@ export const custodyStatement = async (actor, { userId, branchId, drawerId, star
     transactions.push({
       id: m.id, date: toDateString(m.createdAt), time: clockTime(m.createdAt), type: CUSTODY_TYPE[m.type] ?? 'VARIANCE_ADJUSTMENT',
       referenceNumber: m.reference ?? m.type, description: m.description ?? m.type,
+      debit: m.direction === 'IN' ? num(m.amount) : 0, credit: m.direction === 'OUT' ? num(m.amount) : 0,
       cashIn: m.direction === 'IN' ? num(m.amount) : 0, cashOut: m.direction === 'OUT' ? num(m.amount) : 0,
       runningBalance: running.toNumber(), actorUserId: m.userId, actorName: m.userName,
       documentType: DOC_TYPE[m.sourceModule] ?? 'DRAWER', documentId: m.sourceId ?? m.drawerId, movementType: m.type,

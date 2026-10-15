@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { customerSource } from '../clients/clients.schema.js';
 
-const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').refine((value) => { const date = new Date(value + 'T00:00:00Z'); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; }, 'Date must be a valid calendar date.');
 const money = z.number({ message: 'Amounts must be numbers.' }).finite();
 
 const payment = z.object({
@@ -22,10 +22,10 @@ const cartItem = z.object({
   type:           z.enum(['SERVICE', 'PACKAGE', 'PRODUCT']),
   item:           z.object({ id: z.string().min(1), name: z.string().optional(), price: z.number().optional(), sellingPrice: z.number().optional() }).passthrough(),
   quantity:       z.number(),
-  staffId:        z.string().min(1, 'Every cart line needs an assigned staff member.'),
-  staffName:      z.string().optional(),
-  assignedStaff:  z.array(z.object({ staffId: z.string(), staffName: z.string().optional(), staffCommissionRate: z.number().optional(), allocatedAmount: z.number().optional() }).passthrough()).optional(),
-  packageComponents: z.array(z.object({ serviceId: z.string(), staffId: z.string().optional() }).passthrough()).optional(),
+  staffId:        z.string().optional().nullable().default('house'),
+  staffName:      z.string().optional().nullable(),
+  assignedStaff:  z.array(z.object({ staffId: z.string().optional().nullable(), staffName: z.string().optional(), staffCommissionRate: z.number().optional(), allocatedAmount: z.number().optional() }).passthrough()).optional(),
+  packageComponents: z.array(z.object({ serviceId: z.string(), staffId: z.string().optional().nullable() }).passthrough()).optional(),
 }).passthrough();
 
 export const checkoutSchema = z.object({
@@ -46,7 +46,10 @@ export const checkoutSchema = z.object({
   notes:                 z.string().optional(),
 }).passthrough();
 
+export const reverseCollectionSchema = z.object({ reason: z.string().trim().min(3), reversalDate: ymd });
+
 export const collectSchema = z.object({
+  paymentDate: ymd.optional(),
   payments:       z.array(payment).min(1, 'No payment amount provided.'),
   idempotencyKey: z.string().optional(),
   notes:          z.string().optional(),

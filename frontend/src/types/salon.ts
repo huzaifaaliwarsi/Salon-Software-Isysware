@@ -603,6 +603,7 @@ export interface CreatePurchaseInput {
 }
 
 export interface PaySupplierInput {
+  idempotencyKey?: string;
   supplierId: string;
   branchId: string;
   amount: number;
@@ -1825,6 +1826,8 @@ export interface StaffSalaryReportRow {
   net: number;
   paid: number;
   outstanding: number;
+  cashPaid?: number;
+  onlinePaid?: number;
   status: 'FINALIZED' | 'PARTIALLY_PAID' | 'PAID';
   finalizedAt?: string;
   paidDate: string | null;
@@ -1866,6 +1869,7 @@ export interface StaffCommissionReportRow {
   source: 'SERVICE' | 'PACKAGE' | 'PRODUCT';
   eventType: 'EARN' | 'REVERSAL';
   attributedNetSales: number;
+  commissionEligibleSales?: number;
   rateSnapshot: number;
   earned: number;
   reversed: number;
@@ -1975,6 +1979,122 @@ export interface SalesInvoicesReport {
   totals: Record<string, number>;
 }
 
+export interface DetailedIncomeComponent {
+  id: string;
+  serviceCode: string;
+  serviceName: string;
+  quantity: number;
+  staffId: string;
+  staffName: string;
+  allocatedAmount: number;
+  allocationPercentage: number;
+}
+
+export interface DetailedIncomePayment {
+  id: string;
+  amount: number;
+  method: string;
+  paymentAccountId?: string;
+  paymentAccountName: string;
+  date: string;
+  time: string;
+  kind?: string;
+}
+
+export interface DetailedIncomeRow {
+  id: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  date: string;
+  time: string;
+  branchId: string;
+  branchName: string;
+  incomeSource: 'SERVICE' | 'PRODUCT' | 'PACKAGE';
+  clientId?: string;
+  clientName: string;
+  clientPhone?: string;
+  itemCode?: string;
+  itemName: string;
+  staffId: string;
+  staffName: string;
+  quantity: number;
+  unitPrice: number;
+  gross: number;
+  discount: number;
+  netSales: number;
+  refundedNet: number;
+  recognizedNet: number;
+  taxRate: number;
+  tax: number;
+  netTax: number;
+  total: number;
+  paymentStatus: InvoiceStatus;
+  lifecycle: InvoiceLifecycle;
+  createdByName: string;
+  payments: DetailedIncomePayment[];
+  components?: DetailedIncomeComponent[];
+}
+
+export interface DetailedIncomeKPIs {
+  totalTransactions: number;
+  grossSales: number;
+  totalDiscounts: number;
+  netSales: number;
+  totalRefunded: number;
+  recognizedNetRevenue: number;
+  totalTaxCharged: number;
+  netTaxLiability: number;
+  tipsCollected: number;
+  serviceRevenue: number;
+  serviceCount: number;
+  productRevenue: number;
+  productCount: number;
+  packageRevenue: number;
+  packageCount: number;
+  totalPaid: number;
+}
+
+export interface DetailedIncomeReportQuery {
+  branchId?: string;
+  preset?: string;
+  startDate?: string;
+  endDate?: string;
+  from?: string;
+  to?: string;
+  sourceType?: 'ALL' | 'SERVICE' | 'PRODUCT' | 'PACKAGE';
+  paymentStatus?: 'PAID' | 'PARTIAL' | 'UNPAID' | 'ALL';
+  lifecycle?: 'ACTIVE' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'VOIDED' | 'ALL';
+  paymentMethod?: string;
+  staffId?: string;
+  soldByUserId?: string;
+  search?: string;
+}
+
+export interface DetailedIncomeReport {
+  meta: {
+    branchId: string;
+    branchName: string;
+    from: string;
+    to: string;
+    preset: string;
+    dateBasis: string;
+    timezone: string;
+    generatedAt: string;
+    generatedBy: string;
+  };
+  kpis: DetailedIncomeKPIs;
+  rows: DetailedIncomeRow[];
+  totals: {
+    gross: number;
+    discount: number;
+    netSales: number;
+    refundedNet: number;
+    recognizedNet: number;
+    tax: number;
+    netTax: number;
+  };
+}
+
 export type IncomeExpenseItemType =
   | 'INCOME'
   | 'OPERATING_EXPENSE'
@@ -1983,6 +2103,7 @@ export type IncomeExpenseItemType =
   | 'INVENTORY_WRITEOFF';
 
 export interface IncomeExpenseReportRow {
+  cashFlow?: number;
   id: string;
   date: string;
   type: IncomeExpenseItemType | string;
@@ -2004,6 +2125,8 @@ export interface IncomeExpenseReportRow {
 
 export interface IncomeExpenseReportKPIs {
   totalRecognizedIncome: number;
+  cogs?: number;
+  grossContribution?: number;
   directExpenses: number;
   salaryExpenses: number;
   commissionExpenses: number;
@@ -2251,6 +2374,8 @@ export interface PaymentAccountSummaryItem {
   openingBalance: number;
   moneyIn: number;
   moneyOut: number;
+  debit?: number;
+  credit?: number;
   transfersIn: number;
   transfersOut: number;
   netMovement: number;
@@ -2753,6 +2878,7 @@ export interface CashDrawerReportQuery {
 }
 
 export interface CashDrawerReport {
+  transactions?: Array<{ id: string; drawerId: string; date: string; time: string; reference?: string; type: string; direction: 'IN' | 'OUT'; amount: number; actor: string; description?: string }>;
   meta: {
     branchId: string;
     branchName: string;

@@ -1,12 +1,11 @@
 import React from 'react';
-import { useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
-import { Boxes, ArrowDownRight, Truck, RefreshCw, Plus, Building2, BookOpen } from 'lucide-react';
+import { Plus, Building2 } from 'lucide-react';
 
 interface InventoryNavHeaderProps {
   title: string;
   subtitle: string;
-  activePath: string;
+  activePath?: string;
   selectedBranchId: string;
   onBranchChange?: (branchId: string) => void;
   primaryAction?: {
@@ -24,48 +23,13 @@ interface InventoryNavHeaderProps {
 export const InventoryNavHeader: React.FC<InventoryNavHeaderProps> = ({
   title,
   subtitle,
-  activePath,
   selectedBranchId,
   onBranchChange,
   primaryAction,
   secondaryAction,
 }) => {
-  const { navigate } = useRouter();
   const { user, allBranches } = useAuth();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-
-  const navItems = [
-    {
-      id: 'items',
-      label: 'Inventory & Stocks',
-      href: '/operations/inventory',
-      icon: <Boxes className="w-3.5 h-3.5" />,
-    },
-    {
-      id: 'stock-in',
-      label: 'Stock In (Purchases)',
-      href: '/operations/stock-in',
-      icon: <ArrowDownRight className="w-3.5 h-3.5" />,
-    },
-    {
-      id: 'suppliers',
-      label: 'Suppliers & Vendors',
-      href: '/operations/suppliers',
-      icon: <Truck className="w-3.5 h-3.5" />,
-    },
-    {
-      id: 'supplier-ledger',
-      label: 'Supplier Ledger (Khata)',
-      href: '/operations/supplier-ledger',
-      icon: <BookOpen className="w-3.5 h-3.5" />,
-    },
-    {
-      id: 'adjustments',
-      label: 'Stock Adjustments',
-      href: '/operations/stock-adjustments',
-      icon: <RefreshCw className="w-3.5 h-3.5" />,
-    },
-  ];
 
   return (
     <div className="mb-6 space-y-4">
@@ -124,32 +88,6 @@ export const InventoryNavHeader: React.FC<InventoryNavHeaderProps> = ({
             </button>
           )}
         </div>
-      </div>
-
-      {/* Navigation Pills Bar */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-xl max-w-fit overflow-x-auto">
-        {navItems.map((item) => {
-          const isActive =
-            activePath === item.href ||
-            (item.href === '/operations/inventory' &&
-              (activePath === '/inventory' || activePath === '/operations/inventory-suppliers'));
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => navigate(item.href)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                isActive
-                  ? 'bg-white text-[#0047AB] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
       </div>
     </div>
   );

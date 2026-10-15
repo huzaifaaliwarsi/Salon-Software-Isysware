@@ -15,7 +15,7 @@ try {
   created = true;
   connection.pathname = `/${name}`;
   const child = spawnSync(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', ...process.argv.slice(2)], {
-    env: { ...process.env, SALONOS_TEST_DATABASE_URL: connection.toString() }, stdio: 'inherit',
+    env: { ...process.env, SALONOS_TEST_DATABASE_URL: connection.toString(), DIRECT_URL: connection.toString() }, stdio: 'inherit',
   });
   if (child.error) throw child.error;
   exitCode = child.status ?? 1;

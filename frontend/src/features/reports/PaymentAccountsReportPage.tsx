@@ -216,8 +216,8 @@ export const PaymentAccountsReportPage: React.FC = () => {
       ['Branch', selectedBranch === 'ALL' ? 'All Branches' : reportData.meta.branchName || selectedBranch],
       ['From Date', fromDate || reportData.meta.from || '—'],
       ['To Date', toDate || reportData.meta.to || '—'],
-      ['Total Money In', formatPKR(reportData.kpis.totalMoneyIn)],
-      ['Total Money Out', formatPKR(reportData.kpis.totalMoneyOut)],
+      ['Total Debit (In)', formatPKR(reportData.kpis.totalMoneyIn)],
+      ['Total Credit (Out)', formatPKR(reportData.kpis.totalMoneyOut)],
       ['Closing Balance', formatPKR(reportData.kpis.totalClosingBalance)],
     ];
     const headers = ['#', 'Date', 'Account', 'Branch', 'Direction', 'Reference', 'Amount', 'Balance After'];
@@ -432,8 +432,9 @@ export const PaymentAccountsReportPage: React.FC = () => {
                   <th className="py-3.5 px-4 whitespace-nowrap">Source</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">Reference</th>
                   <th className="py-3.5 px-4">Description</th>
-                  <th className="py-3.5 px-4 text-right">Amount</th>
-                  <th className="py-3.5 px-4 text-right">Balance After</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Debit (In)</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Credit (Out)</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Running Balance</th>
                 </tr>
               </thead>
               <tbody className="text-[#334155]">
@@ -498,17 +499,18 @@ export const PaymentAccountsReportPage: React.FC = () => {
                           {row.description || '—'}
                         </td>
 
-                        {/* 10. Amount */}
-                        <td
-                          className={`py-3.5 px-4 text-right tabular-nums font-semibold whitespace-nowrap ${
-                            isInflow ? 'text-[#10B981]' : 'text-[#EF4444]'
-                          }`}
-                        >
-                          {isInflow ? `+${formatPKR(row.amount)}` : `-${formatPKR(row.amount)}`}
+                        {/* 10. Debit (In) */}
+                        <td className="py-3.5 px-4 text-right tabular-nums font-semibold whitespace-nowrap text-[#10B981]">
+                          {isInflow ? `+${formatPKR(row.amount)}` : '—'}
                         </td>
 
-                        {/* 11. Balance After */}
-                        <td className="py-3.5 px-4 text-right tabular-nums font-semibold text-slate-800 whitespace-nowrap">
+                        {/* 11. Credit (Out) */}
+                        <td className="py-3.5 px-4 text-right tabular-nums font-semibold whitespace-nowrap text-[#EF4444]">
+                          {!isInflow ? `-${formatPKR(row.amount)}` : '—'}
+                        </td>
+
+                        {/* 12. Running Balance */}
+                        <td className="py-3.5 px-4 text-right tabular-nums font-bold text-slate-900 whitespace-nowrap bg-slate-50/50">
                           {formatPKR(row.runningBalance)}
                         </td>
                       </tr>
@@ -516,7 +518,7 @@ export const PaymentAccountsReportPage: React.FC = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-400 font-medium">
+                    <td colSpan={12} className="py-12 text-center text-slate-400 font-medium">
                       No account movements found for the selected branch, dates, and filters.
                     </td>
                   </tr>

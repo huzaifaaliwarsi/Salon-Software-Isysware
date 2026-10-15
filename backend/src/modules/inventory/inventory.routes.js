@@ -38,6 +38,7 @@ supplierRoutes.get('/:id/ledger',    validate(v.ledgerQuery, 'query'), c.ledger)
 supplierRoutes.post('/',             validate(v.createSupplierSchema), c.createSupplier);
 supplierRoutes.put('/:id',           validate(v.updateSupplierSchema), c.updateSupplier);
 supplierRoutes.post('/:id/archive',  validate(v.archiveSchema), c.archiveSupplier);
+supplierRoutes.post('/:id/payments/:paymentId/reverse', idempotency, validate(v.reversePaymentSchema), c.reversePayment);
 supplierRoutes.post('/:id/payments', idempotency, validate(v.paySupplierSchema), c.pay);
 
 // ── /purchases, /supplier-returns, /stock-movements, /stock-settlements ──────

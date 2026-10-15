@@ -537,7 +537,6 @@ export const POSBillingPage: React.FC = () => {
       return;
     }
 
-    const defaultStaff = staffList[0] || { id: 'unassigned', name: 'Primary Stylist', commissionRate: 0.1 };
     const cartInstanceId = `ci-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
     const newItem: POSCartItem = {
@@ -545,9 +544,9 @@ export const POSBillingPage: React.FC = () => {
       type: 'PRODUCT',
       item: product,
       quantity: 1,
-      staffId: defaultStaff.id,
-      staffName: defaultStaff.name,
-      staffCommissionRate: defaultStaff.commissionRate,
+      staffId: '',
+      staffName: '',
+      staffCommissionRate: 0,
     };
 
     setCart((prev) => [...prev, newItem]);
@@ -555,7 +554,6 @@ export const POSBillingPage: React.FC = () => {
 
   // Add Service to Cart
   const handleAddServiceToCart = (service: ServiceItem) => {
-    const defaultStaff = staffList[0] || { id: 'unassigned', name: 'Primary Stylist', commissionRate: 0.1 };
     const cartInstanceId = `ci-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
     const newItem: POSCartItem = {
@@ -563,9 +561,9 @@ export const POSBillingPage: React.FC = () => {
       type: 'SERVICE',
       item: service,
       quantity: 1,
-      staffId: defaultStaff.id,
-      staffName: defaultStaff.name,
-      staffCommissionRate: defaultStaff.commissionRate,
+      staffId: '',
+      staffName: '',
+      staffCommissionRate: 0,
     };
 
     setCart((prev) => [...prev, newItem]);
@@ -667,6 +665,40 @@ export const POSBillingPage: React.FC = () => {
 
   // Assign staff to a service cart item
   const handleAssignStaff = (cartInstanceId: string, staffId: string) => {
+    if (!staffId || staffId === 'unassigned') {
+      setCart((prev) =>
+        prev.map((ci) => {
+          if (ci.cartInstanceId === cartInstanceId) {
+            return {
+              ...ci,
+              staffId: '',
+              staffName: '',
+              staffCommissionRate: 0,
+            };
+          }
+          return ci;
+        })
+      );
+      return;
+    }
+
+    if (staffId === 'house') {
+      setCart((prev) =>
+        prev.map((ci) => {
+          if (ci.cartInstanceId === cartInstanceId) {
+            return {
+              ...ci,
+              staffId: 'house',
+              staffName: 'House / Salon',
+              staffCommissionRate: 0,
+            };
+          }
+          return ci;
+        })
+      );
+      return;
+    }
+
     const staff = staffList.find((s) => s.id === staffId);
     if (!staff) return;
 
@@ -687,7 +719,9 @@ export const POSBillingPage: React.FC = () => {
 
   // Add staff member to a package line item
   const handleAddStaffToPackage = (cartInstanceId: string, staffId: string) => {
-    const staff = staffList.find((s) => s.id === staffId);
+    const staff = staffId === 'house'
+      ? { id: 'house', name: 'House / Salon', commissionRate: 0 }
+      : staffList.find((s) => s.id === staffId);
     if (!staff) return;
 
     setCart((prev) =>
@@ -957,9 +991,9 @@ export const POSBillingPage: React.FC = () => {
           const alloc = allocatePackageRevenue(matchedPkg.price, matchedPkg.components);
           const compAssignments: POSCartComponentAssignment[] = alloc.allocatedComponents.map((c) => {
             const bookedComp = itm.packageComponents?.find((bc) => bc.serviceId === c.serviceId);
-            const staffId = bookedComp?.staffId || itm.staffId || staffList[0]?.id || 'unassigned';
-            const staffName = bookedComp?.staffName || itm.staffName || staffList[0]?.name || 'Primary Stylist';
-            const staffMember = staffList.find((s) => s.id === staffId);
+            const staffId = bookedComp?.staffId || itm.staffId || '';
+            const staffMember = staffId ? staffList.find((s) => s.id === staffId) : undefined;
+            const staffName = bookedComp?.staffName || itm.staffName || staffMember?.name || '';
 
             return {
               serviceId: c.serviceId,
@@ -970,13 +1004,13 @@ export const POSBillingPage: React.FC = () => {
               allocatedAmount: c.allocatedAmount,
               staffId,
               staffName,
-              staffCommissionRate: staffMember?.commissionRate ?? 0.1,
+              staffCommissionRate: staffMember?.commissionRate ?? 0,
             };
           });
 
-          const primaryStaffId = compAssignments[0]?.staffId || itm.staffId || staffList[0]?.id || 'unassigned';
-          const primaryStaffName = compAssignments[0]?.staffName || itm.staffName || staffList[0]?.name || 'Primary Stylist';
-          const primaryStaffMember = staffList.find((s) => s.id === primaryStaffId);
+          const primaryStaffId = compAssignments.find((c) => c.staffId)?.staffId || itm.staffId || '';
+          const primaryStaffMember = primaryStaffId ? staffList.find((s) => s.id === primaryStaffId) : undefined;
+          const primaryStaffName = compAssignments.find((c) => c.staffName)?.staffName || itm.staffName || primaryStaffMember?.name || '';
 
           const packageAssignedStaff = itm.assignedStaff && itm.assignedStaff.length > 0
             ? itm.assignedStaff.map((as) => {
@@ -984,16 +1018,18 @@ export const POSBillingPage: React.FC = () => {
                 return {
                   staffId: as.staffId,
                   staffName: as.staffName || member?.name || 'Stylist',
-                  staffCommissionRate: as.staffCommissionRate ?? member?.commissionRate ?? 0.1,
+                  staffCommissionRate: as.staffCommissionRate ?? member?.commissionRate ?? 0,
                 };
               })
-            : [
-                {
-                  staffId: primaryStaffId,
-                  staffName: primaryStaffName,
-                  staffCommissionRate: primaryStaffMember?.commissionRate ?? 0.1,
-                },
-              ];
+            : (primaryStaffId
+                ? [
+                    {
+                      staffId: primaryStaffId,
+                      staffName: primaryStaffName,
+                      staffCommissionRate: primaryStaffMember?.commissionRate ?? 0,
+                    },
+                  ]
+                : []);
 
           newCartItems.push({
             cartInstanceId: itm.lineInstanceId || `ci-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
@@ -1019,9 +1055,9 @@ export const POSBillingPage: React.FC = () => {
             isActive: true,
           };
 
-          const staffId = itm.staffId || staffList[0]?.id || 'unassigned';
-          const staffName = itm.staffName || staffList[0]?.name || 'Primary Stylist';
-          const staffMember = staffList.find((s) => s.id === staffId);
+          const staffId = itm.staffId || '';
+          const staffMember = staffId ? staffList.find((s) => s.id === staffId) : undefined;
+          const staffName = itm.staffName || staffMember?.name || '';
 
           newCartItems.push({
             cartInstanceId: itm.lineInstanceId || `ci-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
@@ -1030,7 +1066,7 @@ export const POSBillingPage: React.FC = () => {
             quantity: 1,
             staffId,
             staffName,
-            staffCommissionRate: staffMember?.commissionRate ?? 0.1,
+            staffCommissionRate: staffMember?.commissionRate ?? 0,
           });
         }
       }
@@ -1115,13 +1151,40 @@ export const POSBillingPage: React.FC = () => {
   // Open Checkout Modal
   const handleOpenCheckout = () => {
     if (cart.length === 0) return;
-    const unassignedPkg = cart.find(
-      (ci) => ci.type === 'PACKAGE' && (!ci.assignedStaff || ci.assignedStaff.length === 0)
+
+    // Check if any service in cart is unassigned and warn cashier
+    const unassignedService = cart.find(
+      (ci) => ci.type === 'SERVICE' && (!ci.staffId || ci.staffId === 'unassigned')
     );
-    if (unassignedPkg) {
-      alert(`Please assign at least one stylist to package '${unassignedPkg.item.name}' before checkout.`);
+    if (unassignedService) {
+      toast.warning(`Please select an assigned staff member for '${unassignedService.item.name}' before checkout.`);
       return;
     }
+    
+    // Auto-assign House / Salon to any package that doesn't have assigned staff
+    setCart((prev) =>
+      prev.map((ci) => {
+        if (ci.type === 'PACKAGE' && (!ci.assignedStaff || ci.assignedStaff.length === 0)) {
+          const totalLineAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
+          return {
+            ...ci,
+            staffId: 'house',
+            staffName: 'House / Salon',
+            staffCommissionRate: 0,
+            assignedStaff: [
+              {
+                staffId: 'house',
+                staffName: 'House / Salon',
+                staffCommissionRate: 0,
+                allocatedAmount: totalLineAmount,
+              },
+            ],
+          };
+        }
+        return ci;
+      })
+    );
+
     if (bookingPriceDiscrepancy && !acknowledgedPriceDiscrepancy) {
       alert(
         `Price Quote Notice: The quoted booking price was ${formatCurrency(
@@ -1178,7 +1241,7 @@ export const POSBillingPage: React.FC = () => {
         }
       } else if (checkoutMode === 'ONLINE') {
         const selectedAcc = paymentAccounts.find((a) => a.id === selectedOnlineAccountId);
-        if (!selectedAcc) {
+        if (!selectedAcc && (onlineAmountInput || 0) > 0) {
           throw new Error('Please select an active online payment account.');
         }
 
@@ -1190,7 +1253,7 @@ export const POSBillingPage: React.FC = () => {
         const billAlloc = Math.min(onlineAmount, billTotal);
         const tipAlloc = Math.min(Math.max(0, roundCurrency(onlineAmount - billAlloc)), tipAmount);
 
-        if (onlineAmount > 0) {
+        if (onlineAmount > 0 && selectedAcc) {
           payments.push({
             method: 'ONLINE_ACCOUNT',
             paymentAccountId: selectedAcc.id,
@@ -1247,6 +1310,35 @@ export const POSBillingPage: React.FC = () => {
         }
       }
 
+      // Check if partial or unpaid: customer name & phone are required
+      const retainedTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+      const isDueRemaining = (calculations.fullInvoiceTotal - retainedTotal) > 0.01;
+
+      if (isDueRemaining) {
+        const cleanName = (clientName || '').trim();
+        const cleanPhone = (clientPhone || '').replace(/\D/g, '');
+        if (!cleanName || cleanName.toLowerCase() === 'walk-in customer' || cleanName.toLowerCase() === 'walk-in' || isWalkIn) {
+          throw new Error('A specific customer name is required for Partial or Unpaid invoices so dues are tracked in their Client Ledger.');
+        }
+        if (!cleanPhone || cleanPhone.length < 10) {
+          throw new Error('A valid customer contact phone number (at least 10 digits) is required for Partial or Unpaid invoices.');
+        }
+      }
+
+      // Sanitize cart items so lines without assigned staff fallback cleanly to 'house' (No Staff / Salon)
+      const sanitizedCart = cart.map((ci) => ({
+        ...ci,
+        staffId: (!ci.staffId || ci.staffId === 'unassigned') ? 'house' : ci.staffId,
+        staffName: (!ci.staffName || ci.staffId === 'house' || ci.staffId === 'unassigned') ? 'House / Salon' : ci.staffName,
+        assignedStaff: (ci.assignedStaff && ci.assignedStaff.length > 0)
+          ? ci.assignedStaff.map((as) => ({
+              ...as,
+              staffId: (!as.staffId || as.staffId === 'unassigned') ? 'house' : as.staffId,
+              staffName: (!as.staffName || as.staffId === 'house' || as.staffId === 'unassigned') ? 'House / Salon' : as.staffName,
+            }))
+          : [{ staffId: 'house', staffName: 'House / Salon', staffCommissionRate: 0, allocatedAmount: getCatalogueSellingPrice(ci.item) * ci.quantity }],
+      }));
+
       // Input payload
       const payload: CreatePOSInvoiceInput = {
         branchId: currentBranch.id,
@@ -1260,7 +1352,7 @@ export const POSBillingPage: React.FC = () => {
         discountValue,
         tip: tipAmount,
         applyTax: applyBranchTax,
-        cartItems: cart,
+        cartItems: sanitizedCart,
         payments,
         idempotencyKey,
         notes: invoiceNotes,
@@ -2011,13 +2103,25 @@ export const POSBillingPage: React.FC = () => {
                           {ci.type === 'PRODUCT' ? 'Sales Staff (Commission):' : 'Assigned Stylist:'}
                         </span>
                         <Select
-                          value={ci.staffId}
+                          value={ci.staffId || 'unassigned'}
                           onValueChange={(val) => handleAssignStaff(ci.cartInstanceId, val)}
                         >
-                          <SelectTrigger className="w-[180px] text-xs h-7 bg-white border-slate-200">
-                            <SelectValue placeholder="Assign Staff" />
+                          <SelectTrigger
+                            className={`w-[190px] text-xs h-7 bg-white transition-colors ${
+                              !ci.staffId || ci.staffId === 'unassigned'
+                                ? 'border-amber-400 text-amber-800 bg-amber-50/60 font-semibold'
+                                : 'border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            <SelectValue placeholder="Select Staff..." />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="unassigned" className="text-xs text-amber-700 italic font-medium">
+                              -- Select Staff --
+                            </SelectItem>
+                            <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                              House / Salon (No Staff)
+                            </SelectItem>
                             {staffList.map((st) => (
                               <SelectItem key={st.id} value={st.id} className="text-xs">
                                 {st.name} ({st.roleTitle})
@@ -2168,6 +2272,11 @@ export const POSBillingPage: React.FC = () => {
                                 <SelectValue placeholder={!ci.assignedStaff || ci.assignedStaff.length === 0 ? '+ Assign Staff' : '+ Add Staff'} />
                               </SelectTrigger>
                               <SelectContent>
+                                {!ci.assignedStaff?.some((as) => as.staffId === 'house') && (
+                                  <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                                    House / Salon (No Staff)
+                                  </SelectItem>
+                                )}
                                 {staffList
                                   .filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id))
                                   .map((st) => (
@@ -2357,6 +2466,126 @@ export const POSBillingPage: React.FC = () => {
           )}
 
           <div className="space-y-4 py-2">
+            {/* Quick Settlement Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setCashTenderedInput(calculations.fullInvoiceTotal);
+                  setOnlineAmountInput(calculations.fullInvoiceTotal);
+                  setSplitCashAmount(calculations.billTotal);
+                  setSplitCashTendered(calculations.billTotal);
+                }}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+              >
+                Full Pay ({formatCurrency(calculations.fullInvoiceTotal)})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const half = Math.round(calculations.fullInvoiceTotal / 2);
+                  setCashTenderedInput(half);
+                  setOnlineAmountInput(half);
+                  setSplitCashAmount(half);
+                  setSplitCashTendered(half);
+                }}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 cursor-pointer"
+              >
+                50% Partial ({formatCurrency(Math.round(calculations.fullInvoiceTotal / 2))})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCashTenderedInput(0);
+                  setOnlineAmountInput(0);
+                  setSplitCashAmount(0);
+                  setSplitCashTendered(0);
+                }}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer"
+              >
+                Unpaid / Credit Khata (PKR 0)
+              </button>
+            </div>
+
+            {/* Real-time Status Card */}
+            {(() => {
+              const currentRetained = checkoutMode === 'CASH'
+                ? Math.min(cashTenderedInput || 0, calculations.fullInvoiceTotal)
+                : checkoutMode === 'ONLINE'
+                ? Math.min(onlineAmountInput || 0, calculations.fullInvoiceTotal)
+                : Math.min((splitCashAmount || 0) + splitOnlinePayments.reduce((s, p) => s + (p.amount || 0), 0), calculations.fullInvoiceTotal);
+              const currentDue = Math.max(0, Math.round((calculations.fullInvoiceTotal - currentRetained) * 100) / 100);
+
+              return (
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                    currentDue === 0
+                      ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                      : currentRetained > 0
+                      ? 'bg-amber-50/70 border-amber-200 text-amber-900'
+                      : 'bg-rose-50/70 border-rose-200 text-rose-900'
+                  }`}>
+                    <div>
+                      <span className="font-bold block">
+                        {currentDue === 0 ? 'STATUS: PAID' : currentRetained > 0 ? 'STATUS: PARTIAL' : 'STATUS: UNPAID'}
+                      </span>
+                      <span className="text-[11px] opacity-80 block">
+                        {currentDue === 0
+                          ? 'Full payment received. Invoice is fully settled.'
+                          : currentRetained > 0
+                          ? `Paying ${formatCurrency(currentRetained)}. Remaining ${formatCurrency(currentDue)} will be recorded in Client Ledger.`
+                          : `Paying PKR 0 now. Full ${formatCurrency(currentDue)} will be recorded as Outstanding Due in Client Ledger.`}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] uppercase font-semibold text-slate-500 block">Remaining Due</span>
+                      <span className={`text-sm font-bold font-mono ${currentDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        {formatCurrency(currentDue)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {currentDue > 0 && (isWalkIn || !clientName || clientName === 'Walk-in Customer' || !clientPhone || clientPhone.replace(/\D/g, '').length < 10) && (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs">
+                      <div className="flex items-center gap-1.5 text-amber-900 font-bold">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>Customer Details Required for Client Ledger</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800">
+                        Partial & Unpaid invoices must be linked to a customer name & phone so dues show in their ledger:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">Customer Name *</label>
+                          <Input
+                            placeholder="Client Name"
+                            value={clientName === 'Walk-in Customer' ? '' : clientName}
+                            onChange={(e) => {
+                              setClientName(e.target.value);
+                              setIsWalkIn(false);
+                            }}
+                            className="text-xs h-8 bg-white font-medium"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-600 font-semibold block mb-0.5">Phone Number (10+ digits) *</label>
+                          <Input
+                            placeholder="03001234567"
+                            value={clientPhone === 'N/A' ? '' : clientPhone}
+                            onChange={(e) => {
+                              setClientPhone(e.target.value);
+                              setIsWalkIn(false);
+                            }}
+                            className="text-xs h-8 bg-white font-medium font-mono"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Payment Method Selector Tabs */}
             <Tabs value={checkoutMode} onValueChange={(val: any) => setCheckoutMode(val)}>
               <TabsList className="grid grid-cols-3 bg-slate-100 p-1 h-10 w-full">

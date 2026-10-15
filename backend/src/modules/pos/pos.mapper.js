@@ -24,6 +24,12 @@ export const toPaymentDTO = (p) => ({
   remainingBalance:    p.remainingBalance === null ? undefined : num(p.remainingBalance),
   notes:               opt(p.notes),
   kind:                p.kind,
+  drawerId: p.drawerId,
+  reference: p.id,
+  reversedAt: p.reversedAt ? iso(p.reversedAt) : undefined,
+  reversedByName: p.reversedByName,
+  reversalReason: p.reversalReason,
+  reversalDate: p.reversalDate ? ymd(p.reversalDate) : undefined,
 });
 
 const toComponentDTO = (c) => ({

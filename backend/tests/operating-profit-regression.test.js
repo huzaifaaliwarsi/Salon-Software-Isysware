@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { db } = vi.hoisted(() => {
   const db = {};
-  for (const name of ['branch', 'staff', 'user', 'invoice', 'invoiceRefund', 'stockMovement', 'expense', 'payrollRun', 'commissionEvent']) {
+  for (const name of ['branch', 'staff', 'user', 'invoice', 'invoiceRefund', 'stockMovement', 'expense', 'payrollRun', 'commissionEvent', 'drawerMovement', 'accountMovement']) {
     db[name] = { findMany: vi.fn(), findUnique: vi.fn() };
   }
   db.payrollPayment = { findMany: vi.fn(() => { throw new Error('Payouts must not be recognized again'); }) };
@@ -11,7 +11,7 @@ const { db } = vi.hoisted(() => {
 });
 vi.mock('../src/config/prisma.js', () => ({ default: db }));
 import { operatingProfitReport, incomeExpenseReport } from '../src/modules/reports/reports.service.js';
-import { downloadReportCsv, formatSignedPKR, printReportWindow } from '../../Salon Software Frontend/src/features/reports/reportUtils.ts';
+import { downloadReportCsv, formatSignedPKR, printReportWindow } from '../../frontend/src/features/reports/reportUtils.ts';
 
 const query = { preset: 'CUSTOM', from: '2026-10-01', to: '2026-10-31' };
 const actor = { role: 'ADMIN', branchId: 'branch-1', name: 'Admin' };

@@ -199,14 +199,14 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
       return [
         i + 1,
-        isIncome ? 'Income' : 'Expense',
+        r.type === 'SETTLEMENT' ? 'Settlement' : isIncome ? 'Income' : 'Expense',
         r.source || '—',
         r.userOrPayee || '—',
         r.branchName || '—',
         r.description || r.reference || '—',
         r.status || 'PAID',
         isIncome ? `+${r.income.toFixed(2)}` : `-${r.expense.toFixed(2)}`,
-        isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${paidVal.toFixed(2)}` : `-${paidVal.toFixed(2)}`,
+        r.cashFlow !== undefined ? `${r.cashFlow >= 0 ? '+' : '-'}${Math.abs(r.cashFlow).toFixed(2)}` : isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${paidVal.toFixed(2)}` : `-${paidVal.toFixed(2)}`,
         (r.discount || 0).toFixed(2),
         remainingVal.toFixed(2),
         formatDateDisplay(r.date),
@@ -268,14 +268,14 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
       return [
         i + 1,
-        isIncome ? 'Income' : 'Expense',
+        r.type === 'SETTLEMENT' ? 'Settlement' : isIncome ? 'Income' : 'Expense',
         r.source || '—',
         r.userOrPayee || '—',
         r.branchName || '—',
         r.description || r.reference || '—',
         r.status || 'PAID',
         isIncome ? `+${r.income.toFixed(2)}` : `-${r.expense.toFixed(2)}`,
-        isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${paidVal.toFixed(2)}` : `-${paidVal.toFixed(2)}`,
+        r.cashFlow !== undefined ? `${r.cashFlow >= 0 ? '+' : '-'}${Math.abs(r.cashFlow).toFixed(2)}` : isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${paidVal.toFixed(2)}` : `-${paidVal.toFixed(2)}`,
         (r.discount || 0).toFixed(2),
         remainingVal.toFixed(2),
         formatDateDisplay(r.date),
@@ -313,7 +313,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
       const isIncome = r.income > 0 || r.type === 'INCOME';
       const isAccruedComm = r.type === 'COMMISSION_EXPENSE' && (r.status === 'ACCRUED' || !r.paid);
       const paidVal = isAccruedComm ? 0 : isIncome ? (r.paid ?? r.income) : (r.paid ?? r.expense);
-      return isIncome ? acc + paidVal : acc - paidVal;
+      return r.cashFlow !== undefined ? acc + r.cashFlow : isIncome ? acc + paidVal : acc - paidVal;
     }, 0);
   }, [reportData]);
 
@@ -341,14 +341,14 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
       return [
         i + 1,
-        isIncome ? 'Income' : 'Expense',
+        r.type === 'SETTLEMENT' ? 'Settlement' : isIncome ? 'Income' : 'Expense',
         r.source || '—',
         r.userOrPayee || '—',
         r.branchName || '—',
         r.description || r.reference || '—',
         r.status || 'PAID',
         isIncome ? `+${formatPKR(r.income)}` : `-${formatPKR(r.expense)}`,
-        isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${formatPKR(paidVal)}` : `-${formatPKR(paidVal)}`,
+        r.cashFlow !== undefined ? `${r.cashFlow >= 0 ? '+' : '-'}${formatPKR(Math.abs(r.cashFlow))}` : isAccruedComm || paidVal === 0 ? '0.00' : isIncome ? `+${formatPKR(paidVal)}` : `-${formatPKR(paidVal)}`,
         formatPKR(r.discount || 0),
         formatPKR(remainingVal),
         formatDateDisplay(r.date),
@@ -642,7 +642,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
                         {/* 2. Type */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          {isIncome ? (
+                          {row.type === 'SETTLEMENT' ? <span className="text-blue-700 font-semibold">Settlement</span> : isIncome ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#10B981] text-white">
                               Income
                             </span>
@@ -675,9 +675,13 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
                         {/* 7. Status */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          {row.status === 'PAID' || row.status === 'FINALIZED' ? (
+                          {row.status === 'PAID' ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#10B981] text-white">
                               Paid
+                            </span>
+                          ) : row.status === 'FINALIZED' ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#64748B] text-white">
+                              Finalized
                             </span>
                           ) : row.status === 'ACCRUED' ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F59E0B] text-white">
@@ -703,7 +707,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
                         {/* 9. Paid (Cash Flow) */}
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          {isAccruedComm || paidValue === 0 ? (
+                          {row.cashFlow !== undefined ? <span className={row.cashFlow >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{row.cashFlow >= 0 ? '+' : '-'}{formatPKR(Math.abs(row.cashFlow))}</span> : isAccruedComm || paidValue === 0 ? (
                             <span className="text-[13px] font-medium tabular-nums text-slate-400">0.00</span>
                           ) : isIncome ? (
                             <span className="text-[13px] font-semibold tabular-nums text-[#10B981]">+{formatPKR(paidValue)}</span>
@@ -774,21 +778,34 @@ export const IncomeExpenseReportPage: React.FC = () => {
                   <td colSpan={2} className="py-3.5 px-4"></td>
                 </tr>
 
-                {/* Row 2: Total Cash Collection (POS Sales Revenue) */}
+                {/* Row 2: Recognized Business Revenue */}
                 <tr className="border-b border-slate-200/70">
                   <td colSpan={7} className="py-3 px-4 text-right font-medium text-slate-700">
-                    Total Cash Collection (POS Sales Revenue)
+                    Recognized Business Revenue (Accrual Net Sales)
                   </td>
                   <td colSpan={4} className="py-3 px-4 text-right font-bold text-[13px] tabular-nums text-[#10B981]">
-                    +{formatPKR(totalCashCollected)}
+                    +{formatPKR(totals.income)}
                   </td>
                   <td colSpan={2} className="py-3 px-4"></td>
                 </tr>
 
-                {/* Row 3: Total Expenses */}
+                {/* Row 3: Cost of Goods Sold (COGS & Consumables) */}
+                {reportData?.kpis?.cogs !== undefined && (
+                  <tr className="border-b border-slate-200/70">
+                    <td colSpan={7} className="py-3 px-4 text-right font-medium text-slate-700">
+                      Cost of Goods Sold (Retail COGS & Consumable Usage)
+                    </td>
+                    <td colSpan={4} className="py-3 px-4 text-right font-bold text-[13px] tabular-nums text-amber-600">
+                      -{formatPKR(reportData.kpis.cogs || 0)}
+                    </td>
+                    <td colSpan={2} className="py-3 px-4"></td>
+                  </tr>
+                )}
+
+                {/* Row 4: Operating Overheads */}
                 <tr className="border-b border-slate-200/70">
                   <td colSpan={7} className="py-3 px-4 text-right font-medium text-slate-700">
-                    Total Expenses (Operating, Salaries & Commissions)
+                    Operating Expenses (Vouchers, Finalized Salaries & Commission Earned)
                   </td>
                   <td colSpan={4} className="py-3 px-4 text-right font-bold text-[13px] tabular-nums text-[#EF4444]">
                     -{formatPKR(totalExpensesRecognized)}
@@ -796,10 +813,10 @@ export const IncomeExpenseReportPage: React.FC = () => {
                   <td colSpan={2} className="py-3 px-4"></td>
                 </tr>
 
-                {/* Row 4: Net Position */}
+                {/* Row 5: Operating Profit (Revenue - COGS - Expenses) */}
                 <tr>
                   <td colSpan={7} className="py-3 px-4 text-right font-bold text-slate-800">
-                    Net Position (Revenue − Total Expenses)
+                    Net Operating Profit (Revenue − COGS − Operating Expenses)
                   </td>
                   <td colSpan={4} className={`py-3 px-4 text-right font-bold text-[13px] tabular-nums ${netRealizedPosition >= 0 ? 'text-[#0047AB]' : 'text-[#EF4444]'}`}>
                     {netRealizedPosition >= 0 ? `+${formatPKR(netRealizedPosition)}` : `-${formatPKR(Math.abs(netRealizedPosition))}`}

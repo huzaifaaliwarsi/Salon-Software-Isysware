@@ -16,6 +16,7 @@ import { ServicesPackagesPage } from '../features/catalogue/ServicesPackagesPage
 import { BranchSettingsPage } from '../features/branches/BranchSettingsPage';
 import { POSBillingPage } from '../features/pos/POSBillingPage';
 import { SalesInvoicesPage } from '../features/invoices/SalesInvoicesPage';
+import { DetailedIncomeReportPage } from '../features/reports/DetailedIncomeReportPage';
 import { UnpaidInvoicesPage } from '../features/invoices/UnpaidInvoicesPage';
 import { ExpenseManagementPage } from '../features/expenses/ExpenseManagementPage';
 import { MyBalanceSheetPage } from '../features/custody/MyBalanceSheetPage';
@@ -144,6 +145,9 @@ export const AppRouter: React.FC = () => {
     }
     if (pathname === '/reports/sales-invoices' || pathname === '/invoices/sales') {
       return <SalesInvoicesPage />;
+    }
+    if (pathname === '/reports/detailed-income' || pathname === '/reports/income-drilldown') {
+      return <DetailedIncomeReportPage />;
     }
     if (pathname === '/reports/unpaid-invoices' || pathname === '/invoices/unpaid') {
       return <UnpaidInvoicesPage />;

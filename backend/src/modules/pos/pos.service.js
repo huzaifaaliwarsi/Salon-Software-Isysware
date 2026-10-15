@@ -6,7 +6,9 @@
 // Tax and tips are liabilities: they are never part of netSales or the commission base.
 
 import Decimal from 'decimal.js';
+import { randomUUID } from 'node:crypto';
 import prisma from '../../config/prisma.js';
+import { paymentPosting } from '../../lib/paymentPosting.js';
 import { auditLog } from '../../lib/audit.js';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/AppError.js';
 import { assertBranchAccess, resolveReadBranch, resolveWriteBranch } from '../../lib/scope.js';
@@ -115,10 +117,11 @@ const receivePayment = async (tx, actor, { invoice, branchId, p, amounts, kind, 
   let drawerId = null;
   let accountName = null;
   const billType = kind === 'DUES_COLLECTION' ? 'DUES_COLLECTION' : 'CASH_SALE';
-  const common = { sourceModule: 'POS', sourceId: invoice.id, reference: invoice.invoiceNumber, actor };
+  const paymentId = randomUUID();
+  const common = { sourceModule: 'POS', sourceId: paymentId, reference: invoice.invoiceNumber, actor, transactionDate: date };
 
   if (p.method === 'CASH') {
-    const drawer = await getActiveDrawer(tx, actor, branchId);
+    const drawer = await getActiveDrawer(tx, actor, branchId, { autoOpen: kind !== 'DUES_COLLECTION' });
     drawerId = drawer.id;
     if (amounts.bill.greaterThan(0)) await postCashMovement(tx, { ...common, holderId: drawer.id, type: billType, direction: 'IN', amount: amounts.bill, description: `${kind === 'DUES_COLLECTION' ? 'Dues collection' : 'POS sale'} ${invoice.invoiceNumber}` });
     if (amounts.tip.greaterThan(0)) await postCashMovement(tx, { ...common, holderId: drawer.id, type: 'CASH_TIP', direction: 'IN', amount: amounts.tip, description: `Tip on ${invoice.invoiceNumber} (staff liability)` });
@@ -136,7 +139,7 @@ const receivePayment = async (tx, actor, { invoice, branchId, p, amounts, kind, 
 
   return tx.invoicePayment.create({
     data: {
-      invoiceId: invoice.id, branchId, date, time, amount: amounts.amount, billAmountAllocated: amounts.bill, tipAmountAllocated: amounts.tip,
+      id: paymentId, invoiceId: invoice.id, branchId, date, time, amount: amounts.amount, billAmountAllocated: amounts.bill, tipAmountAllocated: amounts.tip,
       method: p.method, paymentAccountId: p.method === 'ONLINE_ACCOUNT' ? p.paymentAccountId : null, paymentAccountName: accountName, drawerId,
       cashTendered: p.method === 'CASH' ? round2(p.cashTendered || amounts.amount) : null,
       changeReturned: p.method === 'CASH' ? round2(p.changeReturned || 0) : null,
@@ -157,11 +160,11 @@ const resolveTaxRate = (treatment, specificRuleId, branch, rules) => {
   return branch.taxEnabled ? toDec(branch.taxRate) : toDec(0);
 };
 
-export const postInvoice = async (input, actor, idempotencyKey) => {
+export const postInvoice = async (input, actor, idempotencyKey, request) => {
   if (actor.role === 'STAFF') throw forbidden('FORBIDDEN', 'Access Denied: Staff members cannot perform POS billing or cash collections.');
   const branchId = resolveWriteBranch(actor, input.branchId, 'Access Denied: Cannot perform operations for another branch.');
 
-  return prisma.$transaction(async (tx) => {
+  return paymentPosting(actor, request, async (tx) => {
     const branch = await tx.branch.findUnique({ where: { id: branchId } });
     if (!branch?.isActive) throw badRequest('BRANCH_INACTIVE', `Branch '${branchId}' is invalid or deactivated.`);
     const today = await getBusinessDate(tx);
@@ -190,11 +193,20 @@ export const postInvoice = async (input, actor, idempotencyKey) => {
     ]);
     const staffById = new Map(staffRows.map((s) => [s.id, s]));
     const requireStaff = (id, label) => {
+      if (!id || id === 'unassigned' || id === 'house' || id === 'none' || id === '' || id === 'salon') {
+        return {
+          id: 'house',
+          name: 'House / Salon',
+          commissionRate: 0,
+          compensationType: 'SALARY_ONLY',
+          isActive: true,
+        };
+      }
       const s = staffById.get(id);
       if (!s || !s.isActive) throw badRequest('STAFF_INVALID', `Assigned staff for '${label}' is inactive or from another branch.`);
       return s;
     };
-    const commissionRate = (s) => (isCompensationEligibleForCommission(s.compensationType) ? toDec(s.commissionRate) : toDec(0));
+    const commissionRate = (s) => (s && s.id !== 'house' && isCompensationEligibleForCommission(s.compensationType) ? toDec(s.commissionRate) : toDec(0));
 
     // ── Build line drafts ──
     const drafts = input.cartItems.map((c) => {
@@ -289,7 +301,8 @@ export const postInvoice = async (input, actor, idempotencyKey) => {
         invoiceNumber, branchId, appointmentId: appointment?.id ?? null, date: dateOnly(today), time,
         clientId: client?.id ?? null, clientName, clientPhone,
         customerSource: input.customerSource || client?.source || 'WALK_IN', customerSourceDetails: input.customerSourceDetails || null,
-        staffId: drafts[0].staff.id, staffName: drafts[0].staff.name,
+        staffId: drafts[0].staff.id === 'house' ? null : drafts[0].staff.id,
+        staffName: drafts[0].staff.id === 'house' ? 'House / Salon' : drafts[0].staff.name,
         subtotal, discount: totalDiscount, discountType: input.discountType || 'FIXED', discountValue: round2(discountValue),
         netSales, tax, tip, total, status, amountPaid: received, amountDue,
         paymentMethod: payments.filter((x) => x.amounts.amount.greaterThan(0)).length > 1 ? 'SPLIT' : payments.find((x) => x.amounts.amount.greaterThan(0))?.p.method ?? 'CASH',
@@ -313,6 +326,7 @@ export const postInvoice = async (input, actor, idempotencyKey) => {
         },
       });
       const earn = (staff, attributedNet, componentId) => {
+        if (!staff || staff.id === 'house' || staff.id === 'unassigned' || staff.id === 'none') return null;
         const rate = commissionRate(staff);
         if (rate.isZero() || attributedNet.lessThanOrEqualTo(0)) return null;
         return tx.commissionEvent.create({
@@ -415,13 +429,16 @@ export const postInvoice = async (input, actor, idempotencyKey) => {
         invoice, branchId, p, amounts, kind: 'POS', date: dateOnly(today), time, notes: `POS receipt processed by ${actor.name}`,
       });
       if (amounts.tip.greaterThan(0)) {
+        const isHouse = !drafts[0].staff || drafts[0].staff.id === 'house' || drafts[0].staff.id === 'unassigned';
         await tx.tipReceipt.create({
           data: {
             receiptNumber: await nextSequence(tx, branch.code, 'TR'), branchId, invoiceId: invoice.id, invoiceNumber, paymentId: payment.id,
             collectionDate: dateOnly(today), collectionTime: time, clientName, method: p.method,
             paymentAccountId: payment.paymentAccountId, paymentAccountName: payment.paymentAccountName, cashDrawerId: payment.drawerId,
             collectedByUserId: actor.id, collectedByName: actor.name, collectedAmount: amounts.tip,
-            directStaffId: drafts[0].staff.id, directStaffName: drafts[0].staff.name, unallocatedAmount: amounts.tip,
+            directStaffId: isHouse ? null : drafts[0].staff.id,
+            directStaffName: isHouse ? 'House / Salon' : drafts[0].staff.name,
+            unallocatedAmount: amounts.tip,
           },
         });
       }
@@ -448,9 +465,9 @@ export const postInvoice = async (input, actor, idempotencyKey) => {
 
 // ═══ OUTSTANDING DUES COLLECTION ══════════════════════════════════════════════
 
-export const collectPayment = async (input, actor) => {
+export const collectPayment = async (input, actor, request) => {
   if (actor.role === 'STAFF') throw forbidden('FORBIDDEN', 'Access Denied: Staff members cannot collect bill payments.');
-  return prisma.$transaction(async (tx) => {
+  return paymentPosting(actor, request, async (tx) => {
     await tx.$executeRaw`SELECT 1 FROM "Invoice" WHERE id = ${input.invoiceId} FOR UPDATE`;
     const invoice = await loadInvoice(tx, input.invoiceId);
     assertBranchAccess(actor, invoice.branchId, 'Access Denied: Cannot collect payment for another branch.');
@@ -471,7 +488,7 @@ export const collectPayment = async (input, actor) => {
       throw badRequest('OVER_COLLECTION', `Collected payment (${collected}) exceeds outstanding balance (${toDec(invoice.amountDue)}).`);
     }
 
-    const today = await getBusinessDate(tx);
+    const today = input.paymentDate || await getBusinessDate(tx);
     const time = clockTime();
     const previousBalance = toDec(invoice.amountDue);
     const remaining = round2(previousBalance.minus(collected));
@@ -495,3 +512,24 @@ export const collectPayment = async (input, actor) => {
     return toInvoiceDTO(await loadInvoice(tx, invoice.id));
   });
 };
+
+export const reverseCollection = (input, actor, request) => paymentPosting(actor, request, async (tx) => {
+  await tx.$executeRaw`SELECT 1 FROM "Invoice" WHERE id = ${input.invoiceId} FOR UPDATE`;
+  const invoice = await loadInvoice(tx, input.invoiceId);
+  assertBranchAccess(actor, invoice.branchId);
+  const payment = invoice.payments.find((p) => p.id === input.paymentId);
+  if (!payment || payment.kind !== 'DUES_COLLECTION') throw badRequest('INVALID_COLLECTION', 'Only outstanding invoice collections can be reversed here.');
+  if (payment.reversedAt) throw conflict('PAYMENT_REVERSED', 'Collection has already been reversed.');
+  if (invoice.lifecycle !== 'ACTIVE' || await tx.invoiceRefund.count({ where: { invoiceId: invoice.id } }) > 0) throw conflict('INVOICE_CHANGED', 'Refunded or voided invoices cannot have collections reversed.');
+  const date = dateOnly(input.reversalDate);
+  if (date < payment.date) throw badRequest('REVERSAL_DATE', 'Reversal date cannot precede the collection date.');
+  const common = { type: 'REVERSAL', direction: 'OUT', amount: payment.amount, sourceModule: 'POS', sourceId: payment.id, reference: invoice.invoiceNumber, description: input.reason, actor, transactionDate: date };
+  if (payment.method === 'CASH') await postCashMovement(tx, { ...common, holderId: payment.drawerId });
+  else await postAccountMovement(tx, { ...common, accountId: payment.paymentAccountId, branchId: invoice.branchId });
+  await tx.invoicePayment.update({ where: { id: payment.id }, data: { reversedAt: new Date(), reversedById: actor.id, reversedByName: actor.name, reversalReason: input.reason, reversalDate: date } });
+  const paid = round2(toDec(invoice.amountPaid).minus(payment.billAmountAllocated));
+  const due = round2(toDec(invoice.amountDue).plus(payment.billAmountAllocated));
+  await tx.invoice.update({ where: { id: invoice.id }, data: { amountPaid: paid, amountDue: due, status: due.isZero() ? 'PAID' : paid.greaterThan(0) ? 'PARTIAL' : 'UNPAID' } });
+  await auditLog(tx, { userId: actor.id, userName: actor.name, action: 'COLLECTION_REVERSED', entity: 'InvoicePayment', entityId: payment.id, branchId: invoice.branchId, after: { reason: input.reason, amount: payment.amount.toString() } });
+  return toInvoiceDTO(await loadInvoice(tx, invoice.id));
+});

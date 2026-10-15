@@ -329,6 +329,7 @@ model IdempotencyKey {
   route        String
   statusCode   Int      @default(200)
   responseJson String
+  requestHash  String?
   createdAt    DateTime @default(now())
 
   @@map("IdempotencyKey")
@@ -1129,6 +1130,12 @@ model SupplierPayment {
   paidById         String
   paidByName       String
   createdAt        DateTime @default(now())
+  allocations      Json     @default("[]")
+  reversedAt       DateTime?
+  reversedById     String?
+  reversedByName   String?
+  reversalReason   String?
+  reversalDate     DateTime? @db.Date
 
   supplier Supplier @relation(fields: [supplierId], references: [id])
 
@@ -1360,6 +1367,11 @@ model InvoicePayment {
   processedByName     String
   notes               String?
   createdAt           DateTime      @default(now())
+  reversedAt          DateTime?
+  reversedById        String?
+  reversedByName      String?
+  reversalReason      String?
+  reversalDate        DateTime? @db.Date
 
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 

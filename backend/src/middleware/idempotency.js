@@ -6,6 +6,7 @@
 import prisma      from '../config/prisma.js';
 import { AppError } from '../lib/AppError.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { paymentRequestHash } from '../lib/paymentPosting.js';
 
 export const idempotency = asyncHandler(async (req, res, next) => {
   const rawKey = req.headers['idempotency-key'] || req.body?.idempotencyKey;
@@ -15,17 +16,19 @@ export const idempotency = asyncHandler(async (req, res, next) => {
   // Scope keys per user so two users can never collide on the same key.
   const key = `${req.user.id}:${rawKey}`;
   req.idempotencyKey = String(rawKey);
+  req.paymentRequestHash = paymentRequestHash(req.body);
 
   const existing = await prisma.idempotencyKey.findUnique({ where: { key } });
   if (existing) {
     if (existing.route !== `${req.method} ${req.originalUrl}`) throw new AppError(409, 'IDEMPOTENCY_CONFLICT', 'This request key was already used for a different operation.');
+    if (existing.requestHash && existing.requestHash !== req.paymentRequestHash) throw new AppError(409, 'IDEMPOTENCY_CONFLICT', 'This request key was already used with different payment details.');
     res.setHeader('Idempotent-Replay', 'true');
     return res.status(existing.statusCode).json(JSON.parse(existing.responseJson));
   }
 
   const originalJson = res.json.bind(res);
   res.json = (body) => {
-    if (res.statusCode >= 200 && res.statusCode < 300) {
+    if (!req.atomicPaymentPosting && res.statusCode >= 200 && res.statusCode < 300) {
       prisma.idempotencyKey
         .create({
           data: {

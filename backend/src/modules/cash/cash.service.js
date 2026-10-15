@@ -108,6 +108,7 @@ export const postCashMovement = async (tx, m) => {
   return tx.drawerMovement.create({
     data: {
       drawerId: holder.id, branchId: holder.branchId, type: m.type, direction: m.direction, amount,
+      ...(m.transactionDate ? { createdAt: new Date(m.transactionDate.toISOString().slice(0, 10) + "T12:00:00+05:00") } : {}),
       sourceModule: m.sourceModule, sourceId: m.sourceId ?? null, reference: m.reference ?? null,
       description: m.description ?? null, userId: m.actor.id, userName: m.actor.name,
     },
@@ -141,6 +142,7 @@ export const postAccountMovement = async (tx, m) => {
   const movement = await tx.accountMovement.create({
     data: {
       accountId: account.id, branchId: account.branchId, type: m.type, direction: m.direction, amount,
+      ...(m.transactionDate ? { createdAt: new Date(m.transactionDate.toISOString().slice(0, 10) + "T12:00:00+05:00") } : {}),
       sourceModule: m.sourceModule, sourceId: m.sourceId ?? null, reference: m.reference ?? null,
       description: m.description ?? null, userId: m.actor.id, userName: m.actor.name,
     },

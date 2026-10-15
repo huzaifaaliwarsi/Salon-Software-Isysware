@@ -54,6 +54,8 @@ import {
   StaffCommissionReportQuery,
   SalesInvoicesReport,
   SalesInvoicesReportQuery,
+  DetailedIncomeReport,
+  DetailedIncomeReportQuery,
   IncomeExpenseReport,
   IncomeExpenseReportQuery,
   TaxReport,
@@ -529,6 +531,7 @@ export interface SalonServiceContract {
   getStaffSalaryReport(query: StaffSalaryReportQuery): Promise<StaffSalaryReport>;
   getStaffCommissionReport(query: StaffCommissionReportQuery): Promise<StaffCommissionReport>;
   getSalesInvoicesReport(query: SalesInvoicesReportQuery): Promise<SalesInvoicesReport>;
+  getDetailedIncomeReport(query: DetailedIncomeReportQuery): Promise<DetailedIncomeReport>;
   getIncomeExpenseReport(query: IncomeExpenseReportQuery): Promise<IncomeExpenseReport>;
   getTaxReport(query: TaxReportQuery): Promise<TaxReport>;
   getOperatingProfitReport(query: OperatingProfitReportQuery): Promise<OperatingProfitReport>;
@@ -662,6 +665,8 @@ export interface SalonServiceContract {
     ledgerEntry: SupplierLedgerEntry;
     updatedPayable: number;
   }>;
+  reverseSupplierPayment?(supplierId: string, paymentId: string, input: { reason: string; reversalDate: string; idempotencyKey: string }): Promise<unknown>;
+  reverseCollection?(invoiceId: string, paymentId: string, input: { reason: string; reversalDate: string; idempotencyKey: string }): Promise<Invoice>;
   recordSupplierPayment?(
     input: PaySupplierInput,
     actor?: User

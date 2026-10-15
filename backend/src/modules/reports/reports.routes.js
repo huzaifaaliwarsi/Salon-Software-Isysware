@@ -229,3 +229,25 @@ reportRoutes.get(
   validate(taxReportQuery, 'query'),
   send((req) => r.taxReport(req.user, req.query))
 );
+
+const detailedIncomeQuery = z.object({
+  branchId: z.string().optional(),
+  preset: z.string().optional(),
+  startDate: ymd.optional(),
+  endDate: ymd.optional(),
+  from: ymd.optional(),
+  to: ymd.optional(),
+  sourceType: z.enum(['ALL', 'SERVICE', 'PRODUCT', 'PACKAGE']).optional(),
+  paymentStatus: z.enum(['PAID', 'PARTIAL', 'UNPAID', 'ALL']).optional(),
+  lifecycle: z.enum(['ACTIVE', 'PARTIALLY_REFUNDED', 'REFUNDED', 'VOIDED', 'ALL']).optional(),
+  paymentMethod: z.string().optional(),
+  staffId: z.string().optional(),
+  soldByUserId: z.string().optional(),
+  search: z.string().optional(),
+});
+reportRoutes.get(
+  '/detailed-income',
+  authorize('SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'),
+  validate(detailedIncomeQuery, 'query'),
+  send((req) => r.detailedIncomeReport(req.user, req.query))
+);

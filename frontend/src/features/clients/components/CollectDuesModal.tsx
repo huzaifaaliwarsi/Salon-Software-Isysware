@@ -37,10 +37,13 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
   const [cashTendered, setCashTendered] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const paymentKey = React.useRef('');
+  const paymentBusy = React.useRef(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (invoice && isOpen) {
+      paymentKey.current = crypto.randomUUID();
       setPaymentAmount(invoice.amountDue);
       setCashTendered(invoice.amountDue);
       setNotes(`Dues collection for invoice ${invoice.invoiceNumber}`);
@@ -63,9 +66,10 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (paymentBusy.current) return;
     setErrorMsg(null);
 
-    if (paymentAmount <= 0) {
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
       setErrorMsg('Payment amount must be greater than zero.');
       return;
     }
@@ -85,6 +89,7 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
       return;
     }
 
+    paymentBusy.current = true;
     setIsSubmitting(true);
     try {
       const payments = [];
@@ -109,7 +114,7 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
         });
       }
 
-      const idempotencyKey = `collect-due-${invoice.id}-${Date.now()}`;
+      const idempotencyKey = paymentKey.current;
 
       const updated = await salonService.collectInvoicePayment(
         {
@@ -126,6 +131,7 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
       console.error('Failed to collect dues payment', err);
       setErrorMsg(err.message || 'Payment collection failed.');
     } finally {
+      paymentBusy.current = false;
       setIsSubmitting(false);
     }
   };

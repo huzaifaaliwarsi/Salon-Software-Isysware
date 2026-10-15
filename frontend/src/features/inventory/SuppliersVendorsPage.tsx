@@ -105,6 +105,10 @@ export const SuppliersVendorsPage: React.FC = () => {
   const [payAccountId, setPayAccountId] = useState<string>('');
   const [payReference, setPayReference] = useState<string>('');
   const [payNotes, setPayNotes] = useState<string>('');
+  const [payDate, setPayDate] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }));
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const paymentKey = React.useRef('');
+  const paymentBusy = React.useRef(false);
 
   // Khata Ledger Drawer / Modal & Dedicated View State
   const [isLedgerModalOpen, setIsLedgerModalOpen] = useState<boolean>(false);
@@ -137,7 +141,7 @@ export const SuppliersVendorsPage: React.FC = () => {
         salonService.getCashDrawers(bId || 'ALL').catch(() => []),
       ]);
       setSuppliers(suppList);
-      setPaymentAccounts(accounts);
+      setPaymentAccounts(accounts.filter((account) => account.isActive));
 
       const userDrawer = drawers.find((d: any) => d.status === 'OPEN' && d.custodianUserId === user.id) || null;
       setActiveDrawer(userDrawer);
@@ -266,20 +270,23 @@ export const SuppliersVendorsPage: React.FC = () => {
   // Open Pay Supplier Modal
   const handleOpenPayModal = (s: Supplier) => {
     const bal = s.currentPayable ?? s.currentBalance ?? 0;
+    setErrorMessage(null);
     setPayingSupplier(s);
     setPayAmount(bal > 0 ? bal : 0);
     setPayMethod('CASH');
     setPayAccountId(paymentAccounts[0]?.id || '');
     setPayReference(`PAY-${Date.now().toString().slice(-6)}`);
     setPayNotes('');
+    setPayDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }));
+    paymentKey.current = crypto.randomUUID();
     setIsPayModalOpen(true);
   };
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payingSupplier) return;
-    if (payAmount <= 0) {
-      setErrorMessage('Payment amount must be greater than 0.');
+    if (!payingSupplier || paymentBusy.current) return;
+    if (!Number.isFinite(payAmount) || payAmount <= 0 || payAmount > (payingSupplier.currentPayable ?? payingSupplier.currentBalance ?? 0)) {
+      setErrorMessage('Enter a positive amount within the outstanding payable.');
       return;
     }
 
@@ -288,12 +295,16 @@ export const SuppliersVendorsPage: React.FC = () => {
       return;
     }
 
+    if (payMethod === 'ONLINE' && !payAccountId) { setErrorMessage('Select a branch payment account.'); return; }
+    paymentBusy.current = true;
+    setPaymentSubmitting(true);
     try {
       const input: PaySupplierInput = {
+        idempotencyKey: paymentKey.current,
         branchId: selectedBranchId,
         supplierId: payingSupplier.id,
         amount: Number(payAmount),
-        paymentDate: new Date().toISOString().split('T')[0],
+        paymentDate: payDate,
         paymentMethod: payMethod,
         paymentAccountId: payMethod === 'ONLINE' ? payAccountId : undefined,
         payerDrawerId: payMethod === 'CASH' ? activeDrawer?.id : undefined,
@@ -307,7 +318,7 @@ export const SuppliersVendorsPage: React.FC = () => {
       loadData(selectedBranchId);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to record supplier payment.');
-    }
+    } finally { paymentBusy.current = false; setPaymentSubmitting(false); }
   };
 
   // Fetch Supplier Ledger
@@ -349,6 +360,12 @@ export const SuppliersVendorsPage: React.FC = () => {
   useEffect(() => {
     if (pathname === '/operations/supplier-ledger' || pathname === '/operations/supplier-khata') {
       setActiveTab('LEDGER');
+    } else if (
+      pathname === '/operations/suppliers' ||
+      pathname === '/suppliers' ||
+      pathname === '/operations/vendors'
+    ) {
+      setActiveTab('DIRECTORY');
     }
   }, [pathname]);
 
@@ -1026,6 +1043,22 @@ export const SuppliersVendorsPage: React.FC = () => {
                 <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
                 <p className="text-slate-600 text-sm font-medium">Loading ledger entries...</p>
               </div>
+            ) : suppliers.length === 0 ? (
+              <div className="p-16 flex flex-col items-center justify-center text-center">
+                <Truck className="w-12 h-12 stroke-[1.25] text-slate-300 mb-3" />
+                <p className="text-slate-800 text-sm font-semibold mb-1">No Suppliers Registered Yet</p>
+                <p className="text-slate-500 text-xs max-w-md mb-4">
+                  There are no vendors registered in Warsi Salon. Register a supplier to start recording stock shipments, purchase bills, and view their single khata ledger statements.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddModal}
+                  className="px-4 py-2 bg-[#0047AB] hover:bg-[#003785] text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Register First Supplier</span>
+                </button>
+              </div>
             ) : !ledgerSupplier ? (
               <div className="p-16 text-center text-slate-400 text-sm">
                 Please select a vendor / supplier above to view their statement.
@@ -1211,6 +1244,7 @@ export const SuppliersVendorsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={paymentSubmitting}
                   className="px-5 py-2 text-xs font-semibold text-white bg-[#0047AB] hover:bg-[#003785] rounded-lg shadow-xs cursor-pointer"
                 >
                   {editingSupplier ? 'Save Changes' : 'Register Supplier'}
@@ -1241,6 +1275,9 @@ export const SuppliersVendorsPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmitPayment} className="space-y-4 pt-4">
+              {errorMessage && <p role="alert" className="text-xs text-rose-700">{errorMessage}</p>}
+              <label className="block text-xs font-semibold">Payment Date *<input type="date" required value={payDate} onChange={(e) => setPayDate(e.target.value)} className="block w-full border rounded-lg px-3 py-2" /></label>
+              <label className="block text-xs font-semibold">Notes<input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} className="block w-full border rounded-lg px-3 py-2" /></label>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Payment Amount (PKR) *
@@ -1324,7 +1361,7 @@ export const SuppliersVendorsPage: React.FC = () => {
                   className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs flex items-center gap-1.5"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Confirm Payment</span>
+                  <span>{paymentSubmitting ? 'Posting?' : 'Confirm Payment'}</span>
                 </button>
               </div>
             </form>

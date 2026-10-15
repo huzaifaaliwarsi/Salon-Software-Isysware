@@ -22,7 +22,7 @@ describe('Frontend API route contract', () => {
     const missing = [];
     let checked = 0;
     for (const file of ['httpSalonService.ts', 'httpAuthService.ts']) {
-      const source = readFileSync(new URL(`../../Salon Software Frontend/src/services/http/${file}`, import.meta.url), 'utf8');
+      const source = readFileSync(new URL(`../../frontend/src/services/http/${file}`, import.meta.url), 'utf8');
       const calls = source.matchAll(/api\.(get|post|put|patch|delete)(?:<[^\n]*?>)?\(\s*(['"`])([\s\S]*?)\2/g);
       for (const [, method, , template] of calls) {
         const path = `/api/v1${template.replace(/\$\{[^}]+\}/g, 'contract-id').split('?')[0]}`;

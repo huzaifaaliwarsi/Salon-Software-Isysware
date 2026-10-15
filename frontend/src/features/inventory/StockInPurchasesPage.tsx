@@ -7,6 +7,7 @@ import {
   InventoryItem,
   Supplier,
   CreatePurchaseInput,
+  PurchasePaymentMethod,
   PaymentAccount,
   CashDrawer,
   InventoryBatch,
@@ -82,6 +83,7 @@ export const StockInPurchasesPage: React.FC = () => {
   const [purchaseDate, setPurchaseDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<'CREDIT' | 'CASH' | 'ONLINE' | 'PARTIAL'>('CREDIT');
   const [paidAmount, setPaidAmount] = useState<number>(0);
+  const [paymentSourceMethod, setPaymentSourceMethod] = useState<'CASH' | 'ONLINE'>('CASH');
   const [paymentAccountId, setPaymentAccountId] = useState<string>('');
   const [purchaseNotes, setPurchaseNotes] = useState<string>('');
 
@@ -94,6 +96,7 @@ export const StockInPurchasesPage: React.FC = () => {
     expiryDate?: string;
   }
   const [stockInLines, setStockInLines] = useState<StockInLine[]>([]);
+  const [isSubmittingStockIn, setIsSubmittingStockIn] = useState<boolean>(false);
 
   // Inline Quick Add Vendor Modal
   const [isQuickVendorModalOpen, setIsQuickVendorModalOpen] = useState<boolean>(false);
@@ -154,8 +157,8 @@ export const StockInPurchasesPage: React.FC = () => {
     setSelectedSupplierId(suppliers[0]?.id || '');
     setInvoiceNumber(`PO-${Date.now().toString().slice(-6)}`);
     setPurchaseDate(new Date().toISOString().split('T')[0]);
-    setPaymentMethod('CREDIT');
     setPaidAmount(0);
+    setPaymentSourceMethod('CASH');
     setPaymentAccountId(paymentAccounts[0]?.id || '');
     setPurchaseNotes('');
     setStockInLines([
@@ -211,6 +214,16 @@ export const StockInPurchasesPage: React.FC = () => {
     return stockInLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [stockInLines]);
 
+  const computedPaymentStatus = useMemo<'PAID' | 'PARTIAL' | 'UNPAID'>(() => {
+    if (paidAmount <= 0) return 'UNPAID';
+    if (paidAmount >= calculatedGrandTotal) return 'PAID';
+    return 'PARTIAL';
+  }, [paidAmount, calculatedGrandTotal]);
+
+  const remainingDue = useMemo(() => {
+    return Math.max(0, calculatedGrandTotal - paidAmount);
+  }, [calculatedGrandTotal, paidAmount]);
+
   // Submit Stock In
   const handleSubmitStockIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,30 +236,32 @@ export const StockInPurchasesPage: React.FC = () => {
       return;
     }
 
-    const missingExpiryIndex = stockInLines.findIndex(line =>
-      items.find(item => item.id === line.itemId)?.trackExpiry && !line.expiryDate
-    );
-    if (missingExpiryIndex !== -1) {
-      const item = items.find(item => item.id === stockInLines[missingExpiryIndex].itemId);
-      setErrorMessage('Product #' + (missingExpiryIndex + 1) + ': Please enter the expiry date for ' + item?.name + '.');
+    const finalPaymentMethod: PurchasePaymentMethod =
+      paidAmount <= 0
+        ? 'CREDIT'
+        : paidAmount < calculatedGrandTotal
+        ? 'PARTIAL'
+        : paymentSourceMethod === 'ONLINE'
+        ? 'ONLINE'
+        : 'CASH';
+
+    if (paidAmount > 0 && paymentSourceMethod === 'ONLINE' && !paymentAccountId) {
+      setErrorMessage('Please select a Bank / Online Account for payment.');
       return;
     }
 
-    if (paymentMethod === 'CASH' && !activeDrawer) {
-      setErrorMessage('Payment from Cash Drawer requires an OPEN active cash drawer in your custody.');
-      return;
-    }
-
+    setIsSubmittingStockIn(true);
+    setErrorMessage(null);
     try {
       const input: CreatePurchaseInput = {
         branchId: selectedBranchId,
         supplierId: selectedSupplierId,
         invoiceNumber: invoiceNumber.trim() || `PO-${Date.now().toString().slice(-6)}`,
         purchaseDate,
-        paymentMethod,
-        paidAmount: paymentMethod === 'CREDIT' ? 0 : (paymentMethod === 'CASH' || paymentMethod === 'ONLINE' ? calculatedGrandTotal : paidAmount),
-        paymentAccountId: paymentMethod === 'ONLINE' ? paymentAccountId : undefined,
-        payerDrawerId: paymentMethod === 'CASH' ? activeDrawer?.id : undefined,
+        paymentMethod: finalPaymentMethod,
+        paidAmount: paidAmount > 0 ? paidAmount : 0,
+        paymentAccountId: paidAmount > 0 && paymentSourceMethod === 'ONLINE' ? paymentAccountId : undefined,
+        payerDrawerId: paidAmount > 0 && paymentSourceMethod === 'CASH' ? activeDrawer?.id : undefined,
         notes: purchaseNotes,
         lines: stockInLines.map((l) => ({
           itemId: l.itemId,
@@ -258,11 +273,15 @@ export const StockInPurchasesPage: React.FC = () => {
       };
 
       await salonService.createPurchase(input, user);
-      setSuccessMessage(`Stock-in recorded successfully! ${totalUnitsReceiving} units added to inventory. Vendor ledger updated for PKR ${formatPKR(calculatedGrandTotal)}.`);
+      setSuccessMessage(
+        `Stock-in recorded successfully! ${totalUnitsReceiving} units added to inventory. Status: ${computedPaymentStatus} (Paid: PKR ${formatPKR(paidAmount)}, Remaining Due: PKR ${formatPKR(remainingDue)}).`
+      );
       setIsStockInModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to record stock in.');
+    } finally {
+      setIsSubmittingStockIn(false);
     }
   };
 
@@ -315,7 +334,7 @@ export const StockInPurchasesPage: React.FC = () => {
           minStockLevel: 5,
           taxTreatment: 'BRANCH_DEFAULT',
           trackBatch: true,
-          trackExpiry: true,
+          trackExpiry: false,
           nearExpiryAlertDays: 60,
           isActive: true,
         },
@@ -377,7 +396,7 @@ export const StockInPurchasesPage: React.FC = () => {
         selectedBranchId={selectedBranchId}
         onBranchChange={setSelectedBranchId}
         primaryAction={{
-          label: 'New Stock In (Mangwana)',
+          label: 'New Stock In',
           icon: <ArrowDownRight className="w-3.5 h-3.5" />,
           onClick: handleOpenStockIn,
         }}
@@ -564,7 +583,7 @@ export const StockInPurchasesPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                        {p.paymentStatus || 'COMPLETED'}
+                        {p.paymentStatus === 'PAID' ? 'Fully Paid' : p.paymentStatus === 'PARTIAL' ? 'Partially Paid' : p.paymentStatus === 'UNPAID' ? 'Unpaid' : 'Completed'}
                       </span>
                     </td>
                   </tr>
@@ -577,28 +596,29 @@ export const StockInPurchasesPage: React.FC = () => {
 
       {/* --- MODAL: NEW STOCK IN (MANGWANA) --- */}
       {isStockInModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl border border-slate-200 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
                   <ArrowDownRight className="w-5 h-5 text-[#0047AB]" />
-                  <span>Receive Stock Shipment (Stock In / Mangwana)</span>
+                  <span>Receive Stock Shipment (Stock In)</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Check stock on hand before receiving. Ledger bill is calculated strictly on newly ordered quantity.
+                  Record vendor purchase invoice, receive inventory into stock, and manage payment settlement.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsStockInModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitStockIn} className="space-y-5 pt-4">
+            <form id="stock-in-form" onSubmit={handleSubmitStockIn} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               {/* Row 1: Supplier Picker with Quick Add Button */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
                 <div>
@@ -612,7 +632,7 @@ export const StockInPurchasesPage: React.FC = () => {
                       className="text-[11px] font-bold text-[#0047AB] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
-                      <span>+ Add New Vendor Directly</span>
+                      <span>Add New Vendor</span>
                     </button>
                   </div>
                   <select
@@ -657,7 +677,7 @@ export const StockInPurchasesPage: React.FC = () => {
                       className="text-xs font-semibold text-slate-700 hover:text-[#0047AB] flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />
-                      <span>+ Add New Product</span>
+                      <span>Add New Product</span>
                     </button>
                     <button
                       type="button"
@@ -703,8 +723,8 @@ export const StockInPurchasesPage: React.FC = () => {
 
                         {/* Quantity Receiving */}
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Qty Mangwaya *
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">
+                            Quantity Received *
                           </label>
                           <input
                             type="number"
@@ -717,7 +737,7 @@ export const StockInPurchasesPage: React.FC = () => {
 
                         {/* Unit Purchase Cost */}
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">
                             Unit Cost (PKR)
                           </label>
                           <input
@@ -731,22 +751,22 @@ export const StockInPurchasesPage: React.FC = () => {
                         </div>
 
                         {/* Line Total */}
-                        <div className="sm:col-span-2 text-right">
-                          <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1 text-right whitespace-nowrap">
                             Ledger Bill
                           </label>
-                          <div className="text-xs font-bold text-slate-900 py-2">
+                          <div className="text-xs font-bold text-slate-800 py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg text-right">
                             PKR {formatPKR(lineTotalCost)}
                           </div>
                         </div>
 
                         {/* Remove Button */}
-                        <div className="sm:col-span-1 text-right">
+                        <div className="sm:col-span-1 flex items-center justify-end pb-1">
                           {stockInLines.length > 1 && (
                             <button
                               type="button"
                               onClick={() => handleRemoveLine(idx)}
-                              className="p-1.5 text-rose-500 hover:text-rose-700 cursor-pointer"
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
                               title="Remove item"
                             >
                               <X className="w-4 h-4" />
@@ -757,41 +777,39 @@ export const StockInPurchasesPage: React.FC = () => {
 
                       <div className="max-w-xs">
                         <label htmlFor={'stock-in-expiry-' + idx} className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          Expiry Date {item?.trackExpiry ? '*' : '(Optional)'}
+                          Expiry Date <span className="text-slate-400 font-normal">(Optional)</span>
                         </label>
                         <input
                           id={'stock-in-expiry-' + idx}
                           type="date"
                           value={line.expiryDate || ''}
-                          required={!!item?.trackExpiry}
                           onChange={(e) => handleUpdateLine(idx, { expiryDate: e.target.value || undefined })}
-                          className="w-full text-xs px-2.5 py-2 border border-slate-300 rounded-lg focus:outline-hidden"
+                          className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-hidden"
                         />
-                        {item?.trackExpiry && (
-                          <p className="mt-1 text-[11px] text-slate-500">Enter the expiry date printed on this batch.</p>
-                        )}
                       </div>
 
-                      {/* Stock Clarity Banner (Addressing user instruction directly!) */}
-                      <div className="bg-[#EAF2FB] border border-blue-200/60 rounded-lg px-3 py-2 flex flex-wrap items-center justify-between text-xs gap-2">
-                        <div className="flex items-center gap-2">
+                      {/* Stock Clarity Banner */}
+                      <div className="bg-[#EAF2FB] border border-blue-200/60 rounded-lg px-3.5 py-2 flex flex-wrap items-center justify-between text-xs gap-2">
+                        <div className="flex items-center gap-1.5 text-slate-700">
                           <Info className="w-3.5 h-3.5 text-[#0047AB]" />
-                          <span className="text-slate-700">
-                            Pehle se pada hua stock:{' '}
+                          <span>
+                            Current Stock:{' '}
                             <strong className="text-slate-900 font-bold">
                               {currentStockOnHand} {item?.purchaseUnit || 'Units'}
                             </strong>
                           </span>
                         </div>
                         <div className="text-slate-700">
-                          Naya Mangwaya:{' '}
+                          Received Intake:{' '}
                           <strong className="text-[#0047AB] font-bold">
                             +{newQuantity} {item?.purchaseUnit || 'Units'}
                           </strong>
                         </div>
-                        <div className="text-emerald-800 font-bold">
-                          Kul Stock Baad Mein:{' '}
-                          <span className="underline">{totalAfterStockIn} {item?.purchaseUnit || 'Units'}</span>
+                        <div className="text-emerald-800 font-semibold">
+                          Total Stock After:{' '}
+                          <span className="underline font-bold">
+                            {totalAfterStockIn} {item?.purchaseUnit || 'Units'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -799,84 +817,184 @@ export const StockInPurchasesPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Payment & Ledger Method */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Payment Method / Settlement *
+              {/* Payment & Vendor Khata Settlement */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 text-[#0047AB]" />
+                    <span>Payment & Vendor Khata Settlement</span>
                   </label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as any)}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden"
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                      computedPaymentStatus === 'PAID'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : computedPaymentStatus === 'PARTIAL'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}
                   >
-                    <option value="CREDIT">Supplier Credit (Vendor Khata / Unpaid)</option>
-                    <option value="CASH">Cash Drawer (Disburse from Active Custody)</option>
-                    <option value="ONLINE">Bank / Online Account Transfer</option>
-                  </select>
+                    Payment Status: {computedPaymentStatus}
+                  </span>
                 </div>
 
-                {paymentMethod === 'ONLINE' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  {/* Total Bill */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Bank / Online Account *
-                    </label>
-                    <select
-                      value={paymentAccountId}
-                      onChange={(e) => setPaymentAccountId(e.target.value)}
-                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden"
-                    >
-                      {paymentAccounts.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} ({a.bankName || 'Online'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {paymentMethod === 'CASH' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Cash Custody Drawer
-                    </label>
-                    <div className="text-xs py-2 px-3 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium">
-                      {activeDrawer ? `Drawer: ${activeDrawer.drawerName} (Your Active Session)` : 'No open drawer!'}
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Total Bill</label>
+                    <div className="text-xs font-bold text-slate-900 py-2 px-3 bg-white border border-slate-300 rounded-lg">
+                      PKR {formatPKR(calculatedGrandTotal)}
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Ledger Charging Guarantee Box */}
-              <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                <div>
-                  <strong>Ledger Accuracy Guarantee:</strong> Vendor bill pricing is calculated strictly on the newly received <strong>{totalUnitsReceiving} units (PKR {formatPKR(calculatedGrandTotal)})</strong>. Pre-existing stock on hand remains merged in inventory without generating duplicate ledger charges.
-                </div>
-              </div>
+                  {/* Amount Paid Now */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-slate-700">Amount Paid Now (PKR)</label>
+                      <span className="text-[10px] text-slate-400">0 = Unpaid</span>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      max={calculatedGrandTotal}
+                      step="0.01"
+                      value={paidAmount}
+                      onChange={(e) => {
+                        const val = Math.max(0, Math.min(calculatedGrandTotal, Number(e.target.value) || 0));
+                        setPaidAmount(val);
+                      }}
+                      placeholder="0.00"
+                      className="w-full text-xs font-bold px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden focus:ring-1 focus:ring-[#0047AB]"
+                    />
+                  </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                <div className="text-sm font-bold text-slate-900">
-                  Total Bill: <span className="text-[#0047AB]">PKR {formatPKR(calculatedGrandTotal)}</span>
+                  {/* Remaining Khata Due */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Remaining Khata Due (Payable)
+                    </label>
+                    <div
+                      className={`text-xs font-bold py-2 px-3 rounded-lg border ${
+                        remainingDue > 0
+                          ? 'bg-amber-50 border-amber-200 text-amber-900'
+                          : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      }`}
+                    >
+                      PKR {formatPKR(remainingDue)}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2.5">
+
+                {/* Quick Payment Set Buttons */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-[11px] text-slate-500 font-medium">Quick Set:</span>
                   <button
                     type="button"
-                    onClick={() => setIsStockInModalOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+                    onClick={() => setPaidAmount(0)}
+                    className="text-[11px] font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-slate-700 transition-colors cursor-pointer"
                   >
-                    Cancel
+                    Unpaid (PKR 0)
                   </button>
                   <button
-                    type="submit"
-                    className="px-6 py-2 text-xs font-semibold text-white bg-[#0047AB] hover:bg-[#003785] rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5"
+                    type="button"
+                    onClick={() => setPaidAmount(Math.round(calculatedGrandTotal / 2))}
+                    className="text-[11px] font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-slate-700 transition-colors cursor-pointer"
                   >
-                    <ArrowDownRight className="w-3.5 h-3.5" />
-                    <span>Confirm & Stock In</span>
+                    Partial 50% (PKR {formatPKR(Math.round(calculatedGrandTotal / 2))})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaidAmount(calculatedGrandTotal)}
+                    className="text-[11px] font-semibold px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-slate-700 transition-colors cursor-pointer"
+                  >
+                    Full Paid (100%)
                   </button>
                 </div>
+
+                {/* Payment Source Selection (when paying) */}
+                {paidAmount > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-200">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Payment Method *
+                      </label>
+                      <select
+                        value={paymentSourceMethod}
+                        onChange={(e) => setPaymentSourceMethod(e.target.value as 'CASH' | 'ONLINE')}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden"
+                      >
+                        <option value="CASH">Cash Drawer (Cash in Hand)</option>
+                        <option value="ONLINE">Bank / Online Account</option>
+                      </select>
+                    </div>
+
+                    {paymentSourceMethod === 'ONLINE' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Bank / Online Account *
+                        </label>
+                        <select
+                          value={paymentAccountId}
+                          onChange={(e) => setPaymentAccountId(e.target.value)}
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden"
+                        >
+                          {paymentAccounts.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name} ({a.bankName || 'Bank'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {paymentSourceMethod === 'CASH' && (
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Cash Custody
+                        </label>
+                        <div className="text-xs py-2 px-3 bg-white border border-slate-300 rounded-lg text-slate-700 font-medium">
+                          {activeDrawer ? `Drawer: ${activeDrawer.drawerName}` : 'Branch Vault / Active Cash Drawer'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-[11px] text-slate-500 pt-1">
+                  {remainingDue > 0
+                    ? `PKR ${formatPKR(remainingDue)} will be posted to ${suppliers.find((s) => s.id === selectedSupplierId)?.name || 'vendor'}'s payable khata.`
+                    : 'Bill is fully settled. No debt added to vendor khata.'}
+                </p>
               </div>
             </form>
+
+            {/* Modal Sticky Footer */}
+            <div className="px-6 py-3.5 border-t border-slate-100 flex items-center justify-between shrink-0 bg-slate-50">
+              <div className="text-sm font-bold text-slate-900">
+                Total Bill: <span className="text-[#0047AB]">PKR {formatPKR(calculatedGrandTotal)}</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsStockInModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="stock-in-form"
+                  disabled={isSubmittingStockIn}
+                  className="px-6 py-2 text-xs font-semibold text-white bg-[#0047AB] hover:bg-[#003785] disabled:opacity-50 rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors"
+                >
+                  {isSubmittingStockIn ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <ArrowDownRight className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isSubmittingStockIn ? 'Recording...' : 'Confirm & Stock In'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

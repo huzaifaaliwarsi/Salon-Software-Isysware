@@ -8,6 +8,7 @@
 //   • Supplier payable = Σ ledger credit − Σ ledger debit; a negative value is an advance (not clamped).
 
 import prisma from '../../config/prisma.js';
+import { paymentPosting } from '../../lib/paymentPosting.js';
 import { auditLog } from '../../lib/audit.js';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/AppError.js';
 import { assertBranchAccess, resolveReadBranch, resolveWriteBranch } from '../../lib/scope.js';
@@ -278,7 +279,7 @@ const supplierTotals = async (tx, supplierIds, branchId) => {
     const debit = toDec(r._sum.debit ?? 0);
     t.currentPayable = round2(toDec(t.currentPayable).plus(credit).minus(debit)).toNumber();
     if (['PURCHASE_BILL', 'PURCHASE_CREDIT'].includes(r.entryType)) t.totalPurchases = round2(toDec(t.totalPurchases).plus(credit)).toNumber();
-    if (r.entryType === 'SUPPLIER_PAYMENT') t.totalPayments = round2(toDec(t.totalPayments).plus(debit)).toNumber();
+    if (r.entryType === 'SUPPLIER_PAYMENT') t.totalPayments = round2(toDec(t.totalPayments).plus(debit).minus(credit)).toNumber();
     if (r.entryType === 'PURCHASE_RETURN') t.totalReturns = round2(toDec(t.totalReturns).plus(debit)).toNumber();
   }
   return totals;
@@ -383,7 +384,7 @@ export const supplierLedger = async (actor, supplierId, { branchId, startDate, e
     if (startDate && d < startDate) { opening = running; continue; }
     if (endDate && d > endDate) continue;
     if (['PURCHASE_BILL', 'PURCHASE_CREDIT'].includes(e.entryType)) totals.purchases = totals.purchases.plus(e.credit);
-    if (e.entryType === 'SUPPLIER_PAYMENT') totals.payments = totals.payments.plus(e.debit);
+    if (e.entryType === 'SUPPLIER_PAYMENT') totals.payments = totals.payments.plus(e.debit).minus(e.credit);
     if (e.entryType === 'PURCHASE_RETURN') totals.returns = totals.returns.plus(e.debit);
     out.push(toLedgerEntryDTO(e, s.name, running));
   }
@@ -398,41 +399,53 @@ export const supplierLedger = async (actor, supplierId, { branchId, startDate, e
 };
 
 /** Money out for a supplier: cash from the actor's own open drawer, or a named bank account. */
-const payOut = async (tx, actor, { branchId, method, paymentAccountId, amount, reference, description, sourceId }) => {
+const payOut = async (tx, actor, { branchId, method, paymentAccountId, amount, reference, description, sourceId, transactionDate }) => {
+  const common = { type: 'SUPPLIER_PAYMENT', direction: 'OUT', amount, sourceModule: 'INVENTORY', sourceId, reference, description, actor, transactionDate };
   if (method === 'CASH') {
     const drawer = await getActiveDrawer(tx, actor, branchId, { autoOpen: false });
-    await postCashMovement(tx, {
-      holderId: drawer.id, type: 'SUPPLIER_PAYMENT', direction: 'OUT', amount, sourceModule: 'INVENTORY',
-      sourceId, reference, description, actor,
-    });
+    await postCashMovement(tx, { ...common, holderId: drawer.id });
     return { cashDrawerId: drawer.id, paymentAccountId: null };
   }
-  if (!paymentAccountId) throw badRequest('ACCOUNT_REQUIRED', 'A named online bank account is required for electronic supplier payment.');
-  await postAccountMovement(tx, {
-    accountId: paymentAccountId, branchId, type: 'SUPPLIER_PAYMENT', direction: 'OUT', amount, sourceModule: 'INVENTORY',
-    sourceId, reference, description, actor,
-  });
+  if (!paymentAccountId) throw badRequest('ACCOUNT_REQUIRED', 'Select a branch payment account.');
+  await postAccountMovement(tx, { ...common, accountId: paymentAccountId, branchId });
   return { cashDrawerId: null, paymentAccountId };
 };
 
-export const paySupplier = async (input, actor) => {
+export const paySupplier = async (input, actor, request) => {
   const branchId = resolveWriteBranch(actor, input.branchId, 'Access Denied: Cannot pay suppliers for another branch.');
   const method = input.method ?? (input.paymentMethod === 'CASH' ? 'CASH' : 'ONLINE');
   const amount = round2(input.amount);
-  return prisma.$transaction(async (tx) => {
+  return paymentPosting(actor, request, async (tx) => {
+    if (!amount.isFinite() || amount.lessThanOrEqualTo(0)) throw badRequest('INVALID_AMOUNT', 'Payment amount must be positive.');
+    if (!['CASH', 'ONLINE'].includes(method) || !input.paymentDate) throw badRequest('PAYMENT_REQUIRED', 'Payment date and method are required.');
+    await tx.$executeRaw`SELECT 1 FROM "Supplier" WHERE id = ${input.supplierId} FOR UPDATE`;
     const branch = await activeBranch(tx, branchId);
     const supplier = await loadSupplier(tx, actor, input.supplierId);
     if (!supplier.isActive) throw badRequest('SUPPLIER_INACTIVE', `Supplier '${supplier.name}' is deactivated.`);
 
+    const payable = (await supplierTotals(tx, [supplier.id], branchId)).get(supplier.id).currentPayable;
+    if (amount.greaterThan(payable)) throw badRequest('OVERPAYMENT', 'Payment exceeds the outstanding supplier payable in this branch.');
+    const paymentDate = dateOnly(input.paymentDate);
+    const purchases = await tx.purchase.findMany({ where: { supplierId: supplier.id, branchId, balanceDue: { gt: 0 } }, orderBy: [{ purchaseDate: 'asc' }, { id: 'asc' }] });
+    let unallocated = amount;
+    const allocations = [];
+    for (const purchase of purchases) {
+      if (unallocated.isZero()) break;
+      const allocated = round2(toDec(purchase.balanceDue).lessThan(unallocated) ? purchase.balanceDue : unallocated);
+      const due = round2(toDec(purchase.balanceDue).minus(allocated));
+      await tx.purchase.update({ where: { id: purchase.id }, data: { paidAmount: round2(toDec(purchase.paidAmount).plus(allocated)), balanceDue: due, paymentStatus: due.isZero() ? 'PAID' : 'PARTIAL' } });
+      allocations.push({ purchaseId: purchase.id, invoiceNumber: purchase.purchaseNumber, amount: allocated.toNumber() });
+      unallocated = round2(unallocated.minus(allocated));
+    }
+    if (unallocated.greaterThan(0)) allocations.push({ purchaseId: null, invoiceNumber: 'Opening payable', amount: unallocated.toNumber() });
     const paymentNumber = await nextSequence(tx, branch.code, 'SP');
     const paidFrom = await payOut(tx, actor, {
       branchId, method, paymentAccountId: input.paymentAccountId, amount, reference: paymentNumber,
-      description: `Supplier payment to ${supplier.name}`,
+      description: `Supplier payment to ${supplier.name}`, transactionDate: paymentDate,
     });
-    const paymentDate = dateOnly(input.paymentDate || (await getBusinessDate(tx)));
     const payment = await tx.supplierPayment.create({
       data: {
-        paymentNumber, supplierId: supplier.id, branchId, paymentDate, amount, method, ...paidFrom,
+        paymentNumber, supplierId: supplier.id, branchId, paymentDate, amount, method, ...paidFrom, allocations,
         reference: input.reference || null, notes: input.notes || null, paidById: actor.id, paidByName: actor.name,
       },
     });
@@ -448,8 +461,7 @@ export const paySupplier = async (input, actor) => {
     await tx.accountMovement.updateMany({ where: { reference: paymentNumber }, data: { sourceId: payment.id } });
     await audit(tx, actor, 'SUPPLIER_PAID', 'SupplierPayment', payment.id, branchId, { paymentNumber, amount: amount.toNumber(), method });
 
-    const totals = await supplierTotals(tx, [supplier.id]);
-    const updatedPayable = totals.get(supplier.id).currentPayable;
+    const updatedPayable = (await supplierTotals(tx, [supplier.id], branchId)).get(supplier.id).currentPayable;
     return {
       payment: toSupplierPaymentDTO(payment, supplier.name, await accountName(tx, payment.paymentAccountId)),
       ledgerEntry: toLedgerEntryDTO(entry, supplier.name, updatedPayable),
@@ -501,9 +513,10 @@ export const getPurchase = async (actor, id) => {
   return toPurchaseDTO(p, await accountName(prisma, p.paymentAccountId));
 };
 
-export const createPurchase = async (input, actor) => {
+export const createPurchase = async (input, actor, request) => {
   const branchId = resolveWriteBranch(actor, input.branchId, 'Access Denied: Cannot post purchases for another branch.');
-  return prisma.$transaction(async (tx) => {
+  return paymentPosting(actor, request, async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Supplier" WHERE id = ${input.supplierId} FOR UPDATE`;
     const branch = await activeBranch(tx, branchId);
     const supplier = await loadSupplier(tx, actor, input.supplierId);
     if (!supplier.isActive) throw badRequest('SUPPLIER_INACTIVE', `Supplier '${supplier.name}' is invalid or deactivated.`);
@@ -514,7 +527,6 @@ export const createPurchase = async (input, actor) => {
       const item = items.find((x) => x.id === l.itemId);
       if (!item || !item.isActive) throw badRequest('ITEM_INVALID', `Line ${i + 1}: Item '${l.itemId}' is invalid or deactivated.`);
       if (!availableIn(item, branchId)) throw badRequest('ITEM_NOT_IN_BRANCH', `Line ${i + 1}: '${item.name}' is not enabled for this branch.`);
-      if (item.trackExpiry && !l.expiryDate) throw badRequest('EXPIRY_REQUIRED', `Line ${i + 1}: expiry date is required for '${item.name}'.`);
       return { ...l, item, unitPurchaseCost: l.unitPurchaseCost ?? l.unitCost };
     });
 
@@ -545,7 +557,7 @@ export const createPurchase = async (input, actor) => {
       const method = input.paymentMethod === 'CASH' || (input.paymentMethod === 'PARTIAL' && !input.paymentAccountId) ? 'CASH' : 'ONLINE';
       paidFrom = await payOut(tx, actor, {
         branchId, method, paymentAccountId: input.paymentAccountId, amount: paid, reference: purchaseNumber,
-        description: `Upfront payment for ${purchaseNumber} (${supplier.name})`,
+        description: `Upfront payment for ${purchaseNumber} (${supplier.name})`, transactionDate: purchaseDate,
       });
     }
 
@@ -590,13 +602,20 @@ export const createPurchase = async (input, actor) => {
         description: `Purchase: ${purchaseNumber}${purchase.supplierInvoiceNumber ? ` (Inv #${purchase.supplierInvoiceNumber})` : ''}`,
       },
     });
+    let paymentId = purchase.id;
     if (paid.greaterThan(0)) {
+      const initialPayment = await tx.supplierPayment.create({ data: {
+        paymentNumber: purchaseNumber, supplierId: supplier.id, branchId, paymentDate: purchaseDate, amount: paid,
+        method: paidFrom.cashDrawerId ? 'CASH' : 'ONLINE', ...paidFrom, paidById: actor.id, paidByName: actor.name, notes: input.notes || null,
+        allocations: [{ purchaseId: purchase.id, invoiceNumber: purchaseNumber, amount: paid.toNumber() }],
+      } });
+      paymentId = initialPayment.id;
       await tx.supplierLedger.create({
-        data: { ...ledgerBase, entryType: 'SUPPLIER_PAYMENT', debit: paid, description: `Upfront Payment at Purchase (${input.paymentMethod}): ${purchaseNumber}` },
+        data: { ...ledgerBase, referenceType: 'PAYMENT', referenceId: paymentId, entryType: 'SUPPLIER_PAYMENT', debit: paid, description: `Upfront Payment at Purchase (${input.paymentMethod}): ${purchaseNumber}` },
       });
     }
-    await tx.drawerMovement.updateMany({ where: { reference: purchaseNumber }, data: { sourceId: purchase.id } });
-    await tx.accountMovement.updateMany({ where: { reference: purchaseNumber }, data: { sourceId: purchase.id } });
+    await tx.drawerMovement.updateMany({ where: { reference: purchaseNumber }, data: { sourceId: paymentId } });
+    await tx.accountMovement.updateMany({ where: { reference: purchaseNumber }, data: { sourceId: paymentId } });
     await audit(tx, actor, 'PURCHASE_POSTED', 'Purchase', purchase.id, branchId, { purchaseNumber, netAmount: netAmount.toNumber(), paid: paid.toNumber() });
 
     const full = await tx.purchase.findUnique({ where: { id: purchase.id }, include: { lines: true } });
@@ -910,3 +929,27 @@ export const cogsReport = async (actor, { branchId, startDate, endDate } = {}) =
     },
   };
 };
+
+export const reverseSupplierPayment = (input, actor, request) => paymentPosting(actor, request, async (tx) => {
+  await tx.$executeRaw`SELECT 1 FROM "Supplier" WHERE id = ${input.supplierId} FOR UPDATE`;
+  const payment = await tx.supplierPayment.findUnique({ where: { id: input.paymentId } });
+  if (!payment || payment.supplierId !== input.supplierId) throw notFound('PAYMENT_NOT_FOUND', 'Supplier payment not found.');
+  assertBranchAccess(actor, payment.branchId);
+  if (payment.reversedAt) throw conflict('PAYMENT_REVERSED', 'Payment has already been reversed.');
+  const date = dateOnly(input.reversalDate);
+  if (date < payment.paymentDate) throw badRequest('REVERSAL_DATE', 'Reversal date cannot precede the payment date.');
+  const common = { type: 'REVERSAL', direction: 'IN', amount: payment.amount, sourceModule: 'INVENTORY', sourceId: payment.id, reference: payment.paymentNumber, description: input.reason, actor, transactionDate: date };
+  if (payment.method === 'CASH') await postCashMovement(tx, { ...common, holderId: payment.cashDrawerId });
+  else await postAccountMovement(tx, { ...common, accountId: payment.paymentAccountId, branchId: payment.branchId });
+  for (const allocation of payment.allocations) {
+    if (!allocation.purchaseId) continue;
+    const purchase = await tx.purchase.findUnique({ where: { id: allocation.purchaseId } });
+    const paid = round2(toDec(purchase.paidAmount).minus(allocation.amount));
+    const due = round2(toDec(purchase.balanceDue).plus(allocation.amount));
+    await tx.purchase.update({ where: { id: purchase.id }, data: { paidAmount: paid, balanceDue: due, paymentStatus: due.isZero() ? 'PAID' : paid.greaterThan(0) ? 'PARTIAL' : 'UNPAID' } });
+  }
+  await tx.supplierLedger.create({ data: { supplierId: payment.supplierId, branchId: payment.branchId, date, entryType: 'SUPPLIER_PAYMENT', referenceType: 'PAYMENT_REVERSAL', referenceId: payment.id, referenceNumber: payment.paymentNumber, description: input.reason, credit: payment.amount, userId: actor.id, userName: actor.name } });
+  const reversed = await tx.supplierPayment.update({ where: { id: payment.id }, data: { reversedAt: new Date(), reversedById: actor.id, reversedByName: actor.name, reversalReason: input.reason, reversalDate: date } });
+  await audit(tx, actor, 'SUPPLIER_PAYMENT_REVERSED', 'SupplierPayment', payment.id, payment.branchId, { amount: payment.amount.toString(), reason: input.reason });
+  return toSupplierPaymentDTO(reversed);
+});

@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 
-const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').refine((value) => { const date = new Date(value + 'T00:00:00Z'); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; }, 'Date must be a valid calendar date.');
 const optYmd = ymd.optional().or(z.literal('').transform(() => undefined));
 const positive = (label) => z.number({ message: `${label} must be a number.` }).positive(`${label} must be a positive number.`);
 const nonNeg = (label) => z.number({ message: `${label} must be a number.` }).min(0, `${label} must be non-negative.`);
@@ -79,13 +79,15 @@ export const ledgerQuery = z.object({ branchId: z.string().optional(), startDate
 export const paySupplierSchema = z.object({
   branchId:         z.string().optional(),
   amount:           positive('Payment amount'),
-  paymentDate:      optYmd,
+  paymentDate:      ymd,
   method:           z.enum(['CASH', 'ONLINE']).optional(),
   paymentMethod:    z.enum(['CASH', 'ONLINE', 'ONLINE_ACCOUNT']).optional(),
   paymentAccountId: z.string().optional(),
   reference:        z.string().trim().optional(),
   notes:            z.string().trim().optional(),
-}).passthrough();
+}).passthrough().refine((v) => !!(v.method || v.paymentMethod), { message: 'Cash or Online payment method is required.' });
+
+export const reversePaymentSchema = z.object({ reason: z.string().trim().min(3), reversalDate: ymd });
 
 export const createPurchaseSchema = z.object({
   branchId:              z.string().optional(),

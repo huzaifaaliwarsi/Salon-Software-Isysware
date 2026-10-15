@@ -208,7 +208,7 @@ export const MyBalanceSheetPage: React.FC = () => {
   // Header Title
   const isViewingSelf = targetUserId === user.id;
   const isSupervisorMode = (isSuperAdmin || isAdmin) && !isViewingSelf;
-  const pageTitle = isSupervisorMode ? 'Balance Sheets' : 'My Balance Sheet';
+  const pageTitle = isSupervisorMode ? 'Cash Balance Sheets' : 'My Cash Balance Sheet';
 
   // Export handlers
   const handleExportExcel = () => {
@@ -522,7 +522,7 @@ export const MyBalanceSheetPage: React.FC = () => {
                   <th className="py-2.5 px-3.5">RECEIPT / REF</th>
                   <th className="py-2.5 px-3.5">CATEGORY</th>
                   <th className="py-2.5 px-3.5">METHOD</th>
-                  <th className="py-2.5 px-3.5 text-right">AMOUNT</th>
+                  <th className="py-2.5 px-3.5 text-right">DEBIT (IN)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -595,7 +595,7 @@ export const MyBalanceSheetPage: React.FC = () => {
                   <th className="py-2.5 px-3.5">REF / RECEIPT</th>
                   <th className="py-2.5 px-3.5">EXPENSE / REASON</th>
                   <th className="py-2.5 px-3.5">METHOD</th>
-                  <th className="py-2.5 px-3.5 text-right">AMOUNT</th>
+                  <th className="py-2.5 px-3.5 text-right">CREDIT (OUT)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -648,33 +648,33 @@ export const MyBalanceSheetPage: React.FC = () => {
         </div>
 
         <div className="divide-y divide-slate-100 text-xs font-medium">
-          {/* Row 1: Opening / Petty Cash */}
+          {/* Row 1: Opening / Carry Forward Cash */}
           <div className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/50">
-            <span className="text-slate-600">Opening / Petty Cash:</span>
+            <span className="text-slate-600">Opening / Carry Forward Cash:</span>
             <span className="font-bold text-slate-900 tabular-nums">{formatPKR(openingCash)}</span>
           </div>
 
-          {/* Row 2: (+) Cash Collections */}
+          {/* Row 2: (+) Cash Collections (Debit / In) */}
           <div className="flex items-center justify-between px-5 py-3 bg-emerald-50/40">
-            <span className="text-slate-700 font-semibold">(+) Cash Collections:</span>
+            <span className="text-slate-700 font-semibold">(+) Cash Collections (Debit / In):</span>
             <span className="font-bold text-[#15803D] bg-emerald-100/80 px-3 py-1 rounded-sm tabular-nums">
-              {formatPKR(totalCashCollections)}
+              + {formatPKR(totalCashCollections)}
             </span>
           </div>
 
-          {/* Row 3: (-) Cash Expenses */}
+          {/* Row 3: (-) Cash Expenses (Credit / Out) */}
           <div className="flex items-center justify-between px-5 py-3 bg-rose-50/30">
-            <span className="text-slate-700">(-) Cash Expenses:</span>
+            <span className="text-slate-700">(-) Cash Expenses (Credit / Out):</span>
             <span className="font-bold text-[#DC2626] bg-rose-100/70 px-3 py-1 rounded-sm tabular-nums">
-              {formatPKR(cashExpenses)}
+              - {formatPKR(cashExpenses)}
             </span>
           </div>
 
-          {/* Row 4: (-) Cash Refunds */}
+          {/* Row 4: (-) Cash Refunds (Credit / Out) */}
           <div className="flex items-center justify-between px-5 py-3 bg-rose-50/30">
-            <span className="text-slate-700">(-) Cash Refunds:</span>
+            <span className="text-slate-700">(-) Cash Refunds (Credit / Out):</span>
             <span className="font-bold text-[#DC2626] bg-rose-100/70 px-3 py-1 rounded-sm tabular-nums">
-              {formatPKR(cashRefunds)}
+              - {formatPKR(cashRefunds)}
             </span>
           </div>
 

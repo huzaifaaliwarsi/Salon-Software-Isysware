@@ -99,7 +99,7 @@ describe('Step 10 · Purchases, supplier payable & returns', () => {
 
   it('pays a supplier from a bank account (idempotent) — payable and account both reduce', async () => {
     const before = (await as('admin').get('/payment-accounts')).body.data.find((a) => a.id === 'acc-1').currentBalance;
-    const body = { amount: 10000, method: 'ONLINE', paymentAccountId: 'acc-1', reference: 'IBFT-77' };
+    const body = { amount: 10000, paymentDate: '2026-09-28', method: 'ONLINE', paymentAccountId: 'acc-1', reference: 'IBFT-77' };
     const res = await as('accountant').post('/suppliers/sup-2/payments', body, key('pay-1'));
     expect(res.status).toBe(201);
     expect(res.body.data.updatedPayable).toBe(59300);

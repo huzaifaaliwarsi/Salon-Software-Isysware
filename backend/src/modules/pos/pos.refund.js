@@ -27,7 +27,7 @@ const refundedQty = (invoice) => {
 
 /** Bill money actually held for this invoice = bill receipts − bill refunds already paid out. */
 const billMoneyHeld = (invoice) => {
-  const received = invoice.payments.reduce((s, p) => s.plus(p.billAmountAllocated), toDec(0));
+  const received = invoice.payments.filter((p) => !p.reversedAt).reduce((s, p) => s.plus(p.billAmountAllocated), toDec(0));
   const refunded = invoice.refunds.reduce((s, r) => s.plus(r.cashOut).minus(r.tipReversed), toDec(0));
   return round2(received.minus(refunded));
 };

@@ -118,10 +118,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
               {group.items.map((item) => {
                 const hasChildren = Boolean(item.children && item.children.length > 0);
-                const isChildActive = hasChildren && item.children!.some((c) => pathname === c.href);
+                const isChildActive = hasChildren && item.children!.some((c) => {
+                  if (pathname === c.href) return true;
+                  if (c.href === '/operations/inventory' && (pathname === '/inventory' || pathname === '/operations/inventory-suppliers')) return true;
+                  if (c.href === '/operations/stock-in' && (pathname === '/operations/purchases' || pathname === '/purchases')) return true;
+                  if (c.href === '/operations/suppliers' && (pathname === '/suppliers' || pathname === '/operations/vendors')) return true;
+                  if (c.href === '/operations/supplier-ledger' && pathname === '/operations/supplier-khata') return true;
+                  if (c.href === '/operations/stock-adjustments' && pathname === '/operations/adjustments') return true;
+                  return false;
+                });
                 const isExpanded = expandedMenus[item.id] !== undefined
                   ? expandedMenus[item.id]
-                  : (isChildActive || pathname.startsWith('/accounts/salary') || pathname === '/accounts/payroll');
+                  : (isChildActive || (item.id === 'salary-and-loan' && (pathname.startsWith('/accounts/salary') || pathname === '/accounts/payroll')));
                 const isActive = (!hasChildren && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))) || (hasChildren && isChildActive);
 
                 return (
@@ -172,9 +180,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                     {/* Submenu Accordion Dropdown */}
                     {hasChildren && isExpanded && !isCollapsed && (
-                      <div className="ml-5 pl-4 border-l-2 border-slate-300 space-y-1.5 py-1 my-1">
+                      <div className="ml-5 pl-4 border-l-2 border-slate-300 space-y-1 py-1 my-1">
                         {item.children!.map((child) => {
-                          const isCurrent = pathname === child.href;
+                          const isCurrent =
+                            pathname === child.href ||
+                            (child.href === '/operations/inventory' && (pathname === '/inventory' || pathname === '/operations/inventory-suppliers')) ||
+                            (child.href === '/operations/stock-in' && (pathname === '/operations/purchases' || pathname === '/purchases')) ||
+                            (child.href === '/operations/suppliers' && (pathname === '/suppliers' || pathname === '/operations/vendors')) ||
+                            (child.href === '/operations/supplier-ledger' && pathname === '/operations/supplier-khata') ||
+                            (child.href === '/operations/stock-adjustments' && pathname === '/operations/adjustments');
                           return (
                             <button
                               key={child.id}
@@ -182,8 +196,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               onClick={() => handleItemClick(child.href)}
                               className={`w-full text-left py-1 px-2 rounded-md text-xs transition-colors cursor-pointer block truncate ${
                                 isCurrent
-                                  ? 'text-[#0a3871] font-bold bg-blue-50/70'
-                                  : 'text-slate-600 hover:text-slate-900 font-medium'
+                                  ? 'text-[#0a3871] font-bold bg-blue-50/80 shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-100/60'
                               }`}
                             >
                               {child.label}
