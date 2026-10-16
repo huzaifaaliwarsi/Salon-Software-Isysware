@@ -14,6 +14,7 @@ import {
   parseTimeToMinutes, formatMinutesToTime, evaluateLateness, evaluateEarlyExit, calculateWorkedHours,
   calculateScheduledHours, calculateDeductionSnapshot, evaluateLeaveAllowance, isWorkingDay,
 } from '../../lib/calculations/attendanceCalculations.js';
+import { roundCurrency } from '../../lib/calculations/taxCalculations.js';
 import { toStaffDTO } from '../staff/staff.mapper.js';
 import { lockStaffPayBranch, assertPayrollPeriodOpen } from '../../lib/hrTransactions.js';
 
@@ -79,20 +80,23 @@ const resolveStaffFilter = (actor, staffId) => {
 };
 
 /** Lateness, early exit, worked hours and deduction preview for one day. */
-const evaluateDay = (staffDTO, checkIn, checkOut, isOvernight) => {
+const evaluateDay = (staffDTO, checkIn, checkOut, isOvernight, status) => {
   if (checkOut && !isOvernight && checkIn && parseTimeToMinutes(checkOut) < parseTimeToMinutes(checkIn)) {
     throw badRequest('INVALID_PUNCH', 'Check-out time cannot be earlier than check-in time unless marked as an overnight shift.');
   }
   const { isLate, lateMinutes } = evaluateLateness(checkIn, staffDTO.startTime, staffDTO.lateGraceMinutes);
   const early = checkOut ? evaluateEarlyExit(checkOut, staffDTO.endTime, staffDTO.earlyGraceMinutes, isOvernight) : { isEarlyExit: false, earlyExitMinutes: 0 };
   const sched = calculateScheduledHours(staffDTO.startTime, staffDTO.endTime, isOvernight);
-  const worked = (checkIn && checkOut) ? calculateWorkedHours(checkIn, checkOut, isOvernight) : sched;
+  let worked = (checkIn && checkOut) ? calculateWorkedHours(checkIn, checkOut, isOvernight) : 0;
+  if (status === 'HALF_DAY' && (!checkIn || !checkOut)) {
+    worked = roundCurrency(sched / 2);
+  }
   return {
     isLate, lateMinutes, isEarlyExit: early.isEarlyExit, earlyExitMinutes: early.earlyExitMinutes,
     workedHours: worked,
     scheduledHours: sched,
     calculationSnapshot: calculateDeductionSnapshot(staffDTO, isLate, lateMinutes, early.isEarlyExit, early.earlyExitMinutes),
-    isMissingPunch: Boolean(checkIn && !checkOut),
+    isMissingPunch: status === 'HALF_DAY' ? false : (!checkIn || !checkOut),
   };
 };
 
@@ -131,7 +135,7 @@ export const createAttendance = async (input, actor) => {
 
     const dto = toStaffDTO(staff);
     const isOvernight = input.isOvernightShift ?? staff.isOvernightShift;
-    const day = evaluateDay(dto, input.checkIn, input.checkOut, isOvernight);
+    const day = evaluateDay(dto, input.checkIn, input.checkOut, isOvernight, input.status);
     const source = input.source || 'MANUAL';
     const record = await tx.attendanceRecord.create({
       data: {
@@ -167,7 +171,7 @@ export const correctAttendance = async (id, input, actor) =>
       checkIn: r.checkIn, checkOut: r.checkOut ?? undefined, status: r.status, workedHours: num(r.workedHours),
       isLate: r.isLate, lateMinutes: r.lateMinutes, isEarlyExit: r.isEarlyExit, earlyExitMinutes: r.earlyExitMinutes,
     });
-    const day = evaluateDay(toStaffDTO(staff), input.checkIn, input.checkOut, record.isOvernightShift);
+    const day = evaluateDay(toStaffDTO(staff), input.checkIn, input.checkOut, record.isOvernightShift, input.status || record.status);
     const updated = await tx.attendanceRecord.update({
       where: { id },
       data: {
@@ -349,12 +353,12 @@ export const bulkSaveAttendance = async ({ branchId: requested, date, records },
       if (status === 'PRESENT' || status === 'HALF_DAY') {
         if (checkOut && !checkIn) throw badRequest('INVALID_PUNCH', 'Enter check-in before check-out.');
         const dto = toStaffDTO(staff);
-        const day = evaluateDay(dto, checkIn, checkOut, staff.isOvernightShift);
+        const day = evaluateDay(dto, checkIn, checkOut, staff.isOvernightShift, status);
         isLate = day.isLate;
         lateMinutes = day.lateMinutes;
         isEarlyExit = day.isEarlyExit;
         earlyExitMinutes = day.earlyExitMinutes;
-        workedHours = status === 'HALF_DAY' ? roundCurrency(day.workedHours / 2) : day.workedHours;
+        workedHours = day.workedHours;
         scheduledHours = day.scheduledHours;
         calculationSnapshot = day.calculationSnapshot;
         isMissingPunch = day.isMissingPunch;

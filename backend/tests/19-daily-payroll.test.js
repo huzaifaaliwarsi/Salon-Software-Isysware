@@ -198,6 +198,7 @@ describe('Daily Payroll Flow · Backend API & Integration', () => {
   let dailyStaffId;
 
   beforeAll(async () => {
+    await as('super').put('/system/date', { date: '2026-10-07' });
     // Find or create daily staff member in branch-1
     let dailyStaff = await prisma.staff.findFirst({
       where: { branchId: 'branch-1', compensationType: 'DAILY_PLUS_COMMISSION' },

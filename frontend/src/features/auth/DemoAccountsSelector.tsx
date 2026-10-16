@@ -31,10 +31,10 @@ export const DemoAccountsSelector: React.FC<DemoAccountsSelectorProps> = ({
         <div className="flex items-center gap-1.5">
           <Sparkles className="w-4 h-4 text-[#2254E1]" />
           <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
-            One-Click Demo Accounts
+            Quick Login Portals
           </h4>
         </div>
-        <span className="text-[11px] text-slate-400">Predefined credentials</span>
+        <span className="text-[11px] text-slate-400">Role accounts</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

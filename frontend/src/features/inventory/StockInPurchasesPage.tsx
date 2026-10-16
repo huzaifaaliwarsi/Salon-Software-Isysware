@@ -14,6 +14,7 @@ import {
 } from '@/types/salon';
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
 import { InventoryNavHeader } from './InventoryNavHeader';
+import { toast } from '@/context/ToastContext';
 import {
   ArrowDownRight,
   Plus,
@@ -228,11 +229,15 @@ export const StockInPurchasesPage: React.FC = () => {
   const handleSubmitStockIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSupplierId) {
-      setErrorMessage('Please select or add a supplier/vendor.');
+      const msg = 'Please select or add a supplier/vendor.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (stockInLines.length === 0) {
-      setErrorMessage('Please add at least one product line.');
+      const msg = 'Please add at least one product line.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -246,7 +251,9 @@ export const StockInPurchasesPage: React.FC = () => {
         : 'CASH';
 
     if (paidAmount > 0 && paymentSourceMethod === 'ONLINE' && !paymentAccountId) {
-      setErrorMessage('Please select a Bank / Online Account for payment.');
+      const msg = 'Please select a Bank / Online Account for payment.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -273,13 +280,15 @@ export const StockInPurchasesPage: React.FC = () => {
       };
 
       await salonService.createPurchase(input, user);
-      setSuccessMessage(
-        `Stock-in recorded successfully! ${totalUnitsReceiving} units added to inventory. Status: ${computedPaymentStatus} (Paid: PKR ${formatPKR(paidAmount)}, Remaining Due: PKR ${formatPKR(remainingDue)}).`
-      );
+      const msg = `Stock-in recorded successfully! ${totalUnitsReceiving} units added to inventory.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsStockInModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to record stock in.');
+      const msg = err?.message || 'Failed to record stock in.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmittingStockIn(false);
     }
@@ -288,7 +297,10 @@ export const StockInPurchasesPage: React.FC = () => {
   // Quick Vendor Creation
   const handleQuickAddVendor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickVendorName.trim()) return;
+    if (!quickVendorName.trim()) {
+      toast.error('Vendor name is required.');
+      return;
+    }
     try {
       const created = await salonService.createSupplier(
         {
@@ -307,9 +319,13 @@ export const StockInPurchasesPage: React.FC = () => {
       setQuickVendorName('');
       setQuickVendorCompany('');
       setQuickVendorPhone('');
-      setSuccessMessage(`Vendor "${created.name}" registered and selected.`);
+      const msg = `Vendor "${created.name}" registered and selected.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to create vendor.');
+      const msg = err?.message || 'Failed to create vendor.';
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   };
 
@@ -406,30 +422,6 @@ export const StockInPurchasesPage: React.FC = () => {
           onClick: () => navigate('/operations/suppliers'),
         }}
       />
-
-      {/* Notifications */}
-      {successMessage && (
-        <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-            <span>{errorMessage}</span>
-          </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-700 hover:text-rose-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

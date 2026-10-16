@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from '@/context/RouterContext';
 import { salonService } from '@/services';
+import { toast } from '@/context/ToastContext';
 import {
   InventoryItem,
   InventoryBatch,
@@ -233,7 +234,7 @@ export const InventoryItemsPage: React.FC = () => {
   const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
-      setErrorMessage('Product name is required.');
+      toast.error('Product name is required.');
       return;
     }
 
@@ -255,7 +256,9 @@ export const InventoryItemsPage: React.FC = () => {
           },
           user
         );
-        setSuccessMessage(`Product "${formData.name}" updated successfully.`);
+        const msg = `Product "${formData.name}" updated successfully.`;
+        setSuccessMessage(msg);
+        toast.success(msg);
       } else {
         const openingStock = Math.max(0, Number(formData.openingStock) || 0);
         const openingCost = Number(formData.openingCost || formData.defaultPurchaseCost || 0);
@@ -288,12 +291,16 @@ export const InventoryItemsPage: React.FC = () => {
           user
         );
         const stockNote = openingStock > 0 ? ` with opening stock of ${openingStock} ${formData.purchaseUnit}` : '';
-        setSuccessMessage(`New product "${formData.name}" added to catalogue${stockNote}.`);
+        const msg = `New product "${formData.name}" added to catalogue${stockNote}.`;
+        setSuccessMessage(msg);
+        toast.success(msg);
       }
       setIsModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to save product.');
+      const errMsg = err?.message || 'Failed to save product.';
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -317,30 +324,6 @@ export const InventoryItemsPage: React.FC = () => {
           onClick: () => navigate('/operations/stock-in'),
         }}
       />
-
-      {/* Notifications */}
-      {successMessage && (
-        <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-            <span>{errorMessage}</span>
-          </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-700 hover:text-rose-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

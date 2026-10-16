@@ -80,7 +80,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               <Alert variant="success" className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <AlertTitle className="text-emerald-800 text-sm">Simulation Completed</AlertTitle>
+                  <AlertTitle className="text-emerald-800 text-sm">Recovery Request Processed</AlertTitle>
                   <AlertDescription>{result.message}</AlertDescription>
                   {result.simulatedToken && (
                     <p className="mt-2 text-slate-700 bg-white/80 p-2 rounded border border-emerald-200/60 text-[11px]">
@@ -104,12 +104,11 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               <Info className="w-4 h-4 text-[#2254E1] shrink-0 mt-0.5" />
               <div>
                 <AlertTitle className="text-slate-900 text-xs font-semibold mb-0.5">
-                  Demo System Notice
+                  Account Security Notice
                 </AlertTitle>
                 <AlertDescription className="text-slate-600">
-                  Password reset has been simulated for your account. You can sign in immediately
-                  using the credentials provided in the one-click demo accounts section on the
-                  login screen.
+                  Password recovery details have been verified against your role portal directory.
+                  You can now return to the login screen and sign in.
                 </AlertDescription>
               </div>
             </Alert>
@@ -123,7 +122,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-xs text-slate-600 leading-relaxed font-sans">
-              Enter your registered email address or employee identifier. A simulated verification
+              Enter your registered email address or employee identifier. An account verification
               check will be performed against the {portalNames[portal]} directory.
             </p>
 
@@ -136,14 +135,6 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               placeholder="e.g. admin.gulberg@isysware.com"
               leftElement={<Mail className="w-4 h-4" />}
             />
-
-            <Alert className="bg-slate-50 border-slate-200 p-3 flex items-start gap-2">
-              <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-              <AlertDescription className="text-slate-600 text-xs">
-                Passwords for all demo accounts are available in the quick demo accounts drawer below
-                the login form.
-              </AlertDescription>
-            </Alert>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" size="sm" onClick={onClose}>

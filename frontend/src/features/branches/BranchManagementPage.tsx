@@ -17,6 +17,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/context/ToastContext';
 import {
   Dialog,
   DialogContent,
@@ -228,7 +229,9 @@ export const BranchManagementPage: React.FC = () => {
     setFormError(null);
 
     if (!formData.name.trim() || !formData.code.trim()) {
-      setFormError('Branch name and unique branch code are required.');
+      const msg = 'Branch name and unique branch code are required.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -243,20 +246,24 @@ export const BranchManagementPage: React.FC = () => {
           phone: formData.phone.trim(),
           email: formData.email.trim() || undefined,
           timezone: formData.timezone,
-          taxRate: 0.16, // Demo default value
+          taxRate: 0.16,
           currency: 'PKR',
           openingCashFloat: 25000.0,
           isActive: true,
         },
         user
       );
-      setFormSuccess(`Branch '${formData.name}' created successfully.`);
+      const successMsg = `Branch '${formData.name}' created successfully.`;
+      setFormSuccess(successMsg);
+      toast.success(successMsg);
       await loadData();
       setTimeout(() => {
         setIsAddModalOpen(false);
       }, 700);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to create branch.');
+      const errMsg = err.message || 'Failed to create branch.';
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -268,7 +275,9 @@ export const BranchManagementPage: React.FC = () => {
     setFormError(null);
 
     if (!formData.name.trim() || !formData.code.trim()) {
-      setFormError('Branch name and branch code are required.');
+      const msg = 'Branch name and branch code are required.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -287,13 +296,17 @@ export const BranchManagementPage: React.FC = () => {
         },
         user
       );
-      setFormSuccess(`Branch '${formData.name}' updated successfully.`);
+      const successMsg = `Branch '${formData.name}' updated successfully.`;
+      setFormSuccess(successMsg);
+      toast.success(successMsg);
       await loadData();
       setTimeout(() => {
         setIsEditModalOpen(false);
       }, 700);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to update branch.');
+      const errMsg = err.message || 'Failed to update branch.';
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -306,10 +319,13 @@ export const BranchManagementPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await salonService.assignBranchAdmin(selectedBranch.id, selectedAdminId, user);
+      toast.success('Branch administrator assigned successfully.');
       await loadData();
       setIsAssignAdminModalOpen(false);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to assign branch administrator.');
+      const errMsg = err.message || 'Failed to assign branch administrator.';
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -319,19 +335,21 @@ export const BranchManagementPage: React.FC = () => {
     if (!selectedBranch) return;
     try {
       await salonService.deactivateBranch(selectedBranch.id, user);
+      toast.success(`Branch '${selectedBranch.name}' deactivated.`);
       await loadData();
       setIsDeactivateAlertOpen(false);
     } catch (err: any) {
-      alert(err.message || 'Failed to deactivate branch.');
+      toast.error(err.message || 'Failed to deactivate branch.');
     }
   };
 
   const handleReactivateBranch = async (branch: Branch) => {
     try {
       await salonService.updateBranch(branch.id, { isActive: true }, user);
+      toast.success(`Branch '${branch.name}' reactivated.`);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to reactivate branch.');
+      toast.error(err.message || 'Failed to reactivate branch.');
     }
   };
 
@@ -634,20 +652,6 @@ export const BranchManagementPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {formError && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="w-4 h-4 text-rose-600" />
-              <AlertDescription className="text-xs">{formError}</AlertDescription>
-            </Alert>
-          )}
-
-          {formSuccess && (
-            <Alert variant="success" className="py-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <AlertDescription className="text-xs">{formSuccess}</AlertDescription>
-            </Alert>
-          )}
-
           <form onSubmit={handleCreateBranchSubmit} className="space-y-3.5 py-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
@@ -748,20 +752,6 @@ export const BranchManagementPage: React.FC = () => {
               Update address, contact details, or operational status for {selectedBranch?.name}.
             </DialogDescription>
           </DialogHeader>
-
-          {formError && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="w-4 h-4 text-rose-600" />
-              <AlertDescription className="text-xs">{formError}</AlertDescription>
-            </Alert>
-          )}
-
-          {formSuccess && (
-            <Alert variant="success" className="py-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <AlertDescription className="text-xs">{formSuccess}</AlertDescription>
-            </Alert>
-          )}
 
           <form onSubmit={handleEditBranchSubmit} className="space-y-3.5 py-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

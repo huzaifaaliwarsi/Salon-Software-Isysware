@@ -171,13 +171,6 @@ export const AppointmentDetailsModal: React.FC<AppointmentDetailsModalProps> = (
         </DialogHeader>
 
         <div className="p-6 space-y-6">
-          {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
           {/* Cancellation Reason if cancelled */}
           {(appointment.status === 'CANCELLED' || appointment.status === 'NO_SHOW') && (
             <div className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200 text-rose-800 text-xs space-y-1">

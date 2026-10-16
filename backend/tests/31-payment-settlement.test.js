@@ -11,6 +11,10 @@ let supplier, purchase, drawer, invoice;
 describe('Supplier and client settlement end-to-end', () => {
   beforeAll(async () => {
     await as('super').put('/system/date', { date });
+    await prisma.cashDrawer.updateMany({
+      where: { custodianUserId: 'usr-admin-01', status: 'OPEN' },
+      data: { status: 'SETTLED', closedAt: new Date(), settledAt: new Date() },
+    });
     supplier = (await as('admin').post('/suppliers', { name: 'Settlement supplier', phone: '03001234567' })).body.data;
     const result = await as('admin').post('/purchases', { supplierId: supplier.id, paymentMethod: 'CREDIT', lines: [{ itemId: 'item-6', quantity: 1, unitCost: 1000 }] }, key('purchase'));
     expect(result.status).toBe(201);
@@ -112,8 +116,8 @@ describe('Supplier and client settlement end-to-end', () => {
   });
 
   it('reconciles dated payments and later reversals without recognizing income twice', async () => {
-    const collectionDate = '2026-09-29';
-    const reversalDate = '2026-09-30';
+    const collectionDate = '2026-09-25';
+    const reversalDate = '2026-09-26';
     const result = await as('admin').post(`/invoices/${invoice.id}/payments`, { paymentDate: collectionDate, payments: [{ method: 'CASH', amount: 500, billAllocation: 500 }] }, key('dated-collection'));
     expect(result.status).toBe(201);
     const payment = result.body.data.payments.find((p) => p.kind === 'DUES_COLLECTION' && !p.reversedAt);

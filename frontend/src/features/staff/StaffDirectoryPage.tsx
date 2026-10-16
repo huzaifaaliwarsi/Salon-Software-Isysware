@@ -591,6 +591,13 @@ export const StaffDirectoryPage: React.FC = () => {
     if (!selectedStaff) return;
     setFormError(null);
 
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      const msg = 'Full name and primary phone number are required.';
+      setFormError(msg);
+      toast.error(msg);
+      return;
+    }
+
     if (formData.baseSalary < 0 || formData.dailySalaryRate < 0 || formData.overtimeHourlyRate < 0) {
       const msg = 'Salary amounts and overtime hourly rate must be non-negative.';
       setFormError(msg);
@@ -1036,20 +1043,6 @@ export const StaffDirectoryPage: React.FC = () => {
                 Configure basic info, compensation model, shift schedules, leave allowances, and attendance penalties.
               </DialogDescription>
             </DialogHeader>
-
-            {formError && (
-              <Alert variant="destructive" className="py-2.5">
-                <AlertCircle className="w-4 h-4 text-rose-600" />
-                <AlertDescription className="text-xs">{formError}</AlertDescription>
-              </Alert>
-            )}
-
-            {formSuccess && (
-              <Alert variant="success" className="py-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <AlertDescription className="text-xs">{formSuccess}</AlertDescription>
-              </Alert>
-            )}
 
             <form onSubmit={isAddModalOpen ? handleCreateStaffSubmit : handleEditStaffSubmit} className="space-y-6 py-2">
               {/* SECTION 1: BASIC INFORMATION */}
@@ -1633,20 +1626,6 @@ export const StaffDirectoryPage: React.FC = () => {
                 Grant or revoke personal staff portal access for viewing commissions and shifts.
               </DialogDescription>
             </DialogHeader>
-
-            {formError && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="w-4 h-4 text-rose-600" />
-                <AlertDescription className="text-xs">{formError}</AlertDescription>
-              </Alert>
-            )}
-
-            {formSuccess && (
-              <Alert variant="success" className="py-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <AlertDescription className="text-xs">{formSuccess}</AlertDescription>
-              </Alert>
-            )}
 
             <form onSubmit={handlePortalSubmit} className="space-y-3 py-2">
               <div className="flex items-center space-x-2">

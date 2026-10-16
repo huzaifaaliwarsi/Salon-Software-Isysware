@@ -280,7 +280,7 @@ export const POSBillingPage: React.FC = () => {
       salonService.getAppointment(appointmentIdParam, user).then((appt) => {
         if (appt) {
           if (appt.billingStatus === 'BILLED') {
-            alert(`Appointment ${appt.appointmentNumber || appt.id} has already been billed under invoice ${appt.linkedInvoiceNumber || appt.linkedInvoiceId}.`);
+            toast.warning(`Appointment ${appt.appointmentNumber || appt.id} has already been billed under invoice ${appt.linkedInvoiceNumber || appt.linkedInvoiceId}.`);
           } else {
             handleOpenAppointmentInPOS(appt);
           }
@@ -379,7 +379,9 @@ export const POSBillingPage: React.FC = () => {
         setSelectedInvoiceForPayment(null);
       }
     } catch (err: any) {
-      setCollectionError(err.message || 'Failed to fetch outstanding invoices.');
+      const msg = err.message || 'Failed to fetch outstanding invoices.';
+      setCollectionError(msg);
+      toast.error(msg);
     } finally {
       setIsLoadingInvoices(false);
     }
@@ -469,7 +471,9 @@ export const POSBillingPage: React.FC = () => {
       setIsCollectionModalOpen(false);
       setIsReceiptOpen(true);
     } catch (err: any) {
-      setCollectionError(err.message || 'Failed to process collection payment.');
+      const msg = err.message || 'Failed to process collection payment.';
+      setCollectionError(msg);
+      toast.error(msg);
     } finally {
       setIsPostingCollection(false);
     }
@@ -616,7 +620,7 @@ export const POSBillingPage: React.FC = () => {
             if (ci.type === 'PRODUCT' && delta > 0) {
               const available = productStockMap[ci.item.id] ?? 0;
               if (newQty > available) {
-                alert(`Cannot exceed available branch stock of ${available} for '${ci.item.name}'.`);
+                toast.error(`Cannot exceed available branch stock of ${available} for '${ci.item.name}'.`);
                 return ci;
               }
             }
@@ -1186,7 +1190,7 @@ export const POSBillingPage: React.FC = () => {
     );
 
     if (bookingPriceDiscrepancy && !acknowledgedPriceDiscrepancy) {
-      alert(
+      toast.warning(
         `Price Quote Notice: The quoted booking price was ${formatCurrency(
           bookingPriceDiscrepancy.quoted
         )}, but active catalogue subtotal is ${formatCurrency(
@@ -2457,14 +2461,6 @@ export const POSBillingPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {postingError && (
-            <Alert variant="destructive" className="py-2 text-xs">
-              <AlertCircle className="w-4 h-4" />
-              <AlertTitle>Transaction Failure</AlertTitle>
-              <AlertDescription>{postingError}</AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-4 py-2">
             {/* Quick Settlement Presets */}
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -2790,14 +2786,6 @@ export const POSBillingPage: React.FC = () => {
               Customer: <span className="font-bold text-slate-900">{clientName || selectedClient?.name}</span>
             </DialogDescription>
           </DialogHeader>
-
-          {collectionError && (
-            <Alert variant="destructive" className="py-2 text-xs">
-              <AlertCircle className="w-4 h-4" />
-              <AlertTitle>Collection Error</AlertTitle>
-              <AlertDescription>{collectionError}</AlertDescription>
-            </Alert>
-          )}
 
           {isLoadingInvoices ? (
             <div className="py-8 text-center text-xs text-slate-500">

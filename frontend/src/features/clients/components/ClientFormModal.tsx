@@ -119,6 +119,8 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
+      const firstError = Object.values(errors)[0];
+      toast.error(firstError);
       return;
     }
 
@@ -177,13 +179,6 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               <span>{isEditing ? 'Edit Customer Profile' : 'Add New Customer'}</span>
             </DialogTitle>
           </DialogHeader>
-
-          {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
 
           <div className="space-y-3.5">
             {/* Branch Selection (Super Admin only) */}

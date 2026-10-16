@@ -520,16 +520,6 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
         </DialogHeader>
 
         <div className="p-6 space-y-6">
-          {formError && (
-            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3 animate-in fade-in">
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Scheduling Error</p>
-                <p className="text-xs mt-0.5 leading-relaxed">{formError}</p>
-              </div>
-            </div>
-          )}
-
           {/* SECTION 1: CUSTOMER IDENTITY */}
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
             <div className="flex items-center justify-between">
@@ -959,7 +949,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
             type="button"
             variant="secondary"
             onClick={() => handleSubmit('PENDING')}
-            disabled={isSubmitting || selectedItems.length === 0}
+            disabled={isSubmitting}
             className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium"
           >
             Save as Pending
@@ -968,7 +958,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
           <Button
             type="button"
             onClick={() => handleSubmit('CONFIRMED')}
-            disabled={isSubmitting || selectedItems.length === 0}
+            disabled={isSubmitting}
             className="bg-[#2254E1] hover:bg-[#1b43b5] text-white font-medium shadow-sm"
           >
             {isSubmitting ? 'Validating Slots...' : 'Save & Confirm'}

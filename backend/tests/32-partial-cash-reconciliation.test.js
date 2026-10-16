@@ -6,6 +6,10 @@ import { drawerDebits, drawerMoney } from '../../frontend/src/features/reports/c
 describe('Partial cash collection reconciliation', () => {
   it('posts initial and later payments once and reconciles drawer, statement and settlement custody', async () => {
     await as('super').put('/system/date', { date: '2026-10-15' });
+    await prisma.cashDrawer.updateMany({
+      where: { custodianUserId: 'usr-admin-01', status: 'OPEN' },
+      data: { lastCountedCash: null, lastVariance: null, settledAt: null },
+    });
     const before = (await as('admin').get('/cash-drawers/mine')).body.data;
     const sale = await as('admin').post('/pos/invoices/checkout', {
       branchId: 'branch-1', clientId: 'client-1', clientName: 'Ayesha Khan', clientPhone: '03001234567',

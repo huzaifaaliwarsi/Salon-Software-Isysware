@@ -392,7 +392,7 @@ export const ServicesPackagesPage: React.FC = () => {
     const srv = services.find((s) => s.id === serviceId);
     if (!srv) return;
     if (packageFormData.components.some((c) => c.serviceId === serviceId)) {
-      setErrorMessage(`Service '${srv.name}' is already in this package.`);
+      toast.error(`Service '${srv.name}' is already added to this package.`);
       return;
     }
 
@@ -470,7 +470,9 @@ export const ServicesPackagesPage: React.FC = () => {
           },
           user
         );
-        setSuccessMessage(`Package '${packageFormData.name}' created successfully.`);
+        const msg = `Package '${packageFormData.name}' created successfully.`;
+        setSuccessMessage(msg);
+        toast.success(msg);
         setIsAddPackageModalOpen(false);
       } else if (isEditPackageModalOpen && selectedPackage) {
         await salonService.updatePackage(
@@ -487,12 +489,16 @@ export const ServicesPackagesPage: React.FC = () => {
           },
           user
         );
-        setSuccessMessage(`Package '${packageFormData.name}' updated successfully.`);
+        const msg = `Package '${packageFormData.name}' updated successfully.`;
+        setSuccessMessage(msg);
+        toast.success(msg);
         setIsEditPackageModalOpen(false);
       }
       loadBranchCatalogue();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to save package.');
+      const msg = err.message || 'Failed to save package.';
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   };
 
@@ -501,11 +507,15 @@ export const ServicesPackagesPage: React.FC = () => {
     if (!selectedPackage) return;
     try {
       const updated = await salonService.togglePackageStatus(selectedPackage.id, user);
-      setSuccessMessage(`Package '${updated.name}' is now ${updated.isActive ? 'Active' : 'Inactive'}.`);
+      const msg = `Package '${updated.name}' is now ${updated.isActive ? 'Active' : 'Inactive'}.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsPackageStatusAlertOpen(false);
       loadBranchCatalogue();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to change package status.');
+      const msg = err.message || 'Failed to change package status.';
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   };
 
@@ -674,23 +684,6 @@ export const ServicesPackagesPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* FEEDBACK ALERTS */}
-      {errorMessage && (
-        <Alert variant="destructive" className="animate-in fade-in duration-200">
-          <AlertCircle className="w-4 h-4" />
-          <AlertTitle>Validation Notice</AlertTitle>
-          <AlertDescription className="text-xs">{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert className="bg-emerald-50 border-emerald-200 text-emerald-800 animate-in fade-in duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <AlertTitle>Operation Confirmed</AlertTitle>
-          <AlertDescription className="text-xs">{successMessage}</AlertDescription>
-        </Alert>
-      )}
 
       {/* TABS NAVIGATION */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
@@ -1497,7 +1490,7 @@ export const ServicesPackagesPage: React.FC = () => {
               Multi-Staff Assignment Preview: {previewPackage?.name}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Interactive demonstration of how package component treatments can be performed by different stylists at checkout with exact revenue allocation.
+              Revenue allocation and stylist commission breakdown for this treatment package.
             </DialogDescription>
           </DialogHeader>
 
@@ -1512,7 +1505,7 @@ export const ServicesPackagesPage: React.FC = () => {
                     {formatCurrency(previewPackage.price)}
                   </span>
                 </div>
-                <Badge variant="primary">Non-Posting Simulation</Badge>
+                <Badge variant="primary">Revenue Distribution Preview</Badge>
               </div>
 
               <div className="space-y-2.5">

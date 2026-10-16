@@ -10,6 +10,7 @@ import {
   ApproveSettlementInput,
 } from '@/types/salon';
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
+import { toast } from '@/context/ToastContext';
 import {
   downloadReportExcel,
   downloadReportCsv,
@@ -147,19 +148,27 @@ export const AccountSettlementPage: React.FC = () => {
   const handleInlineSubmitSettlement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeDrawer) {
-      setErrorMessage('No active cash drawer found for settlement.');
+      const msg = 'No active cash drawer found for settlement.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (countedNum < 0 || retainedNum < 0) {
-      setErrorMessage('Amounts must be non-negative numbers.');
+      const msg = 'Amounts must be non-negative numbers.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (handoverNum + retainedNum !== countedNum) {
-      setErrorMessage('Handover amount + Retained float must equal total counted cash.');
+      const msg = 'Handover amount + Retained float must equal total counted cash.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (Math.abs(varianceNum) > 0.001 && !varianceExplanation.trim()) {
-      setErrorMessage('A variance explanation is required for a cash shortage or overage.');
+      const msg = 'A variance explanation is required for a cash shortage or overage.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -178,7 +187,9 @@ export const AccountSettlementPage: React.FC = () => {
       };
 
       await salonService.submitSettlement(payload, user);
-      setSuccessMessage('Shift settlement submitted successfully for manager review.');
+      const msg = 'Shift settlement submitted successfully for manager review.';
+      setSuccessMessage(msg);
+      toast.success(msg);
       setCountedCashInput('');
       setRetainedFloatInput('0');
       setVarianceExplanation('');
@@ -186,7 +197,9 @@ export const AccountSettlementPage: React.FC = () => {
       setShowSettleForm(false);
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to submit settlement.');
+      const msg = err.message || 'Failed to submit settlement.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -311,12 +324,16 @@ export const AccountSettlementPage: React.FC = () => {
         acceptVariance: true,
       };
       await salonService.approveSettlement(selectedSettlement.id, payload, user);
-      setSuccessMessage(`Settlement ${selectedSettlement.settlementNumber} approved successfully.`);
+      const msg = `Settlement ${selectedSettlement.settlementNumber} approved successfully.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsApproveModalOpen(false);
       setSelectedSettlement(null);
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to approve settlement.');
+      const msg = err.message || 'Failed to approve settlement.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -326,19 +343,25 @@ export const AccountSettlementPage: React.FC = () => {
   const handleRejectSettlement = async () => {
     if (!selectedSettlement) return;
     if (!rejectionReason.trim()) {
-      setErrorMessage('Please provide a reason for rejecting the settlement.');
+      const msg = 'Please provide a reason for rejecting the settlement.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
       await salonService.rejectSettlement(selectedSettlement.id, rejectionReason.trim(), user);
-      setSuccessMessage(`Settlement ${selectedSettlement.settlementNumber} rejected.`);
+      const msg = `Settlement ${selectedSettlement.settlementNumber} rejected.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsRejectModalOpen(false);
       setSelectedSettlement(null);
       await loadData();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to reject settlement.');
+      const msg = err.message || 'Failed to reject settlement.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -369,31 +392,6 @@ export const AccountSettlementPage: React.FC = () => {
           <span>View Balance Sheet</span>
         </button>
       </div>
-
-      {/* Alert Messages */}
-      {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-3 rounded-lg mb-5 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-500 hover:text-emerald-700 font-bold">
-            ✕
-          </button>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs px-4 py-3 rounded-lg mb-5 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-500 hover:text-rose-700 font-bold">
-            ✕
-          </button>
-        </div>
-      )}
 
       {/* 2. Top Card: SETTLE CURRENT SHIFT */}
       <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-hidden mb-8">

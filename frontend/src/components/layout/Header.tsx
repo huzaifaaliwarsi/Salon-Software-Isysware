@@ -306,7 +306,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Fast Account Switcher for Demo Evaluation */}
+            {/* Fast Account Switcher */}
             <div className="px-3 py-2">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                 Switch Active Portal Role
@@ -334,7 +334,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <DropdownMenuSeparator />
 
-            {/* Reset Test Data in Dropdown */}
+            {/* Clear Operational Data */}
             {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
               <>
                 <DropdownMenuItem
@@ -342,7 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer font-medium text-xs py-2"
                 >
                   <RotateCcw className="w-4 h-4 mr-2 text-rose-500" />
-                  <span>Reset Operational Test Data</span>
+                  <span>Clear Operational Data & Ledgers</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>

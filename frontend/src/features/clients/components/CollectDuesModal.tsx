@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from '@/context/ToastContext';
 import { AlertCircle, CreditCard, Banknote, Landmark, CheckCircle2 } from 'lucide-react';
 
 interface CollectDuesModalProps {
@@ -70,22 +71,22 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
     setErrorMsg(null);
 
     if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-      setErrorMsg('Payment amount must be greater than zero.');
+      toast.error('Payment amount must be greater than zero.');
       return;
     }
 
     if (paymentAmount > invoice.amountDue) {
-      setErrorMsg(`Payment amount cannot exceed outstanding balance of ${formatCurrency(invoice.amountDue)}.`);
+      toast.error(`Payment amount cannot exceed outstanding balance of ${formatCurrency(invoice.amountDue)}.`);
       return;
     }
 
     if (paymentMethod === 'CASH' && cashTendered < paymentAmount) {
-      setErrorMsg('Cash tendered cannot be less than payment amount.');
+      toast.error('Cash tendered cannot be less than payment amount.');
       return;
     }
 
     if (paymentMethod === 'ONLINE_ACCOUNT' && !selectedOnlineAccountId) {
-      setErrorMsg('Please select a valid online bank account.');
+      toast.error('Please select a valid online bank account.');
       return;
     }
 
@@ -126,10 +127,11 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
         user || undefined
       );
 
+      toast.success(`Payment of ${formatCurrency(paymentAmount)} recorded successfully.`);
       onSuccess(updated);
     } catch (err: any) {
       console.error('Failed to collect dues payment', err);
-      setErrorMsg(err.message || 'Payment collection failed.');
+      toast.error(err.message || 'Payment collection failed.');
     } finally {
       paymentBusy.current = false;
       setIsSubmitting(false);
@@ -146,13 +148,6 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
               <span>Collect Outstanding Dues</span>
             </DialogTitle>
           </DialogHeader>
-
-          {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
 
           {/* Invoice Summary Box */}
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 text-xs">

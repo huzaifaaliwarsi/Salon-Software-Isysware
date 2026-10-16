@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Copy, Check, ExternalLink, AlertTriangle } from 'lucide-react';
+import { toast } from '@/context/ToastContext';
 
 interface ConfirmationMessageModalProps {
   isOpen: boolean;
@@ -45,7 +46,9 @@ export const ConfirmationMessageModal: React.FC<ConfirmationMessageModalProps> =
         const msg = await salonService.prepareConfirmationMessage(appointmentId!, user || undefined);
         if (isMounted) setData(msg);
       } catch (err: any) {
-        if (isMounted) setErrorMsg(err.message || 'Failed to prepare confirmation message.');
+        const msg = err.message || 'Failed to prepare confirmation message.';
+        if (isMounted) setErrorMsg(msg);
+        toast.error(msg);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -60,6 +63,7 @@ export const ConfirmationMessageModal: React.FC<ConfirmationMessageModalProps> =
     if (!data) return;
     navigator.clipboard.writeText(data.messageText);
     setCopied(true);
+    toast.success('Confirmation message copied to clipboard!');
     setTimeout(() => setCopied(false), 2500);
   };
 

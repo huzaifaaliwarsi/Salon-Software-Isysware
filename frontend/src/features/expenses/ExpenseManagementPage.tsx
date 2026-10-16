@@ -298,19 +298,27 @@ export const ExpenseManagementPage: React.FC = () => {
     setFormError(null);
     const amountNum = parseFloat(formAmount);
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      setFormError('Please enter a valid expense amount greater than zero.');
+      const msg = 'Please enter a valid expense amount greater than zero.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     if (!formCategory) {
-      setFormError('Please select an expense category.');
+      const msg = 'Please select an expense category.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     if (!formPayee.trim()) {
-      setFormError('Payee / Paid to name is required.');
+      const msg = 'Payee / Paid to name is required.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     if (!formTitle.trim()) {
-      setFormError('Expense title / purpose is required.');
+      const msg = 'Expense title / purpose is required.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -579,7 +587,7 @@ export const ExpenseManagementPage: React.FC = () => {
   // Export Filtered Table to CSV
   const handleExportCSV = () => {
     if (filteredExpenses.length === 0) {
-      alert('No expense records to export matching current filters.');
+      toast.warning('No expense records to export matching current filters.');
       return;
     }
 
@@ -731,30 +739,6 @@ export const ExpenseManagementPage: React.FC = () => {
           <span>
             You are viewing the <strong>consolidated multi-branch ledger</strong> (read-only). To create an expense, transfer cash float, or reverse vouchers, please select a specific branch from the dropdown above.
           </span>
-        </div>
-      )}
-
-      {/* Global Alerts */}
-      {errorMessage && (
-        <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-sm">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span>{errorMessage}</span>
-          </div>
-          <button onClick={() => setErrorMessage(null)}>
-            <X className="w-4 h-4 text-rose-600" />
-          </button>
-        </div>
-      )}
-      {successMessage && (
-        <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-sm">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)}>
-            <X className="w-4 h-4 text-emerald-600" />
-          </button>
         </div>
       )}
 
@@ -1124,13 +1108,6 @@ export const ExpenseManagementPage: React.FC = () => {
               Disburse operating funds from cash drawer custody or online bank account.
             </DialogDescription>
           </DialogHeader>
-
-          {formError && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{formError}</span>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-3 py-2 text-xs">
             {/* Branch */}

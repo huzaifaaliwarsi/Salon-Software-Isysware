@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { DemoAccountsSelector } from './DemoAccountsSelector';
+import { toast } from '@/context/ToastContext';
 import {
   Scissors,
   Eye,
@@ -66,11 +67,15 @@ export const LoginPage: React.FC = () => {
     setErrorMessage(null);
 
     if (!identifier.trim()) {
-      setErrorMessage('Please enter your email or username.');
+      const msg = 'Please enter your email or username.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
     if (!password) {
-      setErrorMessage('Please enter your password.');
+      const msg = 'Please enter your password.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -83,10 +88,13 @@ export const LoginPage: React.FC = () => {
         rememberMe,
       });
 
+      toast.success('Signed in successfully!');
       const destination = getDefaultRouteForRole(session.user.role);
       navigate(destination);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication failed. Please verify credentials.');
+      const msg = err.message || 'Authentication failed. Please verify credentials.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -50,7 +51,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const showToast = useCallback(
-    (type: ToastType, message: string, title?: string, duration: number = 3800) => {
+    (type: ToastType, message: string, title?: string, duration: number = 4200) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const newToast: ToastItem = { id, type, title, message, duration };
 
@@ -95,17 +96,19 @@ const ToastContainer: React.FC<{ toasts: ToastItem[]; onDismiss: (id: string) =>
   toasts,
   onDismiss,
 }) => {
-  if (toasts.length === 0) return null;
+  if (toasts.length === 0 || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       aria-live="polite"
-      className="fixed top-5 right-5 z-[99999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"
+      className="fixed top-5 right-5 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"
+      style={{ zIndex: 99999999 }}
     >
       {toasts.map((item) => (
         <ToastCard key={item.id} item={item} onDismiss={() => onDismiss(item.id)} />
       ))}
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -114,7 +117,7 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
 
   const config = {
     success: {
-      border: 'border-emerald-200 bg-white',
+      border: 'border-emerald-300 bg-white shadow-2xl shadow-emerald-950/15 ring-1 ring-emerald-500/20',
       accentBg: 'bg-emerald-500',
       iconBg: 'bg-emerald-50 text-emerald-600',
       icon: <CheckCircle2 className="w-5 h-5" />,
@@ -123,16 +126,16 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
       titleColor: 'text-emerald-950',
     },
     error: {
-      border: 'border-rose-200 bg-white',
+      border: 'border-rose-300 bg-white shadow-2xl shadow-rose-950/20 ring-1 ring-rose-500/25',
       accentBg: 'bg-rose-500',
       iconBg: 'bg-rose-50 text-rose-600',
       icon: <AlertCircle className="w-5 h-5" />,
-      defaultTitle: 'Action Failed',
+      defaultTitle: 'Action Required',
       progressBg: 'bg-rose-500',
       titleColor: 'text-rose-950',
     },
     warning: {
-      border: 'border-amber-200 bg-white',
+      border: 'border-amber-300 bg-white shadow-2xl shadow-amber-950/15 ring-1 ring-amber-500/20',
       accentBg: 'bg-amber-500',
       iconBg: 'bg-amber-50 text-amber-600',
       icon: <AlertTriangle className="w-5 h-5" />,
@@ -141,7 +144,7 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
       titleColor: 'text-amber-950',
     },
     info: {
-      border: 'border-blue-200 bg-white',
+      border: 'border-blue-300 bg-white shadow-2xl shadow-blue-950/15 ring-1 ring-[#2254E1]/20',
       accentBg: 'bg-[#2254E1]',
       iconBg: 'bg-blue-50 text-[#2254E1]',
       icon: <Info className="w-5 h-5" />,
@@ -154,7 +157,7 @@ const ToastCard: React.FC<{ item: ToastItem; onDismiss: () => void }> = ({ item,
   return (
     <div
       role="alert"
-      className={`pointer-events-auto relative overflow-hidden rounded-xl border shadow-xl shadow-slate-900/10 transition-all duration-200 transform translate-y-0 opacity-100 flex flex-col ${config.border}`}
+      className={`pointer-events-auto relative overflow-hidden rounded-xl border transition-all duration-200 transform translate-y-0 opacity-100 flex flex-col ${config.border}`}
       style={{
         animation: 'toast-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       }}

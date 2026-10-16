@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Appointment } from '@/types/salon';
 import { useAuth } from '@/context/AuthContext';
 import { salonService } from '@/services';
+import { toast } from '@/context/ToastContext';
 import {
   Dialog,
   DialogContent,
@@ -51,7 +52,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
     setErrorMsg(null);
 
     if (!newDate) {
-      setErrorMsg('Please select a valid date.');
+      toast.error('Please select a valid date.');
       return;
     }
 
@@ -65,11 +66,14 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
         user || undefined
       );
       setIsSubmitting(false);
+      toast.success('Appointment rescheduled successfully.');
       onSuccess(updated);
       onClose();
     } catch (err: any) {
       setIsSubmitting(false);
-      setErrorMsg(err.message || 'Failed to reschedule appointment. Please check stylist availability.');
+      const msg = err.message || 'Failed to reschedule appointment. Please check stylist availability.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
@@ -96,12 +100,6 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
 
           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
             <span className="text-slate-500 block">Current Scheduled Date:</span>

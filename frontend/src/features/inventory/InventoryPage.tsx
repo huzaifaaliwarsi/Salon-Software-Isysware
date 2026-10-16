@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { salonService } from '@/services';
+import { toast } from '@/context/ToastContext';
 import {
   InventoryItem,
   InventoryBatch,
@@ -391,7 +392,9 @@ export const InventoryPage: React.FC = () => {
           },
           user
         );
-        setActionSuccess(`Updated item '${itemFormData.name}' successfully.`);
+        const msg = `Updated item '${itemFormData.name}' successfully.`;
+        setActionSuccess(msg);
+        toast.success(msg);
       } else {
         await salonService.createInventoryItem(
           {
@@ -424,12 +427,16 @@ export const InventoryPage: React.FC = () => {
           user
         );
         const opStock = Number(itemFormData.openingStock) || 0;
-        setActionSuccess(`Created item '${itemFormData.name}'${opStock > 0 ? ` with opening stock of ${opStock} units` : ''}.`);
+        const msg = `Created item '${itemFormData.name}'${opStock > 0 ? ` with opening stock of ${opStock} units` : ''}.`;
+        setActionSuccess(msg);
+        toast.success(msg);
       }
       setIsItemModalOpen(false);
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to save item');
+      const errMsg = err.message || 'Failed to save item';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -450,14 +457,20 @@ export const InventoryPage: React.FC = () => {
     try {
       if (currentStatus === 'QUARANTINED') {
         await salonService.unquarantineBatch(batchId, user);
-        setActionSuccess('Batch released from quarantine to VALID.');
+        const msg = 'Batch released from quarantine to VALID.';
+        setActionSuccess(msg);
+        toast.success(msg);
       } else {
         await salonService.quarantineBatch(batchId, 'Manual quarantine from inventory manager', user);
-        setActionSuccess('Batch successfully moved to QUARANTINED status.');
+        const msg = 'Batch successfully moved to QUARANTINED status.';
+        setActionSuccess(msg);
+        toast.success(msg);
       }
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to update batch status');
+      const errMsg = err.message || 'Failed to update batch status';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -554,11 +567,15 @@ export const InventoryPage: React.FC = () => {
       };
 
       await salonService.createPurchase(input, user);
-      setActionSuccess(`Stock-in purchase recorded successfully for PKR ${purchaseCalculatedTotal.toLocaleString()}.`);
+      const msg = `Stock-in purchase recorded successfully for PKR ${purchaseCalculatedTotal.toLocaleString()}.`;
+      setActionSuccess(msg);
+      toast.success(msg);
       setIsPurchaseModalOpen(false);
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to record purchase');
+      const errMsg = err.message || 'Failed to record purchase';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -624,7 +641,9 @@ export const InventoryPage: React.FC = () => {
           },
           user
         );
-        setActionSuccess(`Supplier '${finalName}' updated successfully.`);
+        const msg = `Supplier '${finalName}' updated successfully.`;
+        setActionSuccess(msg);
+        toast.success(msg);
       } else {
         await salonService.createSupplier(
           {
@@ -642,12 +661,16 @@ export const InventoryPage: React.FC = () => {
           },
           user
         );
-        setActionSuccess(`Supplier '${finalName}' created successfully.`);
+        const msg = `Supplier '${finalName}' created successfully.`;
+        setActionSuccess(msg);
+        toast.success(msg);
       }
       setIsSupplierModalOpen(false);
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to save supplier');
+      const errMsg = err.message || 'Failed to save supplier';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -726,7 +749,9 @@ export const InventoryPage: React.FC = () => {
       };
 
       await salonService.paySupplier(input, user);
-      setActionSuccess(`Payment of PKR ${paySupplierAmount.toLocaleString()} recorded for ${paySupplierTarget.name}.`);
+      const payMsg = `Payment of PKR ${paySupplierAmount.toLocaleString()} recorded for ${paySupplierTarget.name}.`;
+      setActionSuccess(payMsg);
+      toast.success(payMsg);
       setIsPaySupplierModalOpen(false);
       loadInventoryData(selectedBranchId);
       if (isLedgerDrawerOpen && selectedSupplierForLedger?.id === paySupplierTarget.id) {
@@ -741,7 +766,9 @@ export const InventoryPage: React.FC = () => {
         });
       }
     } catch (err: any) {
-      setActionError(err.message || 'Failed to record supplier payment');
+      const errMsg = err.message || 'Failed to record supplier payment';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -795,11 +822,15 @@ export const InventoryPage: React.FC = () => {
       };
 
       await salonService.createSupplierReturn(input, user);
-      setActionSuccess('Supplier return and debit adjustment posted successfully.');
+      const retMsg = 'Supplier return and debit adjustment posted successfully.';
+      setActionSuccess(retMsg);
+      toast.success(retMsg);
       setIsReturnModalOpen(false);
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to execute supplier return');
+      const errMsg = err.message || 'Failed to execute supplier return';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -840,11 +871,15 @@ export const InventoryPage: React.FC = () => {
       };
 
       await salonService.createManualStockOut(input, user);
-      setActionSuccess('Stock-out movement logged and inventory updated.');
+      const outMsg = 'Stock-out movement logged and inventory updated.';
+      setActionSuccess(outMsg);
+      toast.success(outMsg);
       setIsStockOutModalOpen(false);
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to record manual stock out');
+      const errMsg = err.message || 'Failed to record manual stock out';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -905,11 +940,15 @@ export const InventoryPage: React.FC = () => {
       };
 
       await salonService.createStockSettlement(input, user);
-      setActionSuccess('Stock settlement posted and physical reconciliation complete.');
+      const setMsg = 'Stock settlement posted and physical reconciliation complete.';
+      setActionSuccess(setMsg);
+      toast.success(setMsg);
       setIsSettlementModalOpen(false);
       loadInventoryData(selectedBranchId);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to execute stock settlement');
+      const errMsg = err.message || 'Failed to execute stock settlement';
+      setActionError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -971,23 +1010,6 @@ export const InventoryPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Global Alerts */}
-      {actionError && (
-        <Alert variant="destructive" className="py-2.5">
-          <AlertTriangle className="w-4 h-4" />
-          <AlertTitle className="text-xs font-bold">Action Failed</AlertTitle>
-          <AlertDescription className="text-xs">{actionError}</AlertDescription>
-        </Alert>
-      )}
-
-      {actionSuccess && (
-        <Alert className="py-2.5 bg-emerald-50 border-emerald-200 text-emerald-800">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <AlertTitle className="text-xs font-bold text-emerald-900">Success</AlertTitle>
-          <AlertDescription className="text-xs">{actionSuccess}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Primary Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">

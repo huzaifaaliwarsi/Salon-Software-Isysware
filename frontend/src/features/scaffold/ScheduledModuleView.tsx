@@ -47,7 +47,7 @@ export const ScheduledModuleView: React.FC<ScheduledModuleViewProps> = ({
             </span>
             <span className="text-slate-300">·</span>
             <Badge variant="neutral">
-              Not available in this demo yet
+              Scheduled Release
             </Badge>
           </div>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1">
@@ -83,7 +83,7 @@ export const ScheduledModuleView: React.FC<ScheduledModuleViewProps> = ({
                   Feature In Development
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  The <span className="font-medium text-slate-800">{title}</span> module is currently in development and is not available in this demo yet. Operational controls will be activated once backend services and database migrations are completed.
+                  The <span className="font-medium text-slate-800">{title}</span> module is scheduled for the upcoming production release cycle. Operational controls and reports will be activated upon deployment.
                 </p>
               </div>
             </div>

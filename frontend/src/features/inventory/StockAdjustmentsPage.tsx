@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from '@/context/RouterContext';
 import { salonService } from '@/services';
+import { toast } from '@/context/ToastContext';
 import {
   StockMovement,
   StockMovementType,
@@ -196,11 +197,15 @@ export const StockAdjustmentsPage: React.FC = () => {
       };
 
       await salonService.createManualStockOut(input, user);
-      setSuccessMessage(`Stock adjustment of ${adjustQuantity} units recorded.`);
+      const msg = `Stock adjustment of ${adjustQuantity} units recorded.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsAdjustModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to record stock adjustment.');
+      const errMsg = err?.message || 'Failed to record stock adjustment.';
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -236,11 +241,15 @@ export const StockAdjustmentsPage: React.FC = () => {
       };
 
       await salonService.createStockSettlement(input, user);
-      setSuccessMessage(`Physical count reconciled. Variance of ${variance >= 0 ? `+${variance}` : variance} units balanced in inventory.`);
+      const msg = `Physical count reconciled. Variance of ${variance >= 0 ? `+${variance}` : variance} units balanced in inventory.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsAuditModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to record stock audit settlement.');
+      const errMsg = err?.message || 'Failed to record stock audit settlement.';
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -264,30 +273,6 @@ export const StockAdjustmentsPage: React.FC = () => {
           onClick: handleOpenAuditModal,
         }}
       />
-
-      {/* Notifications */}
-      {successMessage && (
-        <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-            <span>{errorMessage}</span>
-          </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-700 hover:text-rose-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

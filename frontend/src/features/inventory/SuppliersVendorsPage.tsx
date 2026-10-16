@@ -11,6 +11,7 @@ import {
 } from '@/types/salon';
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
 import { InventoryNavHeader } from './InventoryNavHeader';
+import { toast } from '@/context/ToastContext';
 import {
   Truck,
   Plus,
@@ -221,7 +222,9 @@ export const SuppliersVendorsPage: React.FC = () => {
   const handleSaveSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supplierFormData.name?.trim()) {
-      setErrorMessage('Vendor name is required.');
+      const msg = 'Vendor name is required.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -240,7 +243,9 @@ export const SuppliersVendorsPage: React.FC = () => {
           },
           user
         );
-        setSuccessMessage(`Supplier "${supplierFormData.name}" updated successfully.`);
+        const msg = `Supplier "${supplierFormData.name}" updated successfully.`;
+        setSuccessMessage(msg);
+        toast.success(msg);
       } else {
         await salonService.createSupplier(
           {
@@ -258,12 +263,16 @@ export const SuppliersVendorsPage: React.FC = () => {
           },
           user
         );
-        setSuccessMessage(`New supplier "${supplierFormData.name}" registered successfully.`);
+        const msg = `New supplier "${supplierFormData.name}" registered successfully.`;
+        setSuccessMessage(msg);
+        toast.success(msg);
       }
       setIsSupplierModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to save supplier.');
+      const msg = err?.message || 'Failed to save supplier.';
+      setErrorMessage(msg);
+      toast.error(msg);
     }
   };
 
@@ -286,16 +295,25 @@ export const SuppliersVendorsPage: React.FC = () => {
     e.preventDefault();
     if (!payingSupplier || paymentBusy.current) return;
     if (!Number.isFinite(payAmount) || payAmount <= 0 || payAmount > (payingSupplier.currentPayable ?? payingSupplier.currentBalance ?? 0)) {
-      setErrorMessage('Enter a positive amount within the outstanding payable.');
+      const msg = 'Enter a positive amount within the outstanding payable.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
     if (payMethod === 'CASH' && !activeDrawer) {
-      setErrorMessage('Payment from Cash Drawer requires an OPEN active cash drawer in your custody.');
+      const msg = 'Payment from Cash Drawer requires an OPEN active cash drawer in your custody.';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
-    if (payMethod === 'ONLINE' && !payAccountId) { setErrorMessage('Select a branch payment account.'); return; }
+    if (payMethod === 'ONLINE' && !payAccountId) {
+      const msg = 'Select a branch payment account.';
+      setErrorMessage(msg);
+      toast.error(msg);
+      return;
+    }
     paymentBusy.current = true;
     setPaymentSubmitting(true);
     try {
@@ -313,11 +331,15 @@ export const SuppliersVendorsPage: React.FC = () => {
       };
 
       await salonService.paySupplier(input, user);
-      setSuccessMessage(`Payment voucher of PKR ${formatPKR(payAmount)} recorded for ${payingSupplier.name}. Khata balance updated.`);
+      const msg = `Payment voucher of PKR ${formatPKR(payAmount)} recorded for ${payingSupplier.name}. Khata balance updated.`;
+      setSuccessMessage(msg);
+      toast.success(msg);
       setIsPayModalOpen(false);
       loadData(selectedBranchId);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to record supplier payment.');
+      const msg = err?.message || 'Failed to record supplier payment.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally { paymentBusy.current = false; setPaymentSubmitting(false); }
   };
 
@@ -540,30 +562,6 @@ export const SuppliersVendorsPage: React.FC = () => {
           onClick: activeTab === 'LEDGER' && ledgerSupplier ? () => handleOpenPayModal(ledgerSupplier) : handleOpenAddModal,
         }}
       />
-
-      {/* Notifications */}
-      {successMessage && (
-        <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMessage}</span>
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-            <span>{errorMessage}</span>
-          </div>
-          <button onClick={() => setErrorMessage(null)} className="text-rose-700 hover:text-rose-900 cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* View Switcher Tabs: Directory vs Khata Ledger */}
       <div className="flex items-center gap-2 mb-6 border-b border-slate-200 pb-3">
@@ -1213,7 +1211,7 @@ export const SuppliersVendorsPage: React.FC = () => {
                   </label>
                   <input
                     type="email"
-                    placeholder="vendor@example.com"
+                    placeholder="vendor@company.com"
                     value={supplierFormData.email || ''}
                     onChange={(e) => setSupplierFormData({ ...supplierFormData, email: e.target.value })}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#0047AB]"

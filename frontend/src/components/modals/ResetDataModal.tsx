@@ -99,14 +99,14 @@ export const ResetDataModal: React.FC<ResetDataModalProps> = ({
               <RotateCcw className="w-4 h-4 text-rose-600" />
             </div>
             <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-300">
-              Testing Utility
+              System Administration
             </Badge>
           </div>
           <DialogTitle className="text-base font-bold text-slate-900">
-            Reset Testing & Operational Data
+            Clear Operational Ledgers & Records
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            Wipe dummy testing transactions for <strong>{branchName}</strong> and reset all financial ledgers, cash drawers, and numbering sequences back to 0.
+            Clear transaction records for <strong>{branchName}</strong> and reset all financial ledgers, cash drawers, and numbering sequences back to fresh state.
           </DialogDescription>
         </DialogHeader>
 
@@ -237,7 +237,7 @@ export const ResetDataModal: React.FC<ResetDataModalProps> = ({
             ) : (
               <>
                 <Trash2 className="w-3.5 h-3.5" />
-                Confirm & Reset All Test Data
+                Confirm & Reset Records
               </>
             )}
           </Button>

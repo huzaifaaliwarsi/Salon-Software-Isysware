@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/context/ToastContext';
 import {
   Dialog,
   DialogContent,
@@ -229,12 +230,16 @@ export const UsersAccessPage: React.FC = () => {
     setFormError(null);
 
     if (!formData.name.trim() || !formData.email.trim()) {
-      setFormError('Full name and unique login identifier (email) are required.');
+      const msg = 'Full name and unique login identifier (email) are required.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
     if (formData.role === 'STAFF' && !formData.staffId) {
-      setFormError('Staff portal accounts must reference an existing eligible employee record.');
+      const msg = 'Staff portal accounts must reference an existing eligible employee record.';
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -253,13 +258,17 @@ export const UsersAccessPage: React.FC = () => {
         },
         user
       );
-      setFormSuccess(`User '${created.name}' (${created.email}) created successfully.`);
+      const successMsg = `User '${created.name}' (${created.email}) created successfully.`;
+      setFormSuccess(successMsg);
+      toast.success(successMsg);
       await loadData();
       setTimeout(() => {
         setIsAddModalOpen(false);
       }, 700);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to create user account.');
+      const errMsg = err.message || 'Failed to create user account.';
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -286,13 +295,17 @@ export const UsersAccessPage: React.FC = () => {
         },
         user
       );
-      setFormSuccess(`User '${formData.name}' updated successfully.`);
+      const successMsg = `User '${formData.name}' updated successfully.`;
+      setFormSuccess(successMsg);
+      toast.success(successMsg);
       await loadData();
       setTimeout(() => {
         setIsEditModalOpen(false);
       }, 700);
     } catch (err: any) {
-      setFormError(err.message || 'Failed to update user account.');
+      const errMsg = err.message || 'Failed to update user account.';
+      setFormError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -303,9 +316,10 @@ export const UsersAccessPage: React.FC = () => {
     try {
       const res = await salonService.resetUserPassword(selectedUser.id, user);
       setResetResult(res);
+      toast.success(`Password reset generated for ${selectedUser.name}.`);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to reset user password.');
+      toast.error(err.message || 'Failed to reset user password.');
     }
   };
 
@@ -313,25 +327,28 @@ export const UsersAccessPage: React.FC = () => {
     if (!selectedUser) return;
     try {
       await salonService.deactivateUser(selectedUser.id, user);
+      toast.success(`User '${selectedUser.name}' account deactivated.`);
       await loadData();
       setIsDeactivateAlertOpen(false);
     } catch (err: any) {
-      alert(err.message || 'Failed to deactivate account.');
+      toast.error(err.message || 'Failed to deactivate account.');
     }
   };
 
   const handleReactivateUser = async (targetUser: User) => {
     try {
       await salonService.updateUser(targetUser.id, { isActive: true }, user);
+      toast.success(`User '${targetUser.name}' account reactivated.`);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to reactivate account.');
+      toast.error(err.message || 'Failed to reactivate account.');
     }
   };
 
   const copyPasswordToClipboard = (pw: string) => {
     navigator.clipboard.writeText(pw);
     setCopiedPass(true);
+    toast.success('Password copied to clipboard.');
     setTimeout(() => setCopiedPass(false), 2000);
   };
 
@@ -649,20 +666,6 @@ export const UsersAccessPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {formError && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="w-4 h-4 text-rose-600" />
-              <AlertDescription className="text-xs">{formError}</AlertDescription>
-            </Alert>
-          )}
-
-          {formSuccess && (
-            <Alert variant="success" className="py-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <AlertDescription className="text-xs">{formSuccess}</AlertDescription>
-            </Alert>
-          )}
-
           <form onSubmit={handleCreateUserSubmit} className="space-y-3.5 py-1">
             {/* Role & Branch Selection */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -820,20 +823,6 @@ export const UsersAccessPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {formError && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="w-4 h-4 text-rose-600" />
-              <AlertDescription className="text-xs">{formError}</AlertDescription>
-            </Alert>
-          )}
-
-          {formSuccess && (
-            <Alert variant="success" className="py-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <AlertDescription className="text-xs">{formSuccess}</AlertDescription>
-            </Alert>
-          )}
-
           <form onSubmit={handleEditUserSubmit} className="space-y-3.5 py-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
@@ -982,11 +971,11 @@ export const UsersAccessPage: React.FC = () => {
           ) : (
             <div className="space-y-4 py-2">
               <p className="text-xs text-slate-600">
-                Are you sure you want to generate a new simulated password for <strong className="text-slate-900">{selectedUser?.name}</strong>?
+                Are you sure you want to generate a new password for <strong className="text-slate-900">{selectedUser?.name}</strong>?
               </p>
               <Alert variant="info" className="py-2.5">
                 <AlertDescription className="text-xs text-slate-600">
-                  Demo Notice: In this environment, no external email server is called. The new credentials will be immediately active and displayed in this modal.
+                  Security Notice: The newly generated credentials will become active immediately and displayed for copying.
                 </AlertDescription>
               </Alert>
 

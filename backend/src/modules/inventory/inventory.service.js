@@ -527,6 +527,7 @@ export const createPurchase = async (input, actor, request) => {
       const item = items.find((x) => x.id === l.itemId);
       if (!item || !item.isActive) throw badRequest('ITEM_INVALID', `Line ${i + 1}: Item '${l.itemId}' is invalid or deactivated.`);
       if (!availableIn(item, branchId)) throw badRequest('ITEM_NOT_IN_BRANCH', `Line ${i + 1}: '${item.name}' is not enabled for this branch.`);
+      if (item.trackExpiry && !l.expiryDate) throw badRequest('EXPIRY_REQUIRED', `Line ${i + 1}: Item '${item.name}' requires an expiry date.`);
       return { ...l, item, unitPurchaseCost: l.unitPurchaseCost ?? l.unitCost };
     });
 

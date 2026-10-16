@@ -5,6 +5,7 @@ import { Invoice, PaymentAccount, InvoiceStatus, POSPaymentEntry } from '@/types
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
 import { ReceiptModal } from '@/features/pos/ReceiptModal';
 import { formatCurrency } from '@/lib/formatters';
+import { toast } from '@/context/ToastContext';
 import {
   Table,
   TableHeader,
@@ -195,10 +196,13 @@ export const UnpaidInvoicesPage: React.FC = () => {
       setIsCollectModalOpen(false);
       setReceiptInvoice(updated);
       setIsReceiptOpen(true);
+      toast.success('Payment collected and invoice settled successfully!');
       await loadData();
     } catch (err: any) {
       console.error('Failed to collect payment:', err);
-      setCollectError(err.message || 'Payment collection failed.');
+      const msg = err.message || 'Payment collection failed.';
+      setCollectError(msg);
+      toast.error(msg);
     } finally {
       setIsCollecting(false);
     }
@@ -371,13 +375,7 @@ export const UnpaidInvoicesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          {collectError && (
-            <Alert variant="destructive" className="py-2 text-xs">
-              <AlertCircle className="w-4 h-4" />
-              <AlertTitle className="text-xs">Collection Error</AlertTitle>
-              <AlertDescription className="text-xs">{collectError}</AlertDescription>
-            </Alert>
-          )}
+          {/* Form Content */}
 
           {selectedInvoice && (
             <div className="space-y-3.5 text-xs">

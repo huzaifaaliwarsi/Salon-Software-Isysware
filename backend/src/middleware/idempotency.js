@@ -30,17 +30,19 @@ export const idempotency = asyncHandler(async (req, res, next) => {
   res.json = (body) => {
     if (!req.atomicPaymentPosting && res.statusCode >= 200 && res.statusCode < 300) {
       prisma.idempotencyKey
-        .create({
-          data: {
+        .upsert({
+          where: { key },
+          create: {
             key,
             userId:       req.user.id,
             route:        `${req.method} ${req.originalUrl}`,
             statusCode:   res.statusCode,
             responseJson: JSON.stringify(body),
           },
+          update: {},
         })
         .catch(() => {
-          // Race: a concurrent request stored it first — safe to ignore.
+          // Race: safe to ignore.
         });
     }
     return originalJson(body);
