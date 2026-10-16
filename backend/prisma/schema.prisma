@@ -1347,6 +1347,7 @@ model InvoiceLineBatch {
 
 model InvoicePayment {
   id                  String        @id @default(uuid())
+  receiptNumber       String?       @unique
   invoiceId           String
   branchId            String
   date                DateTime      @db.Date

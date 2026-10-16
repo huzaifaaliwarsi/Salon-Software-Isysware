@@ -76,11 +76,9 @@ export const AppRouter: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FB] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F5F7FB] flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#2254E1] flex items-center justify-center text-white animate-pulse">
-            <span className="font-bold text-sm">iS</span>
-          </div>
+          <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin" />
           <p className="text-xs text-slate-500 font-medium">Initializing iSysware SalonOS...</p>
         </div>
       </div>
@@ -353,6 +351,16 @@ export const AppRouter: React.FC = () => {
           matchedItem = item;
           matchedGroup = group;
           break;
+        }
+        if (item.children) {
+          for (const child of item.children) {
+            if (child.href === pathname) {
+              matchedItem = child;
+              matchedGroup = group;
+              break;
+            }
+          }
+          if (matchedItem) break;
         }
       }
       if (matchedItem) break;

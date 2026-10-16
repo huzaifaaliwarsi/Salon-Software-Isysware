@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from '@/context/RouterContext';
-import { PortalType, DemoCredential } from '@/types/auth';
+import { PortalType } from '@/types/auth';
 import { getDefaultRouteForRole } from '@/lib/permissions';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
-import { DemoAccountsSelector } from './DemoAccountsSelector';
 import { toast } from '@/context/ToastContext';
 import {
   Scissors,
@@ -52,13 +51,6 @@ export const LoginPage: React.FC = () => {
 
   const handlePortalChange = (newPortal: string) => {
     setSelectedPortal(newPortal as PortalType);
-    setErrorMessage(null);
-  };
-
-  const handleAutofill = (cred: DemoCredential) => {
-    setSelectedPortal(cred.portal);
-    setIdentifier(cred.email);
-    setPassword(cred.password);
     setErrorMessage(null);
   };
 
@@ -201,34 +193,38 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* RIGHT LOGIN PANEL (~35% on Desktop) */}
-      <div className="w-full lg:w-[40%] xl:w-[37%] bg-white p-6 sm:p-8 lg:p-10 flex flex-col justify-center shadow-lg lg:shadow-none overflow-y-auto">
-        <div className="w-full max-w-md mx-auto">
+      {/* RIGHT LOGIN PANEL (~38% on Desktop) */}
+      <div className="w-full lg:w-[42%] xl:w-[38%] bg-white p-6 sm:p-10 lg:p-12 xl:p-14 flex flex-col justify-between shadow-xl lg:shadow-none min-h-screen overflow-y-auto">
+        <div className="w-full max-w-md mx-auto my-auto py-6 sm:py-8">
           {/* Header */}
-          <div className="mb-4">
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Select your role portal to access your workspace.
+          <div className="mb-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#2254E1] text-xs font-semibold mb-3 border border-blue-100">
+              <Sparkles className="w-3.5 h-3.5 text-[#2254E1]" />
+              <span>Secure Portal Access</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Welcome back</h2>
+            <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+              Select your role portal and authenticate to access your workspace.
             </p>
           </div>
 
           {/* Portal Selector Tabs using shadcn Tabs */}
-          <div className="mb-4">
-            <label className="block text-xs font-medium text-slate-700 mb-1.5 font-sans">
+          <div className="mb-6">
+            <label className="block text-xs font-semibold text-slate-700 mb-2 font-sans uppercase tracking-wider">
               Select Portal Target
             </label>
             <Tabs value={selectedPortal} onValueChange={handlePortalChange} className="w-full">
-              <TabsList className="w-full grid grid-cols-4 h-10 p-1 bg-slate-100 rounded-lg">
-                <TabsTrigger value="SUPER_ADMIN" className="text-xs py-1.5 px-1 truncate">
+              <TabsList className="w-full grid grid-cols-4 h-12 p-1.5 bg-slate-100/90 rounded-xl">
+                <TabsTrigger value="SUPER_ADMIN" className="text-xs sm:text-[12.5px] font-semibold py-2 px-1 truncate rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs">
                   Super Admin
                 </TabsTrigger>
-                <TabsTrigger value="ADMIN" className="text-xs py-1.5 px-1 truncate">
+                <TabsTrigger value="ADMIN" className="text-xs sm:text-[12.5px] font-semibold py-2 px-1 truncate rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs">
                   Admin
                 </TabsTrigger>
-                <TabsTrigger value="ACCOUNTANT" className="text-xs py-1.5 px-1 truncate" title="Sales & Billing Portal">
+                <TabsTrigger value="ACCOUNTANT" className="text-xs sm:text-[12.5px] font-semibold py-2 px-1 truncate rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs" title="Sales & Billing Portal">
                   Sales & Billing
                 </TabsTrigger>
-                <TabsTrigger value="STAFF" className="text-xs py-1.5 px-1 truncate">
+                <TabsTrigger value="STAFF" className="text-xs sm:text-[12.5px] font-semibold py-2 px-1 truncate rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs">
                   Staff
                 </TabsTrigger>
               </TabsList>
@@ -237,7 +233,7 @@ export const LoginPage: React.FC = () => {
 
           {/* Error Banner using shadcn Alert */}
           {errorMessage && (
-            <Alert variant="destructive" className="mb-4 flex items-start gap-2.5">
+            <Alert variant="destructive" className="mb-5 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <div>
                 <AlertTitle className="text-xs font-semibold text-rose-800">
@@ -251,7 +247,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <Input
               label="Username or Email"
               type="text"
@@ -261,6 +257,7 @@ export const LoginPage: React.FC = () => {
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               leftElement={<Mail className="w-4 h-4" />}
+              className="h-12 rounded-xl text-sm"
             />
 
             <Input
@@ -272,6 +269,7 @@ export const LoginPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               leftElement={<Lock className="w-4 h-4" />}
+              className="h-12 rounded-xl text-sm"
               rightElement={
                 <button
                   type="button"
@@ -292,7 +290,7 @@ export const LoginPage: React.FC = () => {
                   checked={rememberMe}
                   onCheckedChange={(checked) => setRememberMe(checked === true)}
                 />
-                <Label htmlFor="remember-me" className="text-xs text-slate-600 cursor-pointer">
+                <Label htmlFor="remember-me" className="text-xs text-slate-600 cursor-pointer font-medium">
                   Remember identifier
                 </Label>
               </div>
@@ -300,7 +298,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsForgotPasswordOpen(true)}
-                className="text-xs font-medium text-[#2254E1] hover:text-[#1B3FC5] transition-colors cursor-pointer"
+                className="text-xs font-semibold text-[#2254E1] hover:text-[#1B3FC5] transition-colors cursor-pointer"
               >
                 Forgot password?
               </button>
@@ -311,21 +309,24 @@ export const LoginPage: React.FC = () => {
               <Button
                 type="submit"
                 variant="default"
-                size="md"
+                size="lg"
                 isLoading={isSubmitting}
-                className="w-full"
+                className="w-full h-12.5 rounded-xl font-semibold text-sm shadow-md shadow-blue-600/20"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
                 Login to Portal
               </Button>
             </div>
           </form>
+        </div>
 
-          {/* One-Click Demo Accounts Selector */}
-          <DemoAccountsSelector
-            currentPortal={selectedPortal}
-            onSelectCredential={handleAutofill}
-          />
+        {/* Bottom Security Footer */}
+        <div className="w-full max-w-md mx-auto pt-6 border-t border-slate-100 mt-6 flex items-center justify-between text-xs text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            256-bit Encrypted Session
+          </span>
+          <span>v2.1 · PRA / SRB Certified</span>
         </div>
       </div>
 

@@ -140,13 +140,13 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
 
       // All payments recorded for this invoice
       (inv.payments || []).forEach((p: any) => {
-        if (p.reversedAt) items.push({ id: `rev-${p.id}`, date: p.reversalDate, time: p.time, type: 'INVOICE', reference: p.id, description: `Collection reversed: ${p.reversalReason}`, debit: p.amount, credit: 0, balance: 0, status: 'REVERSED', processedBy: p.reversedByName, rawInvoice: inv });
+        if (p.reversedAt) items.push({ id: `rev-${p.id}`, date: p.reversalDate, time: p.time, type: 'INVOICE', reference: p.receiptNumber || inv.invoiceNumber, description: `Collection reversed: ${p.reversalReason}`, debit: p.amount, credit: 0, balance: 0, status: 'REVERSED', processedBy: p.reversedByName, rawInvoice: inv });
         items.push({
           id: `pay-${p.id}`,
           date: p.date,
           time: p.time || '10:00 AM',
           type: 'PAYMENT',
-          reference: `Receipt (${inv.invoiceNumber})`,
+          reference: p.receiptNumber || `Receipt (${inv.invoiceNumber})`,
           description: p.kind === 'DUES_COLLECTION'
             ? `Dues Collection (${p.method}${p.paymentAccountName ? ` • ${p.paymentAccountName}` : ''})`
             : `POS Payment (${p.method}${p.paymentAccountName ? ` • ${p.paymentAccountName}` : ''})`,

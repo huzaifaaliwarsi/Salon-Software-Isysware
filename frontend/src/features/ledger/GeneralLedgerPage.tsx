@@ -293,7 +293,7 @@ export const GeneralLedgerPage: React.FC = () => {
       <Card padding="none" className="overflow-hidden">
         {isLoading && movements.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3">
-            <RefreshCw className="w-8 h-8 text-[#2254E1] animate-spin" />
+            <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin" />
             <p className="text-xs text-slate-500 font-medium">Reconciling general ledger transactions...</p>
           </div>
         ) : error ? (

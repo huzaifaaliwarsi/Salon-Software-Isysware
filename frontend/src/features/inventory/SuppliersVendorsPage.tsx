@@ -284,7 +284,7 @@ export const SuppliersVendorsPage: React.FC = () => {
     setPayAmount(bal > 0 ? bal : 0);
     setPayMethod('CASH');
     setPayAccountId(paymentAccounts[0]?.id || '');
-    setPayReference(`PAY-${Date.now().toString().slice(-6)}`);
+    setPayReference('');
     setPayNotes('');
     setPayDate(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }));
     paymentKey.current = crypto.randomUUID();
@@ -697,7 +697,7 @@ export const SuppliersVendorsPage: React.FC = () => {
 
             {isLoading ? (
               <div className="p-16 flex flex-col items-center justify-center text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
+                <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-[#2254E1] animate-spin mb-3" />
                 <p className="text-slate-600 text-sm font-medium">Loading suppliers directory...</p>
               </div>
             ) : filteredSuppliers.length === 0 ? (
@@ -916,7 +916,7 @@ export const SuppliersVendorsPage: React.FC = () => {
                   className="flex-1 h-[38px] bg-[#0047AB] hover:bg-[#003785] text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {isLedgerLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
                   ) : (
                     <Filter className="w-3.5 h-3.5" />
                   )}
@@ -1039,7 +1039,7 @@ export const SuppliersVendorsPage: React.FC = () => {
             {/* Table or Loading */}
             {isLedgerLoading ? (
               <div className="p-16 flex flex-col items-center justify-center text-center">
-                <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
+                <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-[#2254E1] animate-spin mb-3" />
                 <p className="text-slate-600 text-sm font-medium">Loading ledger entries...</p>
               </div>
             ) : suppliers.length === 0 ? (
@@ -1390,7 +1390,7 @@ export const SuppliersVendorsPage: React.FC = () => {
             <div className="overflow-y-auto py-4 flex-1">
               {isLedgerLoading ? (
                 <div className="py-12 flex flex-col items-center justify-center text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#0047AB] mb-2" />
+                  <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin mb-2" />
                   <p className="text-slate-500 text-xs">Loading ledger entries...</p>
                 </div>
               ) : ledgerEntries.length === 0 ? (

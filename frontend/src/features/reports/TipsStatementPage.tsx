@@ -462,7 +462,7 @@ export const TipsStatementPage: React.FC = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
                     <span>Loading...</span>
                   </>
                 ) : (
@@ -489,7 +489,7 @@ export const TipsStatementPage: React.FC = () => {
       ) : loading ? (
         /* Loading Skeleton */
         <div className="bg-white rounded-xl border border-slate-200/90 p-16 flex flex-col items-center justify-center min-h-[380px] shadow-xs text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
+          <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-[#2254E1] animate-spin mb-3" />
           <p className="text-slate-600 text-sm font-medium">Reconciling Tip Ledger Records...</p>
         </div>
       ) : errorMessage ? (

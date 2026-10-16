@@ -336,11 +336,11 @@ export const StaffDirectoryPage: React.FC = () => {
     }
 
     let nextNum = maxNum + 1;
-    // Short 5-6 characters format: EMP-01, EMP-02 (clean 6-character ID)
-    let candidate = `EMP-${String(nextNum).padStart(2, '0')}`;
+    // Preview only; the saved number is allocated by the service.
+    let candidate = `EMP-${String(nextNum).padStart(4, '0')}`;
     while (existingCodes.has(candidate)) {
       nextNum++;
-      candidate = `EMP-${String(nextNum).padStart(2, '0')}`;
+      candidate = `EMP-${String(nextNum).padStart(4, '0')}`;
     }
     return candidate;
   };

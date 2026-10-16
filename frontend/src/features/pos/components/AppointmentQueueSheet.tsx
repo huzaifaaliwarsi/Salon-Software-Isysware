@@ -205,7 +205,7 @@ export const AppointmentQueueSheet: React.FC<AppointmentQueueSheetProps> = ({
 
           {isLoading ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-500 mb-2" />
+              <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin mx-auto mb-2" />
               Loading branch appointments queue...
             </div>
           ) : filteredQueue.length === 0 ? (

@@ -135,51 +135,257 @@ const LeaveManagementContent: React.FC = () => {
   return <div className="p-6 max-w-7xl mx-auto space-y-6">
     <div><h1 className="text-2xl font-bold text-slate-900">Leave Management</h1><p className="text-sm text-slate-500 mt-1">Manage employee leave, entitlement and leave history.</p></div>
     {loadError && <div role="alert" className="p-4 bg-rose-50 text-rose-700 rounded-xl">{loadError}<button onClick={loadData} className="ml-3 underline">Retry</button></div>}
-    <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap gap-3 items-end">
-      {user?.role === 'SUPER_ADMIN' && <label className="text-xs text-slate-600">Branch<select value={selectedBranchId} onChange={(e) => { setSelectedBranchId(e.target.value); setStaffFilter('ALL'); setDesignationFilter('ALL'); }} className="block border rounded-lg p-2 mt-1"><option value="ALL">All branches</option>{allBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
-      <label className="text-xs text-slate-600">Period<select value={viewMode} onChange={(e) => setViewMode(e.target.value as 'DAY' | 'MONTH')} className="block border rounded-lg p-2 mt-1"><option value="MONTH">Month</option><option value="DAY">Day</option></select></label>
-      <label className="text-xs text-slate-600">{viewMode === 'DAY' ? 'Date' : 'Month'}<input type={viewMode === 'DAY' ? 'date' : 'month'} value={viewMode === 'DAY' ? selectedDate : selectedMonth} onChange={(e) => viewMode === 'DAY' ? setSelectedDate(e.target.value) : setSelectedMonth(e.target.value)} className="block border rounded-lg p-2 mt-1" /></label>
-      <label className="text-xs text-slate-600">Employee<select value={staffFilter} onChange={(e) => setStaffFilter(e.target.value)} className="block border rounded-lg p-2 mt-1"><option value="ALL">All employees</option>{staffList.map((staff) => <option key={staff.id} value={staff.id}>{staff.name} ({staff.employeeCode})</option>)}</select></label>
-      <label className="text-xs text-slate-600">Designation<select value={designationFilter} onChange={(e) => setDesignationFilter(e.target.value)} className="block border rounded-lg p-2 mt-1"><option value="ALL">All designations</option>{Array.from(new Set(staffList.map((staff) => staff.designation || staff.roleTitle).filter(Boolean))).map((title) => <option key={title} value={title}>{title}</option>)}</select></label>
-      <label className="text-xs text-slate-600 flex-1">Search<input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Employee name or code" className="block w-full border rounded-lg p-2 mt-1" /></label>
-    </div>
-      <section className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+    {/* Filter Card */}
+    <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-end">
+        {user?.role === 'SUPER_ADMIN' && (
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Leave management</h2>
-            <p className="text-xs text-slate-500 mt-1">{filteredLeaves.length} vouchers overlapping the selected period. Date, branch, employee, designation and search filters apply.</p>
-          </div>
-          <button onClick={() => { setLeaveForm({ staffId: staffFilter === 'ALL' ? '' : staffFilter, startDate: selectedDate, endDate: selectedDate, type: 'PAID', reason: '' }); setShowLeaveModal(true); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"><Plus className="w-4 h-4" />Add Leave</button>
-        </div>
-        <div className="p-4 flex flex-wrap items-center gap-3 bg-slate-50">
-          <label className="text-xs font-medium text-slate-600">Leave type
-            <select value={leaveTypeFilter} onChange={(e) => setLeaveTypeFilter(e.target.value)} className="ml-2 border border-slate-200 rounded-lg bg-white px-3 py-2"><option value="ALL">All types</option><option value="PAID">Paid</option><option value="UNPAID">Unpaid</option></select>
-          </label>
-          <label className="text-xs font-medium text-slate-600">Leave status
-            <select value={leaveStatusFilter} onChange={(e) => setLeaveStatusFilter(e.target.value)} className="ml-2 border border-slate-200 rounded-lg bg-white px-3 py-2"><option value="ALL">All statuses</option><option value="APPROVED">Approved</option><option value="CANCELLED">Cancelled</option></select>
-          </label>
-          <button onClick={() => { setStaffFilter('ALL'); setDesignationFilter('ALL'); setSearchQuery(''); setLeaveTypeFilter('ALL'); setLeaveStatusFilter('ALL'); }} className="text-xs font-semibold text-blue-700 hover:underline">Reset record filters</button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="report-records w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 border-y border-slate-200"><tr>{['Employee / Voucher', 'Branch', 'Leave period', 'Working days', 'Type', 'Status', 'Reason / Audit', 'Action'].map((title) => <th key={title} className="px-4 py-3 font-semibold">{title}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-500">Loading leaves...</td></tr> : filteredLeaves.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-500">No leaves match your filters. Choose another day or month, or add a leave.</td></tr> : filteredLeaves.map((leave) => (
-                <tr key={leave.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3"><p className="font-semibold text-slate-900">{leave.staffName}</p><p className="text-slate-500 mt-1">{leave.employeeCode || staffList.find((s) => s.id === leave.staffId)?.employeeCode}</p><p className="font-mono text-blue-600 mt-1">{leave.leaveNumber}</p></td>
-                  <td className="px-4 py-3">{allBranches.find((b) => b.id === leave.branchId)?.name || leave.branchId}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{leave.startDate}<br />to {leave.endDate}</td>
-                  <td className="px-4 py-3 font-semibold">{leave.totalDays}</td>
-                  <td className="px-4 py-3">{leave.type === 'PAID' ? 'Paid' : 'Unpaid'}</td>
-                  <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full font-semibold ${leave.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{leave.status === 'APPROVED' ? 'Approved' : 'Cancelled'}</span></td>
-                  <td className="px-4 py-3 min-w-48 max-w-xs break-words"><p>{leave.reason}</p><p className="text-slate-400 mt-1">Recorded by {leave.createdByName}</p>{leave.status === 'CANCELLED' && <p className="text-rose-600 mt-1">{leave.cancellationReason} · {leave.cancelledByName}</p>}</td>
-                  <td className="px-4 py-3">{leave.status === 'APPROVED' && <button onClick={() => { setCancellationReason(''); setLeaveToCancel(leave); }} className="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 font-semibold">Cancel</button>}</td>
-                </tr>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Branch</label>
+            <select
+              value={selectedBranchId}
+              onChange={(e) => {
+                setSelectedBranchId(e.target.value);
+                setStaffFilter('ALL');
+                setDesignationFilter('ALL');
+              }}
+              className="w-full h-9 text-xs border border-slate-300 rounded-lg px-3 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-[#2254E1] focus:border-[#2254E1] transition-colors cursor-pointer"
+            >
+              <option value="ALL">All branches</option>
+              {allBranches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Period</label>
+          <select
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value as 'DAY' | 'MONTH')}
+            className="w-full h-9 text-xs border border-slate-300 rounded-lg px-3 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-[#2254E1] focus:border-[#2254E1] transition-colors cursor-pointer"
+          >
+            <option value="MONTH">Month</option>
+            <option value="DAY">Day</option>
+          </select>
         </div>
-      </section>
+
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            {viewMode === 'DAY' ? 'Date' : 'Month'}
+          </label>
+          <input
+            type={viewMode === 'DAY' ? 'date' : 'month'}
+            value={viewMode === 'DAY' ? selectedDate : selectedMonth}
+            onChange={(e) =>
+              viewMode === 'DAY' ? setSelectedDate(e.target.value) : setSelectedMonth(e.target.value)
+            }
+            className="w-full h-9 text-xs border border-slate-300 rounded-lg px-3 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-[#2254E1] focus:border-[#2254E1] transition-colors cursor-pointer"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Employee</label>
+          <select
+            value={staffFilter}
+            onChange={(e) => setStaffFilter(e.target.value)}
+            className="w-full h-9 text-xs border border-slate-300 rounded-lg px-3 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-[#2254E1] focus:border-[#2254E1] transition-colors cursor-pointer"
+          >
+            <option value="ALL">All employees</option>
+            {staffList.map((staff) => (
+              <option key={staff.id} value={staff.id}>
+                {staff.name} ({staff.employeeCode})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Designation</label>
+          <select
+            value={designationFilter}
+            onChange={(e) => setDesignationFilter(e.target.value)}
+            className="w-full h-9 text-xs border border-slate-300 rounded-lg px-3 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-[#2254E1] focus:border-[#2254E1] transition-colors cursor-pointer"
+          >
+            <option value="ALL">All designations</option>
+            {Array.from(
+              new Set(staffList.map((staff) => staff.designation || staff.roleTitle).filter(Boolean))
+            ).map((title) => (
+              <option key={title} value={title}>
+                {title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Search</label>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Employee name or code..."
+            className="w-full h-9 text-xs border border-slate-300 rounded-lg px-3 bg-white text-slate-800 font-medium focus:ring-1 focus:ring-[#2254E1] focus:border-[#2254E1] transition-colors"
+          />
+        </div>
+      </div>
+    </div>
+
+    <section className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+      <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Leave vouchers register</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            {filteredLeaves.length} vouchers overlapping the selected period. Date, branch, employee, designation and search filters apply.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setLeaveForm({
+              staffId: staffFilter === 'ALL' ? '' : staffFilter,
+              startDate: selectedDate,
+              endDate: selectedDate,
+              type: 'PAID',
+              reason: '',
+            });
+            setShowLeaveModal(true);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#2254E1] text-white text-xs font-semibold hover:bg-[#1B3FC5] cursor-pointer shadow-2xs"
+        >
+          <Plus className="w-4 h-4" />
+          Add Leave
+        </button>
+      </div>
+
+      <div className="p-3.5 flex flex-wrap items-center gap-3 bg-slate-50/70 border-b border-slate-200/60">
+        <label className="text-xs font-medium text-slate-600 flex items-center">
+          Leave type
+          <select
+            value={leaveTypeFilter}
+            onChange={(e) => setLeaveTypeFilter(e.target.value)}
+            className="ml-2 border border-slate-300 rounded-lg bg-white px-2.5 py-1 text-xs text-slate-700 cursor-pointer"
+          >
+            <option value="ALL">All types</option>
+            <option value="PAID">Paid</option>
+            <option value="UNPAID">Unpaid</option>
+          </select>
+        </label>
+        <label className="text-xs font-medium text-slate-600 flex items-center">
+          Leave status
+          <select
+            value={leaveStatusFilter}
+            onChange={(e) => setLeaveStatusFilter(e.target.value)}
+            className="ml-2 border border-slate-300 rounded-lg bg-white px-2.5 py-1 text-xs text-slate-700 cursor-pointer"
+          >
+            <option value="ALL">All statuses</option>
+            <option value="APPROVED">Approved</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </label>
+        <button
+          onClick={() => {
+            setStaffFilter('ALL');
+            setDesignationFilter('ALL');
+            setSearchQuery('');
+            setLeaveTypeFilter('ALL');
+            setLeaveStatusFilter('ALL');
+          }}
+          className="text-xs font-semibold text-[#2254E1] hover:underline cursor-pointer ml-auto"
+        >
+          Reset record filters
+        </button>
+      </div>
+
+      <div className="overflow-x-auto w-full">
+        <table className="report-records w-full min-w-[1050px] text-left text-xs border-collapse whitespace-nowrap">
+          <thead className="bg-slate-50/80 text-slate-600 border-b border-slate-200 uppercase text-[11px] tracking-wider font-semibold">
+            <tr>
+              {['Employee / Voucher', 'Branch', 'Leave period', 'Working days', 'Type', 'Status', 'Reason / Audit', 'Action'].map(
+                (title) => (
+                  <th key={title} className="px-4 py-3 whitespace-nowrap">
+                    {title}
+                  </th>
+                )
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin mx-auto mb-2" />
+                  Loading leaves...
+                </td>
+              </tr>
+            ) : filteredLeaves.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-slate-500">
+                  No leaves match your filters. Choose another day or month, or add a leave.
+                </td>
+              </tr>
+            ) : (
+              filteredLeaves.map((leave) => (
+                <tr key={leave.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <p className="font-semibold text-slate-900">{leave.staffName}</p>
+                    <p className="text-slate-500 text-[11px] mt-0.5">
+                      {leave.employeeCode || staffList.find((s) => s.id === leave.staffId)?.employeeCode}
+                    </p>
+                    <p className="font-mono text-[#2254E1] text-[11px] mt-0.5">{leave.leaveNumber}</p>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700 font-medium">
+                    {allBranches.find((b) => b.id === leave.branchId)?.name || leave.branchId}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap font-mono text-slate-700">
+                    {leave.startDate} to {leave.endDate}
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{leave.totalDays}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-xs font-medium text-slate-700">
+                      {leave.type === 'PAID' ? 'Paid Leave' : 'Unpaid Leave'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                        leave.status === 'APPROVED'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}
+                    >
+                      {leave.status === 'APPROVED' ? 'Approved' : 'Cancelled'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 min-w-48 max-w-xs whitespace-normal break-words">
+                    <p className="text-slate-800">{leave.reason}</p>
+                    <p className="text-slate-400 text-[10px] mt-0.5">Recorded by {leave.createdByName}</p>
+                    {leave.status === 'CANCELLED' && (
+                      <p className="text-rose-600 text-[10px] mt-0.5">
+                        {leave.cancellationReason} · {leave.cancelledByName}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {leave.status === 'APPROVED' && (
+                      <button
+                        onClick={() => {
+                          setCancellationReason('');
+                          setLeaveToCancel(leave);
+                        }}
+                        className="px-2.5 py-1 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
 
       {leaveToCancel && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">

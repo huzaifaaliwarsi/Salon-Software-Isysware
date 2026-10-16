@@ -72,7 +72,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
     return (
       <div className="p-8 max-w-6xl mx-auto flex items-center justify-center min-h-[50vh] font-sans">
         <div className="flex items-center gap-3 text-slate-500 text-sm">
-          <span className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin shrink-0" />
           <span>Loading your personal shift attendance & overtime profile...</span>
         </div>
       </div>

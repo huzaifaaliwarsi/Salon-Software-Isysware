@@ -1,3 +1,4 @@
+import { nextReference } from './referenceSequence';
 import {
   SalonServiceContract,
   SuperAdminDashboardData,
@@ -305,24 +306,8 @@ class MockSalonService implements SalonServiceContract {
     if (!name) {
       throw new Error('Branch name is required.');
     }
-    if (!code) {
-      let maxNum = 0;
-      const existingCodes = new Set(store.branches.map((b) => b.code?.trim().toUpperCase()));
-      for (const b of store.branches) {
-        if (!b.code) continue;
-        const m = b.code.match(/(\d+)$/);
-        if (m) {
-          const val = parseInt(m[1], 10);
-          if (!isNaN(val) && val > maxNum) maxNum = val;
-        }
-      }
-      let nextNum = maxNum + 1;
-      let candidate = `BR-${String(nextNum).padStart(2, '0')}`;
-      while (existingCodes.has(candidate)) {
-        nextNum++;
-        candidate = `BR-${String(nextNum).padStart(2, '0')}`;
-      }
-      code = candidate;
+    if (!code || /^(?:BR)-\d+$/i.test(code)) {
+      code = nextReference(store, 'BR');
     }
 
     if (store.branches.some((b) => b.code.toUpperCase() === code)) {
@@ -900,7 +885,7 @@ class MockSalonService implements SalonServiceContract {
       }
     }
 
-    const code = params.employeeCode?.trim().toUpperCase();
+    const code = !params.employeeCode || /^EMP-\d+$/i.test(params.employeeCode) ? nextReference(store, 'EMP') : params.employeeCode.trim().toUpperCase();
     if (!code) throw new Error('Unique employee code is required.');
     if (store.staff.some((s) => s.employeeCode.toUpperCase() === code)) {
       throw new Error(`Employee code '${code}' is already assigned to another staff member.`);
@@ -1853,27 +1838,8 @@ class MockSalonService implements SalonServiceContract {
     }
 
     let code = serviceData.code?.trim().toUpperCase();
-    if (!code) {
-      let maxNum = 0;
-      const existingCodes = new Set(
-        store.services
-          .map((s) => s.code?.trim().toUpperCase())
-      );
-      for (const s of store.services) {
-        if (!s.code) continue;
-        const m = s.code.match(/(\d+)$/);
-        if (m) {
-          const val = parseInt(m[1], 10);
-          if (!isNaN(val) && val > maxNum) maxNum = val;
-        }
-      }
-      let nextNum = maxNum + 1;
-      let candidate = `SRV-${String(nextNum).padStart(2, '0')}`;
-      while (existingCodes.has(candidate)) {
-        nextNum++;
-        candidate = `SRV-${String(nextNum).padStart(2, '0')}`;
-      }
-      code = candidate;
+    if (!code || /^(?:SRV|SVR)-\d+$/i.test(code)) {
+      code = nextReference(store, 'SVR');
     }
 
     const proposed: Omit<ServiceItem, 'id'> = {
@@ -1997,27 +1963,8 @@ class MockSalonService implements SalonServiceContract {
     }
 
     let code = pkgData.code?.trim().toUpperCase();
-    if (!code) {
-      let maxNum = 0;
-      const existingCodes = new Set(
-        store.packages
-          .map((p) => p.code?.trim().toUpperCase())
-      );
-      for (const p of store.packages) {
-        if (!p.code) continue;
-        const m = p.code.match(/(\d+)$/);
-        if (m) {
-          const val = parseInt(m[1], 10);
-          if (!isNaN(val) && val > maxNum) maxNum = val;
-        }
-      }
-      let nextNum = maxNum + 1;
-      let candidate = `PKG-${String(nextNum).padStart(2, '0')}`;
-      while (existingCodes.has(candidate)) {
-        nextNum++;
-        candidate = `PKG-${String(nextNum).padStart(2, '0')}`;
-      }
-      code = candidate;
+    if (!code || /^(?:PKG)-\d+$/i.test(code)) {
+      code = nextReference(store, 'PKG');
     }
 
     const proposed: Omit<PackageItem, 'id'> = {
@@ -2546,29 +2493,7 @@ class MockSalonService implements SalonServiceContract {
     return inv ? { ...inv } : null;
   }
 
-  private getNextInvoiceNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.invoiceSequenceCounters = clonedStore.invoiceSequenceCounters || {};
-
-    if (typeof clonedStore.invoiceSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `INV-${branch.code}-${yearStr}-`;
-      for (const inv of clonedStore.invoices) {
-        if (inv.branchId === branch.id && inv.invoiceNumber && inv.invoiceNumber.startsWith(prefix)) {
-          const numPart = parseInt(inv.invoiceNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.invoiceSequenceCounters[key] = maxSeq;
-    }
-
-    clonedStore.invoiceSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.invoiceSequenceCounters[key]).padStart(4, '0');
-    return `INV-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private getNextInvoiceNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string { return nextReference(clonedStore, 'INV'); }
 
   private generateNextExpenseVoucherNumber(
     clonedStore: StorageSchema,
@@ -2576,27 +2501,7 @@ class MockSalonService implements SalonServiceContract {
     targetDate: string,
     type: 'EXP' | 'REV' | 'DFT' = 'EXP'
   ): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `${type}-${branch.id}-${yearStr}`;
-    clonedStore.expenseSequenceCounters = clonedStore.expenseSequenceCounters || {};
-
-    if (typeof clonedStore.expenseSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `${type}-${branch.code}-${yearStr}-`;
-      for (const exp of clonedStore.expenses) {
-        if (exp.branchId === branch.id && exp.voucherNumber && exp.voucherNumber.startsWith(prefix)) {
-          const numPart = parseInt(exp.voucherNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.expenseSequenceCounters[key] = maxSeq;
-    }
-
-    clonedStore.expenseSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.expenseSequenceCounters[key]).padStart(4, '0');
-    return `${type}-${branch.code}-${yearStr}-${seqStr}`;
+    return nextReference(clonedStore, type);
   }
 
   private checkIdempotency(
@@ -3139,6 +3044,7 @@ class MockSalonService implements SalonServiceContract {
 
       paymentRecords.push({
         id: `pay-${idx + 1}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`,
+        receiptNumber: nextReference(clonedStore, 'RCP'),
         invoiceId: '',
         branchId,
         date: targetDate,
@@ -3311,7 +3217,7 @@ class MockSalonService implements SalonServiceContract {
         const smCount = ((clonedStore.movementSequenceCounters || {})[`${branch.code}-2026`] || 0) + 1;
         if (!clonedStore.movementSequenceCounters) clonedStore.movementSequenceCounters = {};
         clonedStore.movementSequenceCounters[`${branch.code}-2026`] = smCount;
-        const moveNum = `SM-${branch.code}-2026-${String(smCount).padStart(4, '0')}`;
+        const moveNum = nextReference(clonedStore, 'SM');
 
         clonedStore.stockMovements.push({
           id: `sm-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
@@ -3484,6 +3390,7 @@ class MockSalonService implements SalonServiceContract {
 
       newPaymentRecords.push({
         id: `pay-coll-${idx + 1}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`,
+        receiptNumber: nextReference(clonedStore, 'RCP'),
         invoiceId: invoice.id,
         branchId: invoice.branchId,
         date: targetDate,
@@ -4392,7 +4299,7 @@ class MockSalonService implements SalonServiceContract {
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     const yearStr = targetDate.slice(0, 4);
     const count = (clonedStore.cashTransfers || []).length + 1;
-    const transferNumber = `CXF-${branch.code}-${yearStr}-${String(count).padStart(4, '0')}`;
+    const transferNumber = nextReference(clonedStore, 'CXF');
 
     const transferRecord: CashTransferRecord = {
       id: `cxf-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
@@ -4420,53 +4327,9 @@ class MockSalonService implements SalonServiceContract {
   // Phase 3C: Balance Sheet & Account Settlement
   // ==========================================
 
-  private generateNextSettlementNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.settlementSequenceCounters = clonedStore.settlementSequenceCounters || {};
+  private generateNextSettlementNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string { return nextReference(clonedStore, 'SET'); }
 
-    if (typeof clonedStore.settlementSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `SET-${branch.code}-${yearStr}-`;
-      for (const s of clonedStore.settlements || []) {
-        if (s.branchId === branch.id && s.settlementNumber && s.settlementNumber.startsWith(prefix)) {
-          const numPart = parseInt(s.settlementNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.settlementSequenceCounters[key] = maxSeq;
-    }
-
-    clonedStore.settlementSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.settlementSequenceCounters[key]).padStart(4, '0');
-    return `SET-${branch.code}-${yearStr}-${seqStr}`;
-  }
-
-  private generateNextVarianceAdjustmentNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.varianceAdjustmentSequenceCounters = clonedStore.varianceAdjustmentSequenceCounters || {};
-
-    if (typeof clonedStore.varianceAdjustmentSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `CVA-${branch.code}-${yearStr}-`;
-      for (const cva of clonedStore.cashVarianceAdjustments || []) {
-        if (cva.branchId === branch.id && cva.adjustmentNumber && cva.adjustmentNumber.startsWith(prefix)) {
-          const numPart = parseInt(cva.adjustmentNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.varianceAdjustmentSequenceCounters[key] = maxSeq;
-    }
-
-    clonedStore.varianceAdjustmentSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.varianceAdjustmentSequenceCounters[key]).padStart(4, '0');
-    return `CVA-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private generateNextVarianceAdjustmentNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string { return nextReference(clonedStore, 'CVA'); }
 
   async getCashCustodyStatement(
     params: {
@@ -5424,7 +5287,7 @@ class MockSalonService implements SalonServiceContract {
 
     const yearStr = targetDate.slice(0, 4);
     const countTransfers = (clonedStore.cashTransfers || []).length + 1;
-    const transferNumber = `CXF-${branch.code}-${yearStr}-${String(countTransfers).padStart(4, '0')}`;
+    const transferNumber = nextReference(clonedStore, 'CXF');
 
     const handoverTransferRecord: CashTransferRecord = {
       id: `cxf-hnd-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
@@ -5478,7 +5341,7 @@ class MockSalonService implements SalonServiceContract {
       }
       settlement.successorDrawerId = successorId;
 
-      const succTransferNumber = `CXF-${branch.code}-${yearStr}-${String(countTransfers + 1).padStart(4, '0')}`;
+      const succTransferNumber = nextReference(clonedStore, 'CXF');
       const succTransfer: CashTransferRecord = {
         id: `cxf-succ-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
         transferNumber: succTransferNumber,
@@ -5517,49 +5380,9 @@ class MockSalonService implements SalonServiceContract {
 
   // --- PHASE 3D: ATTENDANCE, LEAVES, HOLIDAYS & MANUAL OVERTIME ---
 
-  private generateNextLeaveNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.leaveSequenceCounters = clonedStore.leaveSequenceCounters || {};
-    if (typeof clonedStore.leaveSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `LV-${branch.code}-${yearStr}-`;
-      for (const lv of clonedStore.leaves || []) {
-        if (lv.branchId === branch.id && lv.leaveNumber && lv.leaveNumber.startsWith(prefix)) {
-          const numPart = parseInt(lv.leaveNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.leaveSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.leaveSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.leaveSequenceCounters[key]).padStart(4, '0');
-    return `LV-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private generateNextLeaveNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string { return nextReference(clonedStore, 'LV'); }
 
-  private generateNextOvertimeNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.overtimeSequenceCounters = clonedStore.overtimeSequenceCounters || {};
-    if (typeof clonedStore.overtimeSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `OT-${branch.code}-${yearStr}-`;
-      for (const ot of clonedStore.overtime || []) {
-        if (ot.branchId === branch.id && ot.overtimeNumber && ot.overtimeNumber.startsWith(prefix)) {
-          const numPart = parseInt(ot.overtimeNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.overtimeSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.overtimeSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.overtimeSequenceCounters[key]).padStart(4, '0');
-    return `OT-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private generateNextOvertimeNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string { return nextReference(clonedStore, 'OT'); }
 
   async createAttendance(input: CreateAttendanceInput, actor?: User): Promise<AttendanceRecord> {
     const authenticatedActor = this.getAuthenticatedActor(actor);
@@ -6534,135 +6357,17 @@ class MockSalonService implements SalonServiceContract {
   // --- PHASE 3E: SEQUENCE NUMBER GENERATORS ---
   // =========================================================================
 
-  private getNextPayrollRunNumber(clonedStore: StorageSchema, branch: Branch, monthStr: string): string {
-    const key = `${branch.id}-${monthStr}`;
-    clonedStore.payrollSequenceCounters = clonedStore.payrollSequenceCounters || {};
-    if (typeof clonedStore.payrollSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `PAY-${branch.code}-${monthStr}-`;
-      for (const run of clonedStore.payrollRuns || []) {
-        if (run.branchId === branch.id && run.payrollNumber && run.payrollNumber.startsWith(prefix)) {
-          const numPart = parseInt(run.payrollNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.payrollSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.payrollSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.payrollSequenceCounters[key]).padStart(4, '0');
-    return `PAY-${branch.code}-${monthStr}-${seqStr}`;
-  }
+  private getNextPayrollRunNumber(clonedStore: StorageSchema, branch: Branch, monthStr: string): string { return nextReference(clonedStore, 'PAY'); }
 
-  private getNextPayslipNumber(clonedStore: StorageSchema, branch: Branch, monthStr: string): string {
-    const key = `${branch.id}-${monthStr}`;
-    clonedStore.payslipSequenceCounters = clonedStore.payslipSequenceCounters || {};
-    if (typeof clonedStore.payslipSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `PS-${branch.code}-${monthStr}-`;
-      for (const run of clonedStore.payrollRuns || []) {
-        for (const ps of run.payslips || []) {
-          if (ps.branchId === branch.id && ps.payslipNumber && ps.payslipNumber.startsWith(prefix)) {
-            const numPart = parseInt(ps.payslipNumber.slice(prefix.length), 10);
-            if (!isNaN(numPart) && numPart > maxSeq) {
-              maxSeq = numPart;
-            }
-          }
-        }
-      }
-      clonedStore.payslipSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.payslipSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.payslipSequenceCounters[key]).padStart(4, '0');
-    return `PS-${branch.code}-${monthStr}-${seqStr}`;
-  }
+  private getNextPayslipNumber(clonedStore: StorageSchema, branch: Branch, monthStr: string): string { return nextReference(clonedStore, 'PS'); }
 
-  private getNextPayrollPaymentNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string {
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.payrollPaymentSequenceCounters = clonedStore.payrollPaymentSequenceCounters || {};
-    if (typeof clonedStore.payrollPaymentSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `PAYMT-${branch.code}-${yearStr}-`;
-      for (const p of clonedStore.payrollPayments || []) {
-        if (p.branchId === branch.id && p.paymentNumber && p.paymentNumber.startsWith(prefix)) {
-          const numPart = parseInt(p.paymentNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.payrollPaymentSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.payrollPaymentSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.payrollPaymentSequenceCounters[key]).padStart(4, '0');
-    return `PAYMT-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private getNextPayrollPaymentNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(clonedStore, 'PAYMT'); }
 
-  private getNextCommissionRunNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string {
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.commissionSequenceCounters = clonedStore.commissionSequenceCounters || {};
-    if (typeof clonedStore.commissionSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `COM-${branch.code}-${yearStr}-`;
-      for (const run of clonedStore.commissionRuns || []) {
-        if (run.branchId === branch.id && run.commissionNumber && run.commissionNumber.startsWith(prefix)) {
-          const numPart = parseInt(run.commissionNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.commissionSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.commissionSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.commissionSequenceCounters[key]).padStart(4, '0');
-    return `COM-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private getNextCommissionRunNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(clonedStore, 'COM'); }
 
-  private getNextCommissionStatementNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string {
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.commissionStatementSequenceCounters = clonedStore.commissionStatementSequenceCounters || {};
-    if (typeof clonedStore.commissionStatementSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `CS-${branch.code}-${yearStr}-`;
-      for (const run of clonedStore.commissionRuns || []) {
-        for (const stmt of run.statements || []) {
-          if (stmt.branchId === branch.id && stmt.statementNumber && stmt.statementNumber.startsWith(prefix)) {
-            const numPart = parseInt(stmt.statementNumber.slice(prefix.length), 10);
-            if (!isNaN(numPart) && numPart > maxSeq) {
-              maxSeq = numPart;
-            }
-          }
-        }
-      }
-      clonedStore.commissionStatementSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.commissionStatementSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.commissionStatementSequenceCounters[key]).padStart(4, '0');
-    return `CS-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private getNextCommissionStatementNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(clonedStore, 'CS'); }
 
-  private getNextCommissionPaymentNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string {
-    const key = `${branch.id}-${yearStr}`;
-    clonedStore.commissionPaymentSequenceCounters = clonedStore.commissionPaymentSequenceCounters || {};
-    if (typeof clonedStore.commissionPaymentSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `COMPAY-${branch.code}-${yearStr}-`;
-      for (const p of clonedStore.commissionPayments || []) {
-        if (p.branchId === branch.id && p.paymentNumber && p.paymentNumber.startsWith(prefix)) {
-          const numPart = parseInt(p.paymentNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.commissionPaymentSequenceCounters[key] = maxSeq;
-    }
-    clonedStore.commissionPaymentSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.commissionPaymentSequenceCounters[key]).padStart(4, '0');
-    return `COMPAY-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private getNextCommissionPaymentNumber(clonedStore: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(clonedStore, 'COMPAY'); }
 
   // =========================================================================
   // --- PHASE 3E: PAYROLL METHODS ---
@@ -7881,29 +7586,11 @@ class MockSalonService implements SalonServiceContract {
   // PHASE 3F: TIP SEQUENCE NUMBER GENERATORS
   // ==========================================
 
-  private getNextTipReceiptNumber(store: StorageSchema, branch: Branch, yearStr: string): string {
-    store.tipReceiptSequenceCounters = store.tipReceiptSequenceCounters || {};
-    const key = `${branch.code}-${yearStr}`;
-    const nextSeq = (store.tipReceiptSequenceCounters[key] || 0) + 1;
-    store.tipReceiptSequenceCounters[key] = nextSeq;
-    return `TR-${branch.code}-${yearStr}-${String(nextSeq).padStart(4, '0')}`;
-  }
+  private getNextTipReceiptNumber(store: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(store, 'TR'); }
 
-  private getNextTipAllocationNumber(store: StorageSchema, branch: Branch, yearStr: string): string {
-    store.tipAllocationSequenceCounters = store.tipAllocationSequenceCounters || {};
-    const key = `${branch.code}-${yearStr}`;
-    const nextSeq = (store.tipAllocationSequenceCounters[key] || 0) + 1;
-    store.tipAllocationSequenceCounters[key] = nextSeq;
-    return `TA-${branch.code}-${yearStr}-${String(nextSeq).padStart(4, '0')}`;
-  }
+  private getNextTipAllocationNumber(store: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(store, 'TA'); }
 
-  private getNextTipPayoutNumber(store: StorageSchema, branch: Branch, yearStr: string): string {
-    store.tipPayoutSequenceCounters = store.tipPayoutSequenceCounters || {};
-    const key = `${branch.code}-${yearStr}`;
-    const nextSeq = (store.tipPayoutSequenceCounters[key] || 0) + 1;
-    store.tipPayoutSequenceCounters[key] = nextSeq;
-    return `TP-${branch.code}-${yearStr}-${String(nextSeq).padStart(4, '0')}`;
-  }
+  private getNextTipPayoutNumber(store: StorageSchema, branch: Branch, yearStr: string): string { return nextReference(store, 'TP'); }
 
   // ==========================================
   // PHASE 3F: TIP COLLECTION, ALLOCATION & PAYOUTS
@@ -9016,29 +8703,7 @@ class MockSalonService implements SalonServiceContract {
   // PHASE 3G: APPOINTMENT SCHEDULING & BOOKING
   // ==========================================
 
-  private getNextAppointmentNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string {
-    const yearStr = targetDate.slice(0, 4);
-    const key = `APT-${branch.id}-${yearStr}`;
-    clonedStore.appointmentSequenceCounters = clonedStore.appointmentSequenceCounters || {};
-
-    if (typeof clonedStore.appointmentSequenceCounters[key] !== 'number') {
-      let maxSeq = 0;
-      const prefix = `APT-${branch.code}-${yearStr}-`;
-      for (const apt of clonedStore.appointments || []) {
-        if (apt.branchId === branch.id && apt.appointmentNumber && apt.appointmentNumber.startsWith(prefix)) {
-          const numPart = parseInt(apt.appointmentNumber.slice(prefix.length), 10);
-          if (!isNaN(numPart) && numPart > maxSeq) {
-            maxSeq = numPart;
-          }
-        }
-      }
-      clonedStore.appointmentSequenceCounters[key] = maxSeq;
-    }
-
-    clonedStore.appointmentSequenceCounters[key] += 1;
-    const seqStr = String(clonedStore.appointmentSequenceCounters[key]).padStart(4, '0');
-    return `APT-${branch.code}-${yearStr}-${seqStr}`;
-  }
+  private getNextAppointmentNumber(clonedStore: StorageSchema, branch: Branch, targetDate: string): string { return nextReference(clonedStore, 'APT'); }
 
   private validateAndScheduleAppointmentItems(
     store: StorageSchema,
@@ -10284,24 +9949,8 @@ class MockSalonService implements SalonServiceContract {
 
     const store = mockStorage.getStore();
     let sku = input.sku?.trim().toUpperCase();
-    if (!sku) {
-      let maxNum = 0;
-      const existingCodes = new Set((store.inventoryItems || []).map((i) => i.sku?.trim().toUpperCase()));
-      for (const i of store.inventoryItems || []) {
-        if (!i.sku) continue;
-        const m = i.sku.match(/(\d+)$/);
-        if (m) {
-          const val = parseInt(m[1], 10);
-          if (!isNaN(val) && val > maxNum) maxNum = val;
-        }
-      }
-      let nextNum = maxNum + 1;
-      let candidate = `SKU-${String(nextNum).padStart(2, '0')}`;
-      while (existingCodes.has(candidate)) {
-        nextNum++;
-        candidate = `SKU-${String(nextNum).padStart(2, '0')}`;
-      }
-      sku = candidate;
+    if (!sku || /^(?:SKU)-\d+$/i.test(sku)) {
+      sku = nextReference(store, 'SKU');
     }
 
     const existingSku = (store.inventoryItems || []).find(
@@ -10347,7 +9996,7 @@ class MockSalonService implements SalonServiceContract {
         itemName: newItem.name,
         itemSku: newItem.sku,
         branchId,
-        batchNumber: `BATCH-OPN-${newItem.sku}`,
+        batchNumber: nextReference(store, 'BAT'),
         initialQuantity: openingQty,
         purchasedQuantity: openingQty,
         remainingQuantity: openingQty,
@@ -10363,7 +10012,7 @@ class MockSalonService implements SalonServiceContract {
       if (!store.stockMovements) store.stockMovements = [];
       const sm: StockMovement = {
         id: `sm-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
-        movementNumber: `SM-OPN-${Date.now().toString().slice(-5)}`,
+        movementNumber: nextReference(store, 'SM'),
         branchId,
         itemId: newItem.id,
         itemName: newItem.name,
@@ -10743,7 +10392,7 @@ class MockSalonService implements SalonServiceContract {
     if (!store.supplierSequenceCounters) store.supplierSequenceCounters = {};
     const count = (store.supplierSequenceCounters['SUP'] || 3) + 1;
     store.supplierSequenceCounters['SUP'] = count;
-    const supplierCode = `SUP-${String(count).padStart(3, '0')}`;
+    const supplierCode = nextReference(store, 'SUP');
 
     const now = new Date().toISOString();
     const openingPayable = roundCurrency(input.openingPayable || 0);
@@ -11018,7 +10667,7 @@ class MockSalonService implements SalonServiceContract {
     if (!clonedStore.supplierPaymentSequenceCounters) clonedStore.supplierPaymentSequenceCounters = {};
     const spCount = (clonedStore.supplierPaymentSequenceCounters[`${branch.code}-2026`] || 0) + 1;
     clonedStore.supplierPaymentSequenceCounters[`${branch.code}-2026`] = spCount;
-    const paymentNumber = `SP-${branch.code}-2026-${String(spCount).padStart(4, '0')}`;
+    const paymentNumber = nextReference(clonedStore, 'SP');
 
     // Update supplier balances
     supplier.currentPayable = roundCurrency(supplier.currentPayable - amount);
@@ -11181,7 +10830,7 @@ class MockSalonService implements SalonServiceContract {
     if (!clonedStore.purchaseSequenceCounters) clonedStore.purchaseSequenceCounters = {};
     const poCount = (clonedStore.purchaseSequenceCounters[`${branch.code}-2026`] || 0) + 1;
     clonedStore.purchaseSequenceCounters[`${branch.code}-2026`] = poCount;
-    const purchaseNumber = `PO-${branch.code}-2026-${String(poCount).padStart(4, '0')}`;
+    const purchaseNumber = nextReference(clonedStore, 'PO');
     const purchaseId = `po-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
     const supplierInvoiceNumber = input.supplierInvoiceNumber ?? input.supplierInvoiceNo ?? input.invoiceNumber;
     const cashDrawerId = input.cashDrawerId ?? input.payerDrawerId;
@@ -11315,10 +10964,10 @@ class MockSalonService implements SalonServiceContract {
       const smCount = ((clonedStore.movementSequenceCounters || {})[`${branch.code}-2026`] || 0) + 1;
       if (!clonedStore.movementSequenceCounters) clonedStore.movementSequenceCounters = {};
       clonedStore.movementSequenceCounters[`${branch.code}-2026`] = smCount;
-      const moveNum = `SM-${branch.code}-2026-${String(smCount).padStart(4, '0')}`;
+      const moveNum = nextReference(clonedStore, 'SM');
 
       let batchId = line.batchId;
-      const batchNumber = line.batchNumber || `LOT-${branch.code}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+      const batchNumber = line.batchNumber || nextReference(clonedStore, 'BAT');
 
       // Check for existing batch with same batchNumber and item
       let existingBatch = clonedStore.inventoryBatches.find(
@@ -11514,7 +11163,7 @@ class MockSalonService implements SalonServiceContract {
     if (!clonedStore.supplierReturnSequenceCounters) clonedStore.supplierReturnSequenceCounters = {};
     const prCount = (clonedStore.supplierReturnSequenceCounters[`${branch.code}-2026`] || 0) + 1;
     clonedStore.supplierReturnSequenceCounters[`${branch.code}-2026`] = prCount;
-    const returnNumber = `PR-${branch.code}-2026-${String(prCount).padStart(4, '0')}`;
+    const returnNumber = nextReference(clonedStore, 'PR');
     const returnId = `ret-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
     let totalAmount = 0;
@@ -11577,7 +11226,7 @@ class MockSalonService implements SalonServiceContract {
       const smCount = ((clonedStore.movementSequenceCounters || {})[`${branch.code}-2026`] || 0) + 1;
       if (!clonedStore.movementSequenceCounters) clonedStore.movementSequenceCounters = {};
       clonedStore.movementSequenceCounters[`${branch.code}-2026`] = smCount;
-      const moveNum = `SM-${branch.code}-2026-${String(smCount).padStart(4, '0')}`;
+      const moveNum = nextReference(clonedStore, 'SM');
 
       clonedStore.stockMovements.push({
         id: `sm-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
@@ -11855,7 +11504,7 @@ class MockSalonService implements SalonServiceContract {
     if (!clonedStore.movementSequenceCounters) clonedStore.movementSequenceCounters = {};
     const smCount = (clonedStore.movementSequenceCounters[`${branch.code}-2026`] || 0) + 1;
     clonedStore.movementSequenceCounters[`${branch.code}-2026`] = smCount;
-    const movementNumber = `SM-${branch.code}-2026-${String(smCount).padStart(4, '0')}`;
+    const movementNumber = nextReference(clonedStore, 'SM');
     const nowIso = new Date().toISOString();
 
     const movement: StockMovement = {
@@ -11963,7 +11612,7 @@ class MockSalonService implements SalonServiceContract {
     if (!clonedStore.settlementRecordSequenceCounters) clonedStore.settlementRecordSequenceCounters = {};
     const stCount = (clonedStore.settlementRecordSequenceCounters[`${branch.code}-2026`] || 0) + 1;
     clonedStore.settlementRecordSequenceCounters[`${branch.code}-2026`] = stCount;
-    const settlementNumber = `ST-${branch.code}-2026-${String(stCount).padStart(4, '0')}`;
+    const settlementNumber = nextReference(clonedStore, 'ST');
     const settlementId = `st-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
 
     let totalSystemQuantity = 0;
@@ -12038,7 +11687,7 @@ class MockSalonService implements SalonServiceContract {
         const smCount = ((clonedStore.movementSequenceCounters || {})[`${branch.code}-2026`] || 0) + 1;
         if (!clonedStore.movementSequenceCounters) clonedStore.movementSequenceCounters = {};
         clonedStore.movementSequenceCounters[`${branch.code}-2026`] = smCount;
-        const moveNum = `SM-${branch.code}-2026-${String(smCount).padStart(4, '0')}`;
+        const moveNum = nextReference(clonedStore, 'SM');
 
         if (diff > 0) {
           // Positive adjustment (Counted > System)

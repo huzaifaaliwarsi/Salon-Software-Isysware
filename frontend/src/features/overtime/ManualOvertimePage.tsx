@@ -603,8 +603,8 @@ export const ManualOvertimePage: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400">
-                    <div className="inline-flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <div className="inline-flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin shrink-0" />
                       <span>Loading overtime records...</span>
                     </div>
                   </td>

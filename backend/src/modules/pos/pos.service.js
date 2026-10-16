@@ -139,6 +139,7 @@ const receivePayment = async (tx, actor, { invoice, branchId, p, amounts, kind, 
 
   return tx.invoicePayment.create({
     data: {
+      receiptNumber: await nextSequence(tx, '', 'RCP'),
       id: paymentId, invoiceId: invoice.id, branchId, date, time, amount: amounts.amount, billAmountAllocated: amounts.bill, tipAmountAllocated: amounts.tip,
       method: p.method, paymentAccountId: p.method === 'ONLINE_ACCOUNT' ? p.paymentAccountId : null, paymentAccountName: accountName, drawerId,
       cashTendered: p.method === 'CASH' ? round2(p.cashTendered || amounts.amount) : null,

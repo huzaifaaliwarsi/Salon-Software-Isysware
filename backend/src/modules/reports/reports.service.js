@@ -3623,6 +3623,7 @@ export const detailedIncomeReport = async (actor, query = {}) => {
         payments: {
           select: {
             id: true,
+            receiptNumber: true,
             amount: true,
             method: true,
             paymentAccountId: true,
@@ -3686,6 +3687,7 @@ export const detailedIncomeReport = async (actor, query = {}) => {
     const isVoided = inv.lifecycle === 'VOIDED';
     const invPayments = inv.payments.map((p) => ({
       id: p.id,
+      receiptNumber: p.receiptNumber,
       amount: n(p.amount),
       method: p.method,
       paymentAccountId: p.paymentAccountId,

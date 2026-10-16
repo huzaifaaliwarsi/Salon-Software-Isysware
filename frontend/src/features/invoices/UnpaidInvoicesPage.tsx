@@ -238,7 +238,11 @@ export const UnpaidInvoicesPage: React.FC = () => {
           disabled={isLoading}
           className="text-xs gap-1.5 self-start sm:self-center"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? (
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin shrink-0" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
           Refresh Receivables
         </Button>
       </div>
@@ -280,20 +284,20 @@ export const UnpaidInvoicesPage: React.FC = () => {
       {/* Unpaid Invoices Table */}
       <Card padding="none" className="overflow-hidden border-slate-200/90 shadow-2xs">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[1000px] w-full">
             <TableHeader>
               <TableRow className="bg-slate-50/75">
-                <TableHead className="text-xs font-semibold">Invoice No.</TableHead>
-                <TableHead className="text-xs font-semibold">Sale Date</TableHead>
+                <TableHead className="text-xs font-semibold whitespace-nowrap">Invoice No.</TableHead>
+                <TableHead className="text-xs font-semibold whitespace-nowrap">Sale Date</TableHead>
                 {isSuperAdmin && branchScope === 'ALL' && (
-                  <TableHead className="text-xs font-semibold">Branch</TableHead>
+                  <TableHead className="text-xs font-semibold whitespace-nowrap">Branch</TableHead>
                 )}
-                <TableHead className="text-xs font-semibold">Customer Details</TableHead>
-                <TableHead className="text-xs font-semibold text-right">Bill Total</TableHead>
-                <TableHead className="text-xs font-semibold text-right">Paid So Far</TableHead>
-                <TableHead className="text-xs font-semibold text-right">Balance Due</TableHead>
-                <TableHead className="text-xs font-semibold">Status</TableHead>
-                <TableHead className="w-36 text-center text-xs font-semibold">Action</TableHead>
+                <TableHead className="text-xs font-semibold whitespace-nowrap">Customer Details</TableHead>
+                <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Bill Total</TableHead>
+                <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Paid So Far</TableHead>
+                <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Balance Due</TableHead>
+                <TableHead className="text-xs font-semibold whitespace-nowrap">Status</TableHead>
+                <TableHead className="w-36 text-center text-xs font-semibold whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -309,7 +313,7 @@ export const UnpaidInvoicesPage: React.FC = () => {
               ) : (
                 filteredInvoices.map((inv) => (
                   <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors text-xs">
-                    <TableCell className="font-mono font-bold text-slate-900">
+                    <TableCell className="font-mono font-bold text-slate-900 whitespace-nowrap">
                       {inv.invoiceNumber}
                     </TableCell>
                     <TableCell className="text-slate-500 whitespace-nowrap">
@@ -320,23 +324,23 @@ export const UnpaidInvoicesPage: React.FC = () => {
                         {getBranchName(inv.branchId)}
                       </TableCell>
                     )}
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <span className="font-semibold text-slate-900 block">{inv.clientName}</span>
                       <span className="text-[10px] text-slate-500 font-mono block flex items-center gap-1">
                         <Phone className="w-2.5 h-2.5" />
                         {inv.clientPhone}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-mono font-medium text-slate-800">
+                    <TableCell className="text-right font-mono font-medium text-slate-800 whitespace-nowrap">
                       {formatCurrency(inv.netSales + inv.tax)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-emerald-700">
+                    <TableCell className="text-right font-mono text-emerald-700 whitespace-nowrap">
                       {formatCurrency(inv.amountPaid)}
                     </TableCell>
-                    <TableCell className="text-right font-mono font-bold text-rose-600 text-sm">
+                    <TableCell className="text-right font-mono font-bold text-rose-600 text-sm whitespace-nowrap">
                       {formatCurrency(inv.amountDue)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge
                         variant={inv.status === 'PARTIAL' ? 'warning' : 'destructive'}
                         className="text-[10px]"
@@ -344,11 +348,11 @@ export const UnpaidInvoicesPage: React.FC = () => {
                         {inv.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center whitespace-nowrap">
                       <Button
                         size="sm"
                         onClick={() => handleOpenCollect(inv)}
-                        className="h-7 text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white gap-1 cursor-pointer"
+                        className="h-7 text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white gap-1 cursor-pointer whitespace-nowrap"
                       >
                         <Coins className="w-3 h-3" />
                         Collect Payment
@@ -542,7 +546,7 @@ export const UnpaidInvoicesPage: React.FC = () => {
             >
               {isCollecting ? (
                 <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
                   Recording Receipt...
                 </>
               ) : (

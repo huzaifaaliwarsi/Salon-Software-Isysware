@@ -78,30 +78,11 @@ const itemData = (input) => {
   return data;
 };
 
-const generateNextSku = async (tx) => {
-  const items = await tx.inventoryItem.findMany({ select: { sku: true } });
-  let maxNum = 0;
-  const existing = new Set(items.map((i) => (i.sku || '').trim().toUpperCase()));
-  for (const item of items) {
-    if (!item.sku) continue;
-    const m = item.sku.match(/(\d+)$/);
-    if (m) {
-      const val = parseInt(m[1], 10);
-      if (!isNaN(val) && val > maxNum) maxNum = val;
-    }
-  }
-  let nextNum = maxNum + 1;
-  let candidate = `SKU-${String(nextNum).padStart(2, '0')}`;
-  while (existing.has(candidate)) {
-    nextNum++;
-    candidate = `SKU-${String(nextNum).padStart(2, '0')}`;
-  }
-  return candidate;
-};
+const generateNextSku = async (tx) => nextSequence(tx, '', 'SKU');
 
 export const createItem = async (input, actor) =>
   prisma.$transaction(async (tx) => {
-    const sku = input.sku ? input.sku.trim().toUpperCase() : await generateNextSku(tx);
+    const sku = input.sku && !/^SKU-\d+$/i.test(input.sku.trim()) ? input.sku.trim().toUpperCase() : await generateNextSku(tx);
     if (await tx.inventoryItem.findFirst({ where: { sku: { equals: sku, mode: 'insensitive' } } })) {
       throw conflict('SKU_TAKEN', `An inventory item with SKU '${sku}' already exists.`);
     }
@@ -126,7 +107,7 @@ export const createItem = async (input, actor) =>
             if (supp) supplierName = supp.name;
           }
 
-          const batchNumber = `BATCH-OPN-${sku}`;
+          const batchNumber = await nextSequence(tx, '', 'BAT');
           const batch = await tx.inventoryBatch.create({
             data: {
               itemId: item.id,
@@ -320,12 +301,7 @@ export const getSupplier = async (actor, id) => {
   return (await supplierDTOs(prisma, [s], resolveReadBranch(actor)))[0];
 };
 
-const nextSupplierCode = async (tx) => {
-  const rows = await tx.$queryRaw`
-    INSERT INTO "Sequence" (id, "branchCode", prefix, year, "lastValue") VALUES (gen_random_uuid()::text, 'ALL', 'SUP', 0, 1)
-    ON CONFLICT ("branchCode", prefix, year) DO UPDATE SET "lastValue" = "Sequence"."lastValue" + 1 RETURNING "lastValue"`;
-  return `SUP-${String(rows[0].lastValue).padStart(3, '0')}`;
-};
+const nextSupplierCode = async (tx) => nextSequence(tx, '', 'SUP');
 
 export const createSupplier = async (input, actor) => {
   const branchId = actor.role === 'SUPER_ADMIN' ? input.branchId || 'ALL' : input.branchId === 'ALL' ? 'ALL' : actor.branchId;
@@ -575,7 +551,7 @@ export const createPurchase = async (input, actor, request) => {
       // Every purchase line is its own cost layer — never merged with an older batch.
       const batch = await tx.inventoryBatch.create({
         data: {
-          itemId: l.item.id, branchId, batchNumber: l.batchNumber?.trim() || `${purchaseNumber}-L${i + 1}`,
+          itemId: l.item.id, branchId, batchNumber: l.batchNumber?.trim() || await nextSequence(tx, '', 'BAT'),
           purchaseId: purchase.id, purchaseNumber, supplierId: supplier.id, supplierName: supplier.name,
           receivedDate: purchaseDate, mfgDate: l.mfgDate ? dateOnly(l.mfgDate) : null, expiryDate: l.expiryDate ? dateOnly(l.expiryDate) : null,
           initialQuantity: qty(l.quantity), remainingQuantity: 0, unitCost: costs[i].landedUnitCost,

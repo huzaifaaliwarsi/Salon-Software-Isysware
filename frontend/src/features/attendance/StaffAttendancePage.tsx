@@ -618,7 +618,7 @@ export const StaffAttendancePage: React.FC = () => {
                 disabled={loading}
                 className="w-full h-9 bg-[#0047AB] hover:bg-[#003785] active:bg-[#002a66] text-white text-xs font-semibold rounded-lg shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
               >
-                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Filter className="w-3.5 h-3.5" />}
+                {loading ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" /> : <Filter className="w-3.5 h-3.5" />}
                 <span>= Filter</span>
               </button>
             </div>
@@ -711,7 +711,7 @@ export const StaffAttendancePage: React.FC = () => {
                 ) : loading ? (
                   <tr>
                     <td colSpan={9} className="py-12 text-center text-slate-400">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0047AB] mb-2" />
+                      <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin mx-auto mb-2" />
                       Loading staff attendance data...
                     </td>
                   </tr>
@@ -910,7 +910,7 @@ export const StaffAttendancePage: React.FC = () => {
               className="w-full sm:w-auto px-7 py-2.5 rounded-lg bg-[#10b981] hover:bg-[#059669] active:bg-[#047857] text-white text-xs font-bold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
               ) : (
                 <Save className="w-4 h-4" />
               )}

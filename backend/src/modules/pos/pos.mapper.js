@@ -6,6 +6,7 @@ import { ymd } from '../../lib/dates.js';
 
 export const toPaymentDTO = (p) => ({
   id:                  p.id,
+  receiptNumber:       p.receiptNumber,
   invoiceId:           p.invoiceId,
   branchId:            p.branchId,
   date:                ymd(p.date),
@@ -25,7 +26,7 @@ export const toPaymentDTO = (p) => ({
   notes:               opt(p.notes),
   kind:                p.kind,
   drawerId: p.drawerId,
-  reference: p.id,
+  reference: p.receiptNumber,
   reversedAt: p.reversedAt ? iso(p.reversedAt) : undefined,
   reversedByName: p.reversedByName,
   reversalReason: p.reversalReason,

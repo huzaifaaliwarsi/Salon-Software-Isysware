@@ -1,52 +1,51 @@
-// src/lib/sequence.js
-// Human-readable, branch-scoped sequential numbers: PREFIX-BRANCHCODE-YEAR-NNNN (e.g. INV-LHE-01-2026-0001).
-// A single atomic upsert (INSERT … ON CONFLICT DO UPDATE … RETURNING) makes this safe under concurrency,
-// including the very first number of a new year.
+// Human-readable business references are global per type, never per branch/year.
+// Allocate in the posting transaction; UUIDs and existing references stay intact.
+const sources = {
+  INV: ['invoice', 'invoiceNumber'], RCP: ['invoicePayment', 'receiptNumber'],
+  SVR: ['service', 'code'], PKG: ['package', 'code'], BR: ['branch', 'code'],
+  EMP: ['staff', 'employeeCode'], SKU: ['inventoryItem', 'sku'], SUP: ['supplier', 'supplierCode'],
+  APT: ['appointment', 'appointmentNumber'], DFT: ['expense', 'voucherNumber'],
+  EXP: ['expense', 'voucherNumber'], REV: ['expense', 'voucherNumber'],
+  SET: ['settlement', 'settlementNumber'], CVA: ['cashVarianceAdjustment', 'adjustmentNumber'],
+  LV: ['leaveRecord', 'leaveNumber'], OT: ['overtimeRecord', 'overtimeNumber'],
+  PAY: ['payrollRun', 'payrollNumber'], PS: ['payslip', 'payslipNumber'],
+  PAYMT: ['payrollPayment', 'paymentNumber'], ADV: ['salaryAdvance', 'advanceNumber'],
+  COM: ['commissionRun', 'commissionNumber'], CS: ['commissionStatement', 'statementNumber'],
+  COMPAY: ['commissionPayment', 'paymentNumber'], TR: ['tipReceipt', 'receiptNumber'],
+  TA: ['tipAllocation', 'allocationNumber'], TP: ['tipPayout', 'payoutNumber'],
+  SP: ['supplierPayment', 'paymentNumber'], PO: ['purchase', 'purchaseNumber'],
+  PR: ['supplierReturn', 'returnNumber'], ST: ['stockSettlement', 'settlementNumber'],
+  SM: ['stockMovement', 'movementNumber'], CXF: ['cashTransfer', 'transferNumber'],
+  BAT: ['inventoryBatch', 'batchNumber'],
+};
 
-/**
- * MUST be called inside a Prisma interactive transaction so a rollback also rolls back the number.
- * @param {object} tx          Prisma transaction client
- * @param {string} branchCode  e.g. 'LHE-01'
- * @param {string} prefix      e.g. 'INV', 'APT', 'EXP'
- * @param {number} [year]      defaults to the current year
- * @param {number} [pad]       digits in the running number (default 4)
- * @returns {Promise<string>}
- */
-export const nextSequence = async (tx, branchCode, prefix, year, pad = 4) => {
-  const y = year ?? new Date().getFullYear();
-  if (prefix === 'INV') {
-    const scope = 'GLOBAL';
-    const rows = await tx.$queryRaw`
-      INSERT INTO "Sequence" (id, "branchCode", prefix, year, "lastValue")
-      VALUES (gen_random_uuid()::text, ${scope}, ${prefix}, 0, 1)
-      ON CONFLICT ("branchCode", prefix, year)
-      DO UPDATE SET "lastValue" = "Sequence"."lastValue" + 1
-      RETURNING "lastValue"
-    `;
-    return `${prefix}-${String(rows[0].lastValue).padStart(pad, '0')}`;
+export const nextSequence = async (tx, _branchCode, prefix, _year, pad = 4) => {
+  const key = ['SRV', 'SVR'].includes(prefix.toUpperCase()) ? 'SVR' : prefix.toUpperCase();
+  if (!/^[A-Z]+$/.test(key)) throw new Error('Invalid reference prefix');
+  const label = key === 'SVR' ? 'Svr' : key;
+  const source = sources[key];
+  let existingMax = 0;
+  if (source) {
+    const [model, field] = source;
+    const records = await tx[model].findMany({
+      where: { [field]: { startsWith: `${label}-`, mode: 'insensitive' } }, select: { [field]: true },
+    });
+    const pattern = new RegExp(`^${label}-(\\d+)$`, 'i');
+    for (const record of records) {
+      const match = record[field]?.match(pattern);
+      if (match) existingMax = Math.max(existingMax, Number(match[1]));
+    }
   }
-
+  const start = existingMax + 1;
   const rows = await tx.$queryRaw`
     INSERT INTO "Sequence" (id, "branchCode", prefix, year, "lastValue")
-    VALUES (gen_random_uuid()::text, ${branchCode}, ${prefix}, ${y}, 1)
+    VALUES (gen_random_uuid()::text, 'GLOBAL', ${key}, 0, ${start})
     ON CONFLICT ("branchCode", prefix, year)
-    DO UPDATE SET "lastValue" = "Sequence"."lastValue" + 1
+    DO UPDATE SET "lastValue" = GREATEST("Sequence"."lastValue" + 1, ${start})
     RETURNING "lastValue"
   `;
-  return `${prefix}-${branchCode}-${y}-${String(rows[0].lastValue).padStart(pad, '0')}`;
+  return `${label}-${String(rows[0].lastValue).padStart(Math.max(4, pad), '0')}`;
 };
 
-/**
- * Period sequences such as PAY-LHE-01-2026-08-0001 (period = 'YYYY-MM')
- */
-export const nextPeriodSequence = async (tx, branchCode, prefix, period, pad = 4) => {
-  const scope = `${branchCode}:${period}`;
-  const rows = await tx.$queryRaw`
-    INSERT INTO "Sequence" (id, "branchCode", prefix, year, "lastValue")
-    VALUES (gen_random_uuid()::text, ${scope}, ${prefix}, 0, 1)
-    ON CONFLICT ("branchCode", prefix, year)
-    DO UPDATE SET "lastValue" = "Sequence"."lastValue" + 1
-    RETURNING "lastValue"
-  `;
-  return `${prefix}-${branchCode}-${period}-${String(rows[0].lastValue).padStart(pad, '0')}`;
-};
+export const nextPeriodSequence = (tx, branchCode, prefix, _period, pad = 4) =>
+  nextSequence(tx, branchCode, prefix, undefined, pad);

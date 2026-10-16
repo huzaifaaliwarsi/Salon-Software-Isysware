@@ -229,16 +229,17 @@ export const BranchOperationalSections: React.FC<BranchOperationalSectionsProps>
                 No active cash drawers assigned for this shift.
               </div>
             ) : (
-              cashDrawers.map((drawer) => (
+              cashDrawers.map((drawer, index) => (
                 <div
                   key={drawer.id}
                   className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-3"
+                  title={`Till ID: ${drawer.id}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Wallet className="w-4 h-4 text-[#2254E1]" />
                       <span className="text-xs font-semibold text-slate-900">
-                        Till ID: {drawer.id} · Custodian: {drawer.custodianName}
+                        Till #{index + 1} · Custodian: {drawer.custodianName}
                       </span>
                     </div>
                     <Badge variant={drawer.variance === 0 ? 'success' : 'danger'}>

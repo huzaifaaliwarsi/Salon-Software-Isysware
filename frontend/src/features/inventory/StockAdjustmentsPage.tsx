@@ -358,7 +358,7 @@ export const StockAdjustmentsPage: React.FC = () => {
 
         {isLoading ? (
           <div className="p-16 flex flex-col items-center justify-center text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
+            <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-[#2254E1] animate-spin mb-3" />
             <p className="text-slate-600 text-sm font-medium">Loading stock movements...</p>
           </div>
         ) : filteredMovements.length === 0 ? (

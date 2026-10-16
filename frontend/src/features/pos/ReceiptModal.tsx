@@ -220,6 +220,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </div>
 
                   <div className="text-[10px] text-slate-500 space-y-0.5">
+                    {p.receiptNumber && <div className="font-semibold text-slate-700">Receipt: {p.receiptNumber}</div>}
                     {p.previousBalance !== undefined && (
                       <div className="flex justify-between text-amber-800 font-medium bg-amber-50/80 px-1.5 py-0.5 rounded">
                         <span>Original Invoice: <strong className="font-mono">{invoice.invoiceNumber}</strong></span>

@@ -610,10 +610,10 @@ export const ServicesPackagesPage: React.FC = () => {
     }
 
     let nextNum = maxNum + 1;
-    let candidate = `SRV-${String(nextNum).padStart(2, '0')}`;
+    let candidate = `Svr-${String(nextNum).padStart(4, '0')}`;
     while (existingCodes.has(candidate)) {
       nextNum++;
-      candidate = `SRV-${String(nextNum).padStart(2, '0')}`;
+      candidate = `Svr-${String(nextNum).padStart(4, '0')}`;
     }
     return candidate;
   };
@@ -636,10 +636,10 @@ export const ServicesPackagesPage: React.FC = () => {
     }
 
     let nextNum = maxNum + 1;
-    let candidate = `PKG-${String(nextNum).padStart(2, '0')}`;
+    let candidate = `PKG-${String(nextNum).padStart(4, '0')}`;
     while (existingCodes.has(candidate)) {
       nextNum++;
-      candidate = `PKG-${String(nextNum).padStart(2, '0')}`;
+      candidate = `PKG-${String(nextNum).padStart(4, '0')}`;
     }
     return candidate;
   };
@@ -1107,9 +1107,9 @@ export const ServicesPackagesPage: React.FC = () => {
                 <Input
                   value={serviceFormData.code}
                   onChange={(e) => setServiceFormData({ ...serviceFormData, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. SRV-01"
+                  placeholder="e.g. Svr-0001"
                   required
-                  className="font-mono text-xs uppercase"
+                  className="font-mono text-xs"
                 />
               </div>
 
@@ -1172,7 +1172,7 @@ export const ServicesPackagesPage: React.FC = () => {
                         onClick={handleCreateInlineCategory}
                         disabled={isCreatingInlineCategory || !inlineCategoryName.trim()}
                       >
-                        {isCreatingInlineCategory ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add'}
+                        {isCreatingInlineCategory ? <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" /> : 'Add'}
                       </Button>
                     </div>
                   </div>
@@ -1303,9 +1303,9 @@ export const ServicesPackagesPage: React.FC = () => {
                 <Input
                   value={packageFormData.code}
                   onChange={(e) => setPackageFormData({ ...packageFormData, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. PKG-01"
+                  placeholder="e.g. PKG-0001"
                   required
-                  className="font-mono text-xs uppercase"
+                  className="font-mono text-xs"
                 />
               </div>
 

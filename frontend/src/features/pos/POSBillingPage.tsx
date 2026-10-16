@@ -1667,7 +1667,7 @@ export const POSBillingPage: React.FC = () => {
                     className="pl-8 text-xs h-8 bg-slate-50 border-slate-200"
                   />
                   {isSearchingClients && (
-                    <RefreshCw className="w-3.5 h-3.5 absolute right-3 top-2.5 text-slate-400 animate-spin" />
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin absolute right-3 top-2.5" />
                   )}
                 </div>
 
@@ -2993,7 +2993,7 @@ export const POSBillingPage: React.FC = () => {
               onClick={handlePostInvoice}
               className="bg-[#2254E1] hover:bg-[#1B44B8] text-white text-xs font-bold gap-1.5"
             >
-              {isPosting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              {isPosting ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               Confirm & Print Receipt
             </Button>
           </DialogFooter>
@@ -3015,7 +3015,7 @@ export const POSBillingPage: React.FC = () => {
 
           {isLoadingInvoices ? (
             <div className="py-8 text-center text-xs text-slate-500">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto text-slate-400 mb-2" />
+              <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin mx-auto mb-2" />
               Loading customer unpaid invoices...
             </div>
           ) : customerOutstandingInvoices.length === 0 ? (
@@ -3248,7 +3248,7 @@ export const POSBillingPage: React.FC = () => {
               className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold gap-1.5"
             >
               {isPostingCollection ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
               ) : (
                 <Banknote className="w-3.5 h-3.5" />
               )}

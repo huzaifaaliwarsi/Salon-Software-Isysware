@@ -1,3 +1,4 @@
+import { nextSequence } from '../../lib/sequence.js';
 // src/modules/branches/branches.service.js
 // Branch CRUD, admin assignment and safe deactivation.
 
@@ -30,26 +31,7 @@ const assertCodeFree = async (tx, code, exceptId) => {
   if (clash) throw conflict('BRANCH_CODE_TAKEN', `Branch code '${code}' is already registered to another branch.`);
 };
 
-const generateNextBranchCode = async (tx) => {
-  const branches = await tx.branch.findMany({ select: { code: true } });
-  let maxNum = 0;
-  const existing = new Set(branches.map((b) => (b.code || '').trim().toUpperCase()));
-  for (const b of branches) {
-    if (!b.code) continue;
-    const m = b.code.match(/(\d+)$/);
-    if (m) {
-      const val = parseInt(m[1], 10);
-      if (!isNaN(val) && val > maxNum) maxNum = val;
-    }
-  }
-  let nextNum = maxNum + 1;
-  let candidate = `BR-${String(nextNum).padStart(2, '0')}`;
-  while (existing.has(candidate)) {
-    nextNum++;
-    candidate = `BR-${String(nextNum).padStart(2, '0')}`;
-  }
-  return candidate;
-};
+const generateNextBranchCode = async (tx) => nextSequence(tx, '', 'BR');
 
 // Branch metadata (names, codes, tax config) is needed by every portal for headers,
 // receipts and selectors, so all authenticated users can list branches (same as the mock).
@@ -66,7 +48,7 @@ export const getBranch = async (id) => {
 
 export const createBranch = async (input, actor) => {
   return prisma.$transaction(async (tx) => {
-    const code = input.code ? input.code.trim().toUpperCase() : await generateNextBranchCode(tx);
+    const code = input.code && !/^(?:BR)-\d+$/i.test(input.code.trim()) ? input.code.trim().toUpperCase() : await generateNextBranchCode(tx);
     await assertCodeFree(tx, code);
 
     // New branches start with ZERO opening float and tax disabled until explicitly configured.

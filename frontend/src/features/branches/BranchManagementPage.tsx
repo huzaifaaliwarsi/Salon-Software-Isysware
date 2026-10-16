@@ -163,10 +163,10 @@ export const BranchManagementPage: React.FC = () => {
     }
 
     let nextNum = maxNum + 1;
-    let candidate = `BR-${String(nextNum).padStart(2, '0')}`;
+    let candidate = `BR-${String(nextNum).padStart(4, '0')}`;
     while (existingCodes.has(candidate)) {
       nextNum++;
-      candidate = `BR-${String(nextNum).padStart(2, '0')}`;
+      candidate = `BR-${String(nextNum).padStart(4, '0')}`;
     }
     return candidate;
   };

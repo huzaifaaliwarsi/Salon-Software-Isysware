@@ -1,3 +1,4 @@
+import { nextSequence } from '../../lib/sequence.js';
 // src/modules/staff/staff.service.js
 // Staff directory: profiles, compensation (with history), schedules and portal access.
 
@@ -99,26 +100,7 @@ export const getStaff = async (actor, id) => {
   return toStaffDTO(staff, { redactPay: actor.role === 'ACCOUNTANT' });
 };
 
-const generateNextEmployeeCode = async (tx) => {
-  const staff = await tx.staff.findMany({ select: { employeeCode: true } });
-  let maxNum = 0;
-  const existing = new Set(staff.map((s) => (s.employeeCode || '').trim().toUpperCase()));
-  for (const s of staff) {
-    if (!s.employeeCode) continue;
-    const m = s.employeeCode.match(/(\d+)$/);
-    if (m) {
-      const val = parseInt(m[1], 10);
-      if (!isNaN(val) && val > maxNum) maxNum = val;
-    }
-  }
-  let nextNum = maxNum + 1;
-  let candidate = `EMP-${String(nextNum).padStart(2, '0')}`;
-  while (existing.has(candidate)) {
-    nextNum++;
-    candidate = `EMP-${String(nextNum).padStart(2, '0')}`;
-  }
-  return candidate;
-};
+const generateNextEmployeeCode = async (tx) => nextSequence(tx, '', 'EMP');
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
@@ -129,7 +111,7 @@ export const createStaff = async (input, actor) => {
     const branch = await tx.branch.findUnique({ where: { id: branchId } });
     if (!branch || !branch.isActive) throw badRequest('BRANCH_INACTIVE', 'Cannot add staff to an inactive or non-existent branch.');
 
-    const employeeCode = input.employeeCode ? input.employeeCode.trim().toUpperCase() : await generateNextEmployeeCode(tx);
+    const employeeCode = input.employeeCode && !/^(?:EMP)-\d+$/i.test(input.employeeCode.trim()) ? input.employeeCode.trim().toUpperCase() : await generateNextEmployeeCode(tx);
 
     // Employee codes are unique across the whole company (biometric devices map by code).
     const clash = await tx.staff.findFirst({ where: { employeeCode: { equals: employeeCode, mode: 'insensitive' } } });

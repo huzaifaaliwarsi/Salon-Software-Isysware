@@ -309,10 +309,10 @@ export const InventoryPage: React.FC = () => {
     }
 
     let nextNum = maxNum + 1;
-    let candidate = `SKU-${String(nextNum).padStart(2, '0')}`;
+    let candidate = `SKU-${String(nextNum).padStart(4, '0')}`;
     while (existingCodes.has(candidate)) {
       nextNum++;
-      candidate = `SKU-${String(nextNum).padStart(2, '0')}`;
+      candidate = `SKU-${String(nextNum).padStart(4, '0')}`;
     }
     return candidate;
   };
@@ -497,7 +497,7 @@ export const InventoryPage: React.FC = () => {
 
   const handleOpenCreatePurchase = () => {
     setPurchaseSupplierId(suppliers[0]?.id || '');
-    setPurchaseInvoiceNumber(`PO-${Date.now().toString().slice(-6)}`);
+    setPurchaseInvoiceNumber('');
     setPurchasePaymentMethod('CREDIT');
     setPurchasePaidAmount(0);
     setPurchasePaymentAccountId(paymentAccounts[0]?.id || '');
@@ -505,7 +505,7 @@ export const InventoryPage: React.FC = () => {
     setPurchaseLines([
       {
         itemId: inventoryItems[0]?.id || '',
-        batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
+        batchNumber: '',
         quantity: 10,
         unitPurchaseCost: inventoryItems[0]?.defaultPurchaseCost ?? 0,
       },
@@ -518,7 +518,7 @@ export const InventoryPage: React.FC = () => {
       ...prev,
       {
         itemId: inventoryItems[0]?.id || '',
-        batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
+        batchNumber: '',
         quantity: 1,
         unitPurchaseCost: inventoryItems[0]?.defaultPurchaseCost ?? 0,
       },

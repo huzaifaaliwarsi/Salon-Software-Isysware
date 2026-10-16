@@ -186,3 +186,38 @@
   }
 }
 
+/* Simple circular blue rounded-border loaders */
+.spinner-blue {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  border: 2.5px solid #dbeafe;
+  border-top-color: #2254e1;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.spinner-blue-sm {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid #dbeafe;
+  border-top-color: #2254e1;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.spinner-blue-lg {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2254e1;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+

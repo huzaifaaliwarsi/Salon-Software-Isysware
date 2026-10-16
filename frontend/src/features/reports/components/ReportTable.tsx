@@ -79,7 +79,7 @@ export function ReportTable<T>({
                   className="py-12 text-center text-slate-400 font-medium"
                 >
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="w-6 h-6 border-2 border-[#0047AB] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-7 h-7 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin mb-1" />
                     <span>Loading report records…</span>
                   </div>
                 </td>

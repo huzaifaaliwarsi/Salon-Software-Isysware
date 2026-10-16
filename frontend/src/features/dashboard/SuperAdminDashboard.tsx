@@ -51,8 +51,8 @@ export const SuperAdminDashboard: React.FC = () => {
 
   if (isLoading && !data) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center space-y-3">
-        <RefreshCw className="w-8 h-8 text-[#2254E1] animate-spin" />
+      <div className="py-20 flex flex-col items-center justify-center space-y-3 font-sans">
+        <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin" />
         <p className="text-xs text-slate-500 font-medium">Loading multi-branch financial intelligence...</p>
       </div>
     );

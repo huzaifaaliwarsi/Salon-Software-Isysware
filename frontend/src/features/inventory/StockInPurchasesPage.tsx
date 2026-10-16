@@ -156,7 +156,7 @@ export const StockInPurchasesPage: React.FC = () => {
   const handleOpenStockIn = () => {
     const firstItem = items[0];
     setSelectedSupplierId(suppliers[0]?.id || '');
-    setInvoiceNumber(`PO-${Date.now().toString().slice(-6)}`);
+    setInvoiceNumber('');
     setPurchaseDate(new Date().toISOString().split('T')[0]);
     setPaidAmount(0);
     setPaymentSourceMethod('CASH');
@@ -167,7 +167,7 @@ export const StockInPurchasesPage: React.FC = () => {
         itemId: firstItem?.id || '',
         quantity: 10,
         unitPurchaseCost: firstItem?.defaultPurchaseCost || 0,
-        batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
+        batchNumber: '',
       },
     ]);
     setIsStockInModalOpen(true);
@@ -181,7 +181,7 @@ export const StockInPurchasesPage: React.FC = () => {
         itemId: firstItem?.id || '',
         quantity: 1,
         unitPurchaseCost: firstItem?.defaultPurchaseCost || 0,
-        batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
+        batchNumber: '',
       },
     ]);
   };
@@ -263,7 +263,7 @@ export const StockInPurchasesPage: React.FC = () => {
       const input: CreatePurchaseInput = {
         branchId: selectedBranchId,
         supplierId: selectedSupplierId,
-        invoiceNumber: invoiceNumber.trim() || `PO-${Date.now().toString().slice(-6)}`,
+        invoiceNumber: invoiceNumber.trim() || '',
         purchaseDate,
         paymentMethod: finalPaymentMethod,
         paidAmount: paidAmount > 0 ? paidAmount : 0,
@@ -338,8 +338,8 @@ export const StockInPurchasesPage: React.FC = () => {
         {
           branchAvailability: [selectedBranchId],
           name: quickProductName.trim(),
-          sku: `SKU-${Date.now().toString().slice(-5)}`,
-          code: `SKU-${Date.now().toString().slice(-5)}`,
+          sku: '',
+          code: '',
           category: quickProductCategory || 'General',
           itemType: 'RETAIL_PRODUCT',
           purchaseUnit: 'BOTTLE',
@@ -498,7 +498,7 @@ export const StockInPurchasesPage: React.FC = () => {
 
         {isLoading ? (
           <div className="p-16 flex flex-col items-center justify-center text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
+            <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-[#2254E1] animate-spin mb-3" />
             <p className="text-slate-600 text-sm font-medium">Loading stock in records...</p>
           </div>
         ) : filteredPurchases.length === 0 ? (
@@ -644,12 +644,12 @@ export const StockInPurchasesPage: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Supplier Invoice / PO # *
+                    Supplier Invoice # (Optional)
                   </label>
                   <input
                     type="text"
-                    required
                     value={invoiceNumber}
+                    placeholder="Supplier reference, if available"
                     onChange={(e) => setInvoiceNumber(e.target.value)}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg bg-white focus:outline-hidden"
                   />
@@ -979,7 +979,7 @@ export const StockInPurchasesPage: React.FC = () => {
                   className="px-6 py-2 text-xs font-semibold text-white bg-[#0047AB] hover:bg-[#003785] disabled:opacity-50 rounded-lg shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors"
                 >
                   {isSubmittingStockIn ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
                   ) : (
                     <ArrowDownRight className="w-3.5 h-3.5" />
                   )}

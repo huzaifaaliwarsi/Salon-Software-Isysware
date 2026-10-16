@@ -888,6 +888,7 @@ export type PaymentMethod = 'CASH' | 'ONLINE_ACCOUNT' | 'SPLIT';
 export type InvoiceStatus = 'PAID' | 'UNPAID' | 'PARTIAL';
 
 export interface PaymentRecord {
+  receiptNumber?: string;
   id: string;
   invoiceId: string;
   branchId: string;
@@ -1991,6 +1992,7 @@ export interface DetailedIncomeComponent {
 }
 
 export interface DetailedIncomePayment {
+  receiptNumber?: string;
   id: string;
   amount: number;
   method: string;

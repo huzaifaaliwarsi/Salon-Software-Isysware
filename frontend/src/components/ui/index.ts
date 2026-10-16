@@ -16,3 +16,4 @@ export * from './skeleton';
 export * from './alert';
 export * from './alert-dialog';
 export * from './stat-card';
+export * from './spinner';

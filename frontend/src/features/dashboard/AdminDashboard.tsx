@@ -9,8 +9,8 @@ import { BranchOperationalSections } from './components/BranchOperationalSection
 import {
   Building2,
   Lock,
-  RefreshCw,
   ArrowRight,
+  RefreshCw,
   ShieldAlert,
 } from 'lucide-react';
 
@@ -52,8 +52,8 @@ export const AdminDashboard: React.FC = () => {
 
   if (isLoading && !data) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center space-y-3">
-        <RefreshCw className="w-8 h-8 text-[#2254E1] animate-spin" />
+      <div className="py-20 flex flex-col items-center justify-center space-y-3 font-sans">
+        <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin" />
         <p className="text-xs text-slate-500 font-medium">Loading branch operational data...</p>
       </div>
     );
@@ -121,74 +121,6 @@ export const AdminDashboard: React.FC = () => {
           </Button>
         </div>
       </div>
-
-      {/* Immediate Managerial Actions Widget */}
-      {data.pendingActions.length > 0 && (
-        <Card padding="md" className="border-amber-200/80 bg-amber-50/20">
-          <CardHeader
-            title="Immediate Managerial Actions"
-            subtitle="Pending settlement hand-offs, collection alerts and attendance verifications"
-          />
-          <div
-            className={`grid gap-3 ${
-              data.pendingActions.length === 1
-                ? 'grid-cols-1'
-                : data.pendingActions.length === 2
-                ? 'grid-cols-1 md:grid-cols-2'
-                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-            }`}
-          >
-            {data.pendingActions.map((action) => (
-              <div
-                key={action.id}
-                className={`p-3.5 rounded-lg bg-white border border-slate-200 shadow-2xs ${
-                  data.pendingActions.length === 1
-                    ? 'flex flex-col sm:flex-row sm:items-center justify-between gap-4'
-                    : 'flex flex-col justify-between'
-                }`}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-slate-900">{action.title}</span>
-                    <Badge
-                      size="sm"
-                      variant={
-                        action.urgency === 'high'
-                          ? 'danger'
-                          : action.urgency === 'medium'
-                          ? 'warning'
-                          : 'primary'
-                      }
-                    >
-                      {action.urgency === 'high'
-                        ? 'High Priority'
-                        : action.urgency === 'medium'
-                        ? 'Action Required'
-                        : 'Notice'}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed">{action.description}</p>
-                </div>
-                <div
-                  className={
-                    data.pendingActions.length === 1
-                      ? 'shrink-0 flex justify-end sm:pt-0'
-                      : 'mt-3 pt-2 border-t border-slate-100 flex justify-end'
-                  }
-                >
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => navigate(action.href)}
-                  >
-                    Resolve
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {/* Shared Branch Operational Metrics & Drawers */}
       <BranchOperationalSections

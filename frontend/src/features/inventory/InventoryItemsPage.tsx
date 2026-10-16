@@ -197,7 +197,7 @@ export const InventoryItemsPage: React.FC = () => {
     setEditingItem(null);
     setFormData({
       name: '',
-      sku: `SKU-${Date.now().toString().slice(-5)}`,
+      sku: '',
       barcode: '',
       category: 'Hair Care',
       itemType: 'RETAIL_PRODUCT',
@@ -267,8 +267,8 @@ export const InventoryItemsPage: React.FC = () => {
           {
             branchAvailability: [selectedBranchId],
             name: formData.name,
-            sku: formData.sku || `SKU-${Date.now().toString().slice(-5)}`,
-            code: formData.sku || `SKU-${Date.now().toString().slice(-5)}`,
+            sku: formData.sku || '',
+            code: formData.sku || '',
             barcode: formData.barcode || undefined,
             category: formData.category || 'General',
             itemType: formData.itemType,
@@ -451,7 +451,7 @@ export const InventoryItemsPage: React.FC = () => {
 
         {isLoading ? (
           <div className="p-16 flex flex-col items-center justify-center text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-[#0047AB] mb-3" />
+            <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-[#2254E1] animate-spin mb-3" />
             <p className="text-slate-600 text-sm font-medium">Loading inventory catalogue...</p>
           </div>
         ) : filteredItems.length === 0 ? (
@@ -601,12 +601,12 @@ export const InventoryItemsPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    SKU Code *
+                    SKU Code
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.sku || ''}
+                    placeholder="Assigned automatically on save"
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#0047AB]"
                   />
