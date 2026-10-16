@@ -652,7 +652,7 @@ export const ExpenseManagementPage: React.FC = () => {
   }, [allBranches, selectedBranchId]);
 
   return (
-    <div className="space-y-6 font-['Poppins']">
+    <div className="space-y-6 font-sans">
       {/* Top Header & Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
@@ -1099,7 +1099,7 @@ export const ExpenseManagementPage: React.FC = () => {
       {/* 1. ADD / EDIT EXPENSE MODAL                       */}
       {/* ================================================= */}
       <Dialog open={isAddExpenseModalOpen} onOpenChange={setIsAddExpenseModalOpen}>
-        <DialogContent className="sm:max-w-[550px] font-['Poppins']">
+        <DialogContent className="sm:max-w-[550px] font-sans">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               {editingExpenseId ? 'Edit Draft Expense' : 'Record Operating Expense'}
@@ -1307,7 +1307,7 @@ export const ExpenseManagementPage: React.FC = () => {
       {/* 2. PRINTABLE EXPENSE VOUCHER MODAL                */}
       {/* ================================================= */}
       <Dialog open={isVoucherModalOpen} onOpenChange={setIsVoucherModalOpen}>
-        <DialogContent className="sm:max-w-[650px] font-['Poppins']">
+        <DialogContent className="sm:max-w-[650px] font-sans">
           <DialogHeader className="no-print">
             <DialogTitle className="text-base font-bold text-slate-900">Official Expense Voucher</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
@@ -1460,7 +1460,7 @@ export const ExpenseManagementPage: React.FC = () => {
       {/* 3. REVERSAL CONFIRMATION MODAL                    */}
       {/* ================================================= */}
       <Dialog open={isReverseModalOpen} onOpenChange={setIsReverseModalOpen}>
-        <DialogContent className="sm:max-w-[480px] font-['Poppins']">
+        <DialogContent className="sm:max-w-[480px] font-sans">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-rose-600" />
@@ -1535,7 +1535,7 @@ export const ExpenseManagementPage: React.FC = () => {
       {/* 4. CATEGORY MANAGEMENT MODAL                      */}
       {/* ================================================= */}
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="sm:max-w-[500px] font-['Poppins']">
+        <DialogContent className="sm:max-w-[500px] font-sans">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-600" />
@@ -1641,7 +1641,7 @@ export const ExpenseManagementPage: React.FC = () => {
       {/* 5. CASH FLOAT TRANSFER MODAL                      */}
       {/* ================================================= */}
       <Dialog open={isFloatTransferModalOpen} onOpenChange={setIsFloatTransferModalOpen}>
-        <DialogContent className="sm:max-w-[480px] font-['Poppins']">
+        <DialogContent className="sm:max-w-[480px] font-sans">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
               <ArrowRightLeft className="w-4 h-4 text-emerald-600" />

@@ -70,7 +70,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-6xl mx-auto flex items-center justify-center min-h-[50vh] font-['Poppins']">
+      <div className="p-8 max-w-6xl mx-auto flex items-center justify-center min-h-[50vh] font-sans">
         <div className="flex items-center gap-3 text-slate-500 text-sm">
           <span className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
           <span>Loading your personal shift attendance & overtime profile...</span>
@@ -81,7 +81,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
 
   if (errorMsg) {
     return (
-      <div className="p-6 max-w-6xl mx-auto font-['Poppins']">
+      <div className="p-6 max-w-6xl mx-auto font-sans">
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
           <div>
@@ -96,7 +96,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
   const allowance = summaryData?.allowance;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6 font-['Poppins']">
+    <div className="p-6 max-w-6xl mx-auto space-y-6 font-sans">
       {/* PERSONAL PROFILE HERO CARD */}
       <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-80 bg-white/5 -skew-x-12 pointer-events-none" />

@@ -142,7 +142,7 @@ export const LoginPage: React.FC = () => {
         {/* Hero Narrative */}
         <div className="relative z-10 my-6 lg:my-8 max-w-xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-xs border border-white/20 text-xs font-normal text-blue-100 mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-200" />
             <span>Salon Management System · Multi-Branch Workspace</span>
           </div>
 

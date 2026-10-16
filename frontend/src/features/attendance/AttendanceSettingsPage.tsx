@@ -199,7 +199,7 @@ export const AttendanceSettingsPage: React.FC = () => {
       {/* Overview Information Box */}
       <div className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-white p-5 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="p-2.5 bg-blue-600 text-white rounded-xl shrink-0 mt-0.5 shadow-xs">
-          <Sparkles className="w-5 h-5" />
+          <ShieldCheck className="w-5 h-5" />
         </div>
         <div className="space-y-1.5 text-xs">
           <h3 className="font-bold text-slate-900 text-sm">

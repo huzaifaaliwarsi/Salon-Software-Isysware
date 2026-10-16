@@ -169,12 +169,13 @@ export const printReportWindow = ({
 <head>
   <meta charset="utf-8">
   <title>${title} - SalonOS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     @media print {
       @page { size: landscape; margin: 10mm; }
       body { margin: 0; }
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 20px; }
+    body { font-family: 'Inter', sans-serif; color: #0f172a; margin: 20px; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
   </style>
 </head>
@@ -200,7 +201,7 @@ export const printReportWindow = ({
   </table>
 
   <script>
-    window.onload = function() { window.print(); }
+    window.onload = function() { document.fonts.ready.then(function() { window.print(); }); }
   </script>
 </body>
 </html>`);

@@ -383,7 +383,7 @@ export const ManualOvertimePage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 font-['Poppins']">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 font-sans">
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>

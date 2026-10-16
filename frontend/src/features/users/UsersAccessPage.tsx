@@ -477,17 +477,17 @@ export const UsersAccessPage: React.FC = () => {
 
       {/* Users Table */}
       <Card padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-x-auto w-full">
+          <Table className="min-w-[1050px] w-full">
             <TableHeader>
               <TableRow>
-                <TableHead>User Name & Title</TableHead>
-                <TableHead>Login Identifier</TableHead>
-                <TableHead>System Role</TableHead>
-                <TableHead>Assigned Branch</TableHead>
-                <TableHead>Linked Employee Record</TableHead>
-                <TableHead>Access Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="whitespace-nowrap">User Name & Title</TableHead>
+                <TableHead className="whitespace-nowrap">Login Identifier</TableHead>
+                <TableHead className="whitespace-nowrap">System Role</TableHead>
+                <TableHead className="whitespace-nowrap">Assigned Branch</TableHead>
+                <TableHead className="whitespace-nowrap">Linked Employee Record</TableHead>
+                <TableHead className="whitespace-nowrap">Access Status</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -512,7 +512,7 @@ export const UsersAccessPage: React.FC = () => {
 
                   return (
                     <TableRow key={targetUser.id}>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-[#2254E1]/10 text-[#2254E1] border border-[#2254E1]/20 font-bold text-xs flex items-center justify-center shrink-0">
                             {targetUser.name
@@ -525,7 +525,7 @@ export const UsersAccessPage: React.FC = () => {
                               : 'U'}
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900 flex items-center gap-1.5">
+                            <p className="font-semibold text-slate-900 flex items-center gap-1.5 whitespace-nowrap">
                               <span>{targetUser.name}</span>
                               {isActorSelf && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 text-[#2254E1] font-bold">
@@ -533,57 +533,57 @@ export const UsersAccessPage: React.FC = () => {
                                 </span>
                               )}
                             </p>
-                            <p className="text-[11px] text-slate-500">{targetUser.title}</p>
+                            <p className="text-[11px] text-slate-500 whitespace-nowrap">{targetUser.title}</p>
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        <div className="font-mono text-xs text-slate-800 font-medium">
+                      <TableCell className="whitespace-nowrap">
+                        <div className="font-mono text-xs text-slate-800 font-medium whitespace-nowrap">
                           {targetUser.email}
                         </div>
                         {targetUser.phone && (
-                          <div className="text-[11px] text-slate-400 mt-0.5">{targetUser.phone}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap">{targetUser.phone}</div>
                         )}
                       </TableCell>
 
-                      <TableCell>
-                        <Badge variant={roleMeta.variant} dot>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={roleMeta.variant} dot className="whitespace-nowrap">
                           {roleMeta.label}
                         </Badge>
                       </TableCell>
 
-                      <TableCell>
-                        <div className="text-xs text-slate-800 flex items-center gap-1.5">
+                      <TableCell className="whitespace-nowrap">
+                        <div className="text-xs text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
                           <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{targetUser.branchName || (targetUser.branchId === 'ALL' ? 'All Branches' : targetUser.branchId)}</span>
                         </div>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {linkedStaff ? (
                           <div>
-                            <span className="text-xs font-semibold text-slate-900 block">
+                            <span className="text-xs font-semibold text-slate-900 block whitespace-nowrap">
                               {linkedStaff.name}
                             </span>
-                            <span className="text-[11px] text-slate-400 font-mono">
+                            <span className="text-[11px] text-slate-400 font-mono whitespace-nowrap">
                               {linkedStaff.employeeCode} · {linkedStaff.designation}
                             </span>
                           </div>
                         ) : targetUser.role === 'STAFF' ? (
-                          <span className="text-xs text-amber-600 italic">Unlinked Staff Record</span>
+                          <span className="text-xs text-amber-600 italic whitespace-nowrap">Unlinked Staff Record</span>
                         ) : (
-                          <span className="text-xs text-slate-400">Direct System User</span>
+                          <span className="text-xs text-slate-400 whitespace-nowrap">Direct System User</span>
                         )}
                       </TableCell>
 
-                      <TableCell>
-                        <Badge variant={targetUser.isActive ? 'success' : 'secondary'} dot>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={targetUser.isActive ? 'success' : 'secondary'} dot className="whitespace-nowrap">
                           {targetUser.isActive ? 'Active' : 'Deactivated'}
                         </Badge>
                       </TableCell>
 
-                      <TableCell className="text-right">
+                      <TableCell className="text-right whitespace-nowrap">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

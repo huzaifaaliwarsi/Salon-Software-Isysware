@@ -667,7 +667,7 @@ export const DebitCreditStatementPage: React.FC = () => {
 
             {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1250px] text-left border-collapse text-[13px]">
+              <table className="report-records w-full min-w-[1250px] text-left border-collapse text-[13px]">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[12px]">
                     <th className="py-3 px-3 text-center w-8">#</th>
@@ -823,7 +823,7 @@ export const DebitCreditStatementPage: React.FC = () => {
             {cashSubView === 'TRANSACTIONS' ? (
               /* VIEW A: Cash Transactions Ledger */
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-left border-collapse text-[13px]">
+                <table className="report-records w-full min-w-[1100px] text-left border-collapse text-[13px]">
                   <thead>
                     <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[12px]">
                       <th className="py-3 px-3 text-center w-8">#</th>
@@ -884,7 +884,7 @@ export const DebitCreditStatementPage: React.FC = () => {
             ) : (
               /* VIEW B: Shift Reconciliation & Custody */
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1250px] text-left border-collapse text-[13px]">
+                <table className="report-records w-full min-w-[1250px] text-left border-collapse text-[13px]">
                   <thead>
                     <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[12px]">
                       <th className="py-3 px-3 text-center w-8">#</th>

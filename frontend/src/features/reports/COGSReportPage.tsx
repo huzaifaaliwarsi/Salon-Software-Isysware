@@ -377,7 +377,7 @@ export const COGSReportPage: React.FC = () => {
           {/* Table Container */}
           <div className="bg-white overflow-x-auto rounded-b-xl border-t border-blue-200/40">
             {activeTab === 'STATEMENT' ? (
-              <table className="w-full text-[13px] text-left text-slate-700 whitespace-nowrap border-collapse min-w-[900px] font-['Inter',sans-serif]">
+              <table className="report-records w-full text-[13px] text-left text-slate-700 whitespace-nowrap border-collapse min-w-[900px] font-['Inter',sans-serif]">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4 text-left">P&L Financial Line Item</th>
@@ -471,7 +471,7 @@ export const COGSReportPage: React.FC = () => {
                 </tbody>
               </table>
             ) : (
-              <table className="w-full text-[13px] text-left text-slate-700 whitespace-nowrap border-collapse min-w-[1000px] font-['Inter',sans-serif]">
+              <table className="report-records w-full text-[13px] text-left text-slate-700 whitespace-nowrap border-collapse min-w-[1000px] font-['Inter',sans-serif]">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-3">Account / Line Item</th>

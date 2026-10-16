@@ -416,7 +416,7 @@ export const CashDrawerLogsReportPage: React.FC = () => {
 
           {/* Table Container with Horizontal Scroll */}
           <div className="bg-white overflow-x-auto rounded-b-xl border border-t-0 border-slate-200/90 shadow-sm">
-            <table className="w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
+            <table className="report-records w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
               <thead>
                 <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                   <th className="py-3.5 px-3 text-center w-8">#</th>
@@ -561,7 +561,7 @@ export const CashDrawerLogsReportPage: React.FC = () => {
 
       {!!reportData?.transactions?.length && <div className="bg-white border rounded-xl overflow-x-auto p-4">
         <h2 className="font-semibold mb-3">Cash transactions in selected dates</h2>
-        <table className="w-full text-left text-xs"><thead><tr><th className="p-2">Date / Time</th><th className="p-2">Reference</th><th className="p-2">Actor</th><th className="p-2">Type</th><th className="p-2 text-right">Amount (PKR)</th></tr></thead>
+        <table className="report-records w-full text-left text-xs"><thead><tr><th className="p-2">Date / Time</th><th className="p-2">Reference</th><th className="p-2">Actor</th><th className="p-2">Type</th><th className="p-2 text-right">Amount (PKR)</th></tr></thead>
           <tbody>{reportData.transactions.map((transaction) => <tr key={transaction.id} className="border-t"><td className="p-2">{transaction.date} {transaction.time}</td><td className="p-2">{transaction.reference}</td><td className="p-2">{transaction.actor}</td><td className="p-2">{transaction.type}</td><td className="p-2 text-right">{transaction.direction === 'IN' ? '+' : '-'}{formatPKR(transaction.amount)}</td></tr>)}</tbody>
         </table>
       </div>}

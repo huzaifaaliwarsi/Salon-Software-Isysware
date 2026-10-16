@@ -604,7 +604,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
 
           {/* Table Container with smooth horizontal scroll and generous column space */}
           <div className="bg-white overflow-x-auto rounded-b-xl border-t border-blue-200/40">
-            <table className="w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
+            <table className="report-records w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
               <thead>
                 <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                   <th className="py-3.5 px-4 text-center w-12 font-medium text-[#475569]">#</th>

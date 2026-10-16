@@ -718,7 +718,7 @@ export const StaffPerformancePage: React.FC = () => {
 
           {/* Table Container with Horizontal Scroll */}
           <div className="bg-white overflow-x-auto rounded-b-xl border border-t-0 border-slate-200/90 shadow-sm">
-            <table className="w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
+            <table className="report-records w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
               <thead>
                 <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                   <th className="py-3.5 px-3 text-center w-8">#</th>
@@ -987,7 +987,7 @@ export const StaffPerformancePage: React.FC = () => {
 
             {/* Drilldown Table */}
             <div className="p-4 flex-1 overflow-y-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="report-records w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100 text-[#0B2545] font-semibold text-[11px]">
                     <th className="py-2.5 px-3">Date</th>

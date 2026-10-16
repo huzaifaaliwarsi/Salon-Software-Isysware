@@ -846,19 +846,19 @@ export const StaffDirectoryPage: React.FC = () => {
 
       {/* STAFF TABLE */}
       <Card padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-x-auto w-full">
+          <Table className="min-w-[1180px] w-full">
             <TableHeader>
               <TableRow>
-                <TableHead>Employee & Code</TableHead>
-                <TableHead>Branch Location</TableHead>
-                <TableHead>Designation & Role</TableHead>
-                <TableHead>Compensation Model</TableHead>
-                <TableHead className="text-right">Overtime Rate</TableHead>
-                <TableHead>Schedule & Grace</TableHead>
-                <TableHead>Portal Access</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="whitespace-nowrap">Employee & Code</TableHead>
+                <TableHead className="whitespace-nowrap">Branch Location</TableHead>
+                <TableHead className="whitespace-nowrap">Designation & Role</TableHead>
+                <TableHead className="whitespace-nowrap">Compensation Model</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Overtime Rate</TableHead>
+                <TableHead className="whitespace-nowrap">Schedule & Grace</TableHead>
+                <TableHead className="whitespace-nowrap">Portal Access</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -873,7 +873,7 @@ export const StaffDirectoryPage: React.FC = () => {
               ) : (
                 filteredStaff.map((staff) => (
                   <TableRow key={staff.id}>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-2.5">
                         {/* Photo removal requirement: render consistent Initials Badge */}
                         <div className="w-8 h-8 rounded-full bg-[#2254E1]/10 text-[#2254E1] border border-[#2254E1]/20 font-bold text-xs flex items-center justify-center shrink-0">
@@ -887,32 +887,32 @@ export const StaffDirectoryPage: React.FC = () => {
                             : 'S'}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900 leading-tight">{staff.name}</p>
-                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">{staff.employeeCode}</p>
+                          <p className="font-semibold text-slate-900 leading-tight whitespace-nowrap">{staff.name}</p>
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">{staff.employeeCode}</p>
                         </div>
                       </div>
                     </TableCell>
 
-                    <TableCell>
-                      <div className="text-xs text-slate-800 flex items-center gap-1.5">
+                    <TableCell className="whitespace-nowrap">
+                      <div className="text-xs text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
                         <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span>{staff.branchName || staff.branchId}</span>
                       </div>
                     </TableCell>
 
-                    <TableCell>
-                      <div className="text-xs font-medium text-slate-900">{staff.designation}</div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <TableCell className="whitespace-nowrap">
+                      <div className="text-xs font-medium text-slate-900 whitespace-nowrap">{staff.designation}</div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5 whitespace-nowrap">
                         <Calendar className="w-3 h-3" />
                         <span>Joined: {staff.joiningDate}</span>
                       </div>
                     </TableCell>
 
-                    <TableCell>
-                      <div className="text-xs font-semibold text-slate-900">
+                    <TableCell className="whitespace-nowrap min-w-[200px]">
+                      <div className="text-xs font-semibold text-slate-900 whitespace-nowrap">
                         {COMPENSATION_TYPE_LABELS[staff.compensationType || 'MONTHLY_SALARY']}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5 whitespace-nowrap">
                         {formatCompensationSummary(staff)}
                       </div>
                       {staff.requiresCompensationReview && (
@@ -922,23 +922,23 @@ export const StaffDirectoryPage: React.FC = () => {
                       )}
                     </TableCell>
 
-                    <TableCell className="text-right font-medium text-slate-700 tabular-nums">
+                    <TableCell className="text-right font-medium text-slate-700 tabular-nums whitespace-nowrap">
                       {formatCurrency(staff.overtimeHourlyRate || 0)}/hr
                     </TableCell>
 
-                    <TableCell>
-                      <div className="text-xs text-slate-700 font-mono">
+                    <TableCell className="whitespace-nowrap">
+                      <div className="text-xs text-slate-700 font-mono whitespace-nowrap">
                         {staff.startTime || '09:00'} - {staff.endTime || '18:00'}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
+                      <div className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">
                         Grace: +{staff.lateGraceMinutes ?? 15}m late / -{staff.earlyGraceMinutes ?? 15}m early
                       </div>
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {staff.hasPortalAccess ? (
                         <div>
-                          <Badge variant="primary" dot>
+                          <Badge variant="primary" dot className="whitespace-nowrap">
                             Portal Active
                           </Badge>
                           <span className="text-[10px] text-slate-400 block font-mono mt-0.5 truncate max-w-[130px]">
@@ -946,19 +946,19 @@ export const StaffDirectoryPage: React.FC = () => {
                           </span>
                         </div>
                       ) : (
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="whitespace-nowrap">
                           No Login
                         </Badge>
                       )}
                     </TableCell>
 
-                    <TableCell>
-                      <Badge variant={staff.isActive ? 'success' : 'secondary'} dot>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant={staff.isActive ? 'success' : 'secondary'} dot className="whitespace-nowrap">
                         {staff.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

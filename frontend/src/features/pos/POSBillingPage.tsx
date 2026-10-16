@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { salonService } from '@/services';
 import {
@@ -81,6 +81,9 @@ import {
   X,
   ChevronRight,
   Users,
+  Printer,
+  Tag,
+  Wallet,
 } from 'lucide-react';
 
 export const POSBillingPage: React.FC = () => {
@@ -121,6 +124,23 @@ export const POSBillingPage: React.FC = () => {
   const [catalogueTab, setCatalogueTab] = useState<'SERVICES' | 'PACKAGES' | 'PRODUCTS'>('SERVICES');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Shortcut: '/' to focus search input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === '/' &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Cart & Customer state
   const [cart, setCart] = useState<POSCartItem[]>([]);
@@ -499,35 +519,124 @@ export const POSBillingPage: React.FC = () => {
     return { isValid: true };
   };
 
-  // Filtered catalogue
-  const filteredServices = useMemo(() => {
-    return services.filter((s) => {
-      const matchesSearch =
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.code.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'ALL' || s.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [services, searchQuery, selectedCategory]);
+  // Unified Catalogue list for the grid display (Services, Packages, Products)
+  const allCatalogueItems = useMemo(() => {
+    const list: Array<{
+      id: string;
+      type: 'SERVICE' | 'PACKAGE' | 'PRODUCT';
+      name: string;
+      code: string;
+      category: string;
+      price: number;
+      stock?: number;
+      isOutOfStock?: boolean;
+      isLowStock?: boolean;
+      raw: ServiceItem | PackageItem | InventoryItem;
+    }> = [];
 
-  const filteredPackages = useMemo(() => {
-    return packages.filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.code.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
+    services.forEach((s) => {
+      list.push({
+        id: s.id,
+        type: 'SERVICE',
+        name: s.name,
+        code: s.code || 'SRV',
+        category: s.category || 'Service',
+        price: getCatalogueSellingPrice(s),
+        raw: s,
+      });
     });
-  }, [packages, searchQuery]);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'ALL' || p.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+    packages.forEach((p) => {
+      list.push({
+        id: p.id,
+        type: 'PACKAGE',
+        name: p.name,
+        code: p.code || 'PKG',
+        category: 'Package',
+        price: getCatalogueSellingPrice(p),
+        raw: p,
+      });
     });
-  }, [products, searchQuery, selectedCategory]);
+
+    products.forEach((prod) => {
+      const stock = productStockMap[prod.id] ?? 0;
+      list.push({
+        id: prod.id,
+        type: 'PRODUCT',
+        name: prod.name,
+        code: getCatalogueCode(prod) || prod.sku || 'PRD',
+        category: prod.category || prod.brand || 'Retail',
+        price: getCatalogueSellingPrice(prod),
+        stock,
+        isOutOfStock: stock <= 0,
+        isLowStock: stock > 0 && stock <= (prod.minStockLevel || 5),
+        raw: prod,
+      });
+    });
+
+    return list;
+  }, [services, packages, products, productStockMap]);
+
+  // Dynamic filter category pills matching reference design
+  const categoryPills = useMemo(() => {
+    const pills: Array<{ key: string; label: string; count: number }> = [];
+    pills.push({ key: 'ALL', label: 'All Items', count: allCatalogueItems.length });
+    pills.push({ key: 'SERVICES', label: 'Services', count: services.length });
+    pills.push({ key: 'PACKAGES', label: 'Packages', count: packages.length });
+    pills.push({ key: 'PRODUCTS', label: 'Products', count: products.length });
+
+    // Distinct category names
+    const catMap = new Map<string, number>();
+    allCatalogueItems.forEach((item) => {
+      if (item.category && item.category !== 'Package' && item.category !== 'Service' && item.category !== 'Retail') {
+        catMap.set(item.category, (catMap.get(item.category) || 0) + 1);
+      }
+    });
+
+    catMap.forEach((count, cat) => {
+      pills.push({ key: `CAT:${cat}`, label: cat, count });
+    });
+
+    return pills;
+  }, [allCatalogueItems, services.length, packages.length, products.length]);
+
+  // Filtered items shown in the card grid
+  const filteredCatalogueItems = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return allCatalogueItems.filter((item) => {
+      const matchesSearch =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.code.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (selectedCategory === 'ALL') return true;
+      if (selectedCategory === 'SERVICES') return item.type === 'SERVICE';
+      if (selectedCategory === 'PACKAGES') return item.type === 'PACKAGE';
+      if (selectedCategory === 'PRODUCTS') return item.type === 'PRODUCT';
+      if (selectedCategory.startsWith('CAT:')) {
+        const cat = selectedCategory.slice(4);
+        return item.category === cat;
+      }
+      return item.category === selectedCategory;
+    });
+  }, [allCatalogueItems, searchQuery, selectedCategory]);
+
+  const handleItemCardClick = (item: any) => {
+    if (item.type === 'SERVICE') {
+      handleAddServiceToCart(item.raw as ServiceItem);
+    } else if (item.type === 'PACKAGE') {
+      handleAddPackageToCart(item.raw as PackageItem);
+    } else if (item.type === 'PRODUCT') {
+      handleAddProductToCart(item.raw as InventoryItem);
+    }
+  };
+
+  const filteredServices = services;
+  const filteredPackages = packages;
+  const filteredProducts = products;
 
   const handleAddProductToCart = (product: InventoryItem) => {
     const available = productStockMap[product.id] ?? 0;
@@ -719,6 +828,51 @@ export const POSBillingPage: React.FC = () => {
         return ci;
       })
     );
+  };
+
+  // Fast bulk assign: Assign a staff member to ALL line items in cart at once
+  const handleAssignStaffToAll = (staffId: string) => {
+    if (!staffId || staffId === 'unassigned') return;
+    const staff = staffId === 'house'
+      ? { id: 'house', name: 'House / Salon', commissionRate: 0 }
+      : staffList.find((s) => s.id === staffId);
+    if (!staff) return;
+
+    setCart((prev) =>
+      prev.map((ci) => {
+        const rate = typeof staff.commissionRate === 'number' && staff.commissionRate <= 1
+          ? Math.round(staff.commissionRate * 100)
+          : (staff.commissionRate || 0);
+
+        if (ci.type === 'SERVICE' || ci.type === 'PRODUCT') {
+          return {
+            ...ci,
+            staffId: staff.id,
+            staffName: staff.name,
+            staffCommissionRate: rate,
+          };
+        }
+        if (ci.type === 'PACKAGE') {
+          const totalLine = getCatalogueSellingPrice(ci.item) * ci.quantity;
+          return {
+            ...ci,
+            staffId: staff.id,
+            staffName: staff.name,
+            staffCommissionRate: rate,
+            assignedStaff: [
+              {
+                staffId: staff.id,
+                staffName: staff.name,
+                staffCommissionRate: rate,
+                allocatedAmount: totalLine,
+              },
+            ],
+          };
+        }
+        return ci;
+      })
+    );
+    toast.success(`Assigned all items to ${staff.name}`);
   };
 
   // Add staff member to a package line item
@@ -1382,6 +1536,31 @@ export const POSBillingPage: React.FC = () => {
     }
   };
 
+  const handleAddQuickCustomItem = () => {
+    const name = window.prompt('Enter custom service / item name:');
+    if (!name || !name.trim()) return;
+    const priceStr = window.prompt('Enter price in PKR:', '1000');
+    if (priceStr === null) return;
+    const price = Number(priceStr);
+    if (isNaN(price) || price < 0) {
+      toast.error('Invalid price entered');
+      return;
+    }
+
+    const customService: ServiceItem = {
+      id: `custom-${Date.now()}`,
+      name: name.trim(),
+      code: 'CUST-01',
+      category: 'Custom Service',
+      gender: 'UNISEX',
+      price: price,
+      durationMinutes: 30,
+      isActive: true,
+    };
+    handleAddServiceToCart(customService);
+    toast.success(`Custom service '${name}' added to sale.`);
+  };
+
   const currentCartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
   return (
@@ -1961,21 +2140,40 @@ export const POSBillingPage: React.FC = () => {
 
           {/* Active Cart Line Items Card */}
           <Card className="p-4 bg-white border-slate-200/80 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-4 h-4 text-[#2254E1]" />
                 <h3 className="font-bold text-slate-900 text-sm">Current Cart Items ({currentCartCount})</h3>
               </div>
-              {cart.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearCart}
-                  className="text-xs h-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2"
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear Cart
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {cart.length > 0 && staffList.length > 0 && (
+                  <Select value="" onValueChange={handleAssignStaffToAll}>
+                    <SelectTrigger className="h-7 text-[11px] bg-blue-50 border-blue-200 text-[#2254E1] font-semibold w-[145px] hover:bg-blue-100 transition-colors">
+                      <SelectValue placeholder="⚡ Assign All Staff" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                        House / Salon (No Staff)
+                      </SelectItem>
+                      {staffList.map((st) => (
+                        <SelectItem key={st.id} value={st.id} className="text-xs">
+                          {st.name} ({st.roleTitle})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {cart.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearCart}
+                    className="text-xs h-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear Cart
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Linked Appointment Badge */}
@@ -2602,6 +2800,33 @@ export const POSBillingPage: React.FC = () => {
                     onChange={(e) => setCashTenderedInput(parseFloat(e.target.value) || 0)}
                     className="text-sm font-mono font-bold bg-white h-10"
                   />
+                  {/* Fast Tender Shortcuts */}
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCashTenderedInput(calculations.fullInvoiceTotal)}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-blue-50 text-[#2254E1] border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                    >
+                      Exact ({formatCurrency(calculations.fullInvoiceTotal)})
+                    </button>
+                    {[500, 1000, 2000, 5000].map((note) => (
+                      <button
+                        key={note}
+                        type="button"
+                        onClick={() => setCashTenderedInput((prev) => (prev || 0) + note)}
+                        className="px-2 py-1 text-[11px] font-semibold rounded-md bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        +{note.toLocaleString()}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCashTenderedInput(0)}
+                      className="px-2 py-1 text-[11px] font-medium rounded-md text-slate-400 hover:text-rose-600 transition-colors cursor-pointer ml-auto"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { ReportKpis } from './components/ReportKpis';
 import { salonService } from '@/services';
 import { Branch, StaffMember, StaffSalaryReport, StaffSalaryReportQuery } from '@/types/salon';
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
@@ -368,6 +369,12 @@ export const StaffSalaryReportPage: React.FC = () => {
       ) : (
         /* Filtered Data Layout */
         <div className="mb-8">
+          <ReportKpis items={[
+            { label: 'Gross Salary', value: `PKR ${formatPKR(totals.gross)}` },
+            { label: 'Net Salary', value: `PKR ${formatPKR(totals.net)}` },
+            { label: 'Paid', value: `PKR ${formatPKR(totals.paid)}`, tone: 'positive' },
+            { label: 'Outstanding', value: `PKR ${formatPKR(totals.outstanding)}`, tone: 'negative' },
+          ]} />
           {/* Royal Blue Banner Header */}
           <div className="bg-[#0047AB] text-white px-5 py-3 rounded-t-xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-2.5">
@@ -404,7 +411,7 @@ export const StaffSalaryReportPage: React.FC = () => {
 
           {/* Table Container with Horizontal Scroll */}
           <div className="bg-white overflow-x-auto rounded-b-xl border border-t-0 border-slate-200/90 shadow-sm">
-            <table className="w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
+            <table className="report-records w-full min-w-[1300px] text-left border-collapse font-['Inter',sans-serif] text-[13px] antialiased">
               <thead>
                 <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                   <th className="py-3.5 px-3 text-center w-8">#</th>

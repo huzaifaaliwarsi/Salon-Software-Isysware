@@ -592,7 +592,7 @@ export const TipsStatementPage: React.FC = () => {
           {/* Table Container */}
           <div className="bg-white overflow-x-auto rounded-b-xl border-t border-blue-200/40">
             {activeTab === 'SUMMARY' ? (
-              <table className="w-full text-left border-collapse min-w-[800px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[800px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Financial Liability Metric</th>
@@ -677,7 +677,7 @@ export const TipsStatementPage: React.FC = () => {
                 </tbody>
               </table>
             ) : activeTab === 'COLLECTIONS' ? (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Receipt #</th>
@@ -753,7 +753,7 @@ export const TipsStatementPage: React.FC = () => {
                 )}
               </table>
             ) : activeTab === 'ALLOCATIONS' ? (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Allocation #</th>
@@ -827,7 +827,7 @@ export const TipsStatementPage: React.FC = () => {
                 )}
               </table>
             ) : (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Payout #</th>

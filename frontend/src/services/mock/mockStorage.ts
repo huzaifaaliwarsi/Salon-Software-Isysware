@@ -276,7 +276,7 @@ const INITIAL_USERS: User[] = [
     phone: '+92 (300) 111-2233',
     isActive: true,
     createdAt: '2026-01-15',
-    password: 'Super@Salon2026',
+    password: 'admin123',
   },
   {
     id: '85887989-7308-4579-b32d-05d660dcdb8d',
@@ -289,7 +289,7 @@ const INITIAL_USERS: User[] = [
     phone: '03132220567',
     isActive: true,
     createdAt: '2026-10-01',
-    password: 'Temp@7369',
+    password: 'admin123',
   },
   {
     id: 'usr-admin-01',
@@ -302,7 +302,7 @@ const INITIAL_USERS: User[] = [
     phone: '+92 (300) 222-3344',
     isActive: true,
     createdAt: '2026-01-20',
-    password: 'Admin@Gulberg2026',
+    password: 'admin123',
   },
   {
     id: 'usr-admin-02',
@@ -315,7 +315,7 @@ const INITIAL_USERS: User[] = [
     phone: '+92 (321) 555-8899',
     isActive: true,
     createdAt: '2026-01-22',
-    password: 'Admin@Clifton2026',
+    password: 'admin123',
   },
   {
     id: 'usr-acc-01',
@@ -328,7 +328,7 @@ const INITIAL_USERS: User[] = [
     phone: '+92 (300) 333-4455',
     isActive: true,
     createdAt: '2026-02-01',
-    password: 'Accountant@2026',
+    password: 'admin123',
   },
   {
     id: 'usr-staff-01',
@@ -342,7 +342,7 @@ const INITIAL_USERS: User[] = [
     phone: '+92 (300) 444-5566',
     isActive: true,
     createdAt: '2026-02-15',
-    password: 'Staff@Zara2026',
+    password: 'admin123',
   },
 ];
 

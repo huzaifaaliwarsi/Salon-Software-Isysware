@@ -3,6 +3,8 @@
 @theme {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Inter', sans-serif;
+  --font-serif: 'Inter', sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -66,13 +68,59 @@
   }
 
   button, input, select, textarea {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom subtle scrollbar */
+.report-records {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-records > thead > tr > th {
+  background: #eaf2fb;
+  color: #475569;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.report-records > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+  padding: 14px 16px;
+  border-right: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.report-records > :is(thead, tbody, tfoot) > tr > :last-child {
+  border-right: 0;
+}
+
+.report-records > tbody > tr > td {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.report-records > tbody > tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.report-records > tbody > tr:hover {
+  background-color: #eff6ff;
+}
+
+.report-records > tfoot > tr > td {
+  background: #f8fafc;
+  border-top: 1px solid #cbd5e1;
+  font-weight: 600;
 }
 
 /* Custom subtle scrollbar */
@@ -107,7 +155,7 @@
     padding: 12px !important;
     border: none !important;
     box-shadow: none !important;
-    font-family: 'Poppins', sans-serif !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   }
 }
 

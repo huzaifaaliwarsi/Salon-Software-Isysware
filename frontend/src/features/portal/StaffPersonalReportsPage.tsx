@@ -534,7 +534,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
                 </p>
               </div>
               <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                <Sparkles className="w-6 h-6" />
+                <Coins className="w-6 h-6" />
               </div>
             </div>
 
@@ -579,7 +579,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <Coins className="w-4 h-4 text-amber-500" />
                   <h3 className="font-bold text-slate-900 text-sm">Personal Tip Allocations</h3>
                 </div>
                 <button

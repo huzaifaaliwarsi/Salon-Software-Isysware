@@ -41,7 +41,7 @@ export function ReportTable<T>({
         Ensures wide report tables never squash or wrap contents awkwardly vertically.
       */}
       <div className="w-full overflow-x-auto min-w-full">
-        <table className="w-full text-xs text-left text-slate-700 whitespace-nowrap border-collapse">
+        <table className="report-records w-full text-xs text-left text-slate-700 whitespace-nowrap border-collapse">
           {/* Header row with light blue-gray background matching reference */}
           <thead className="bg-[#EBF1FA] text-slate-800 font-bold border-b border-slate-200 text-[11px] tracking-wide uppercase">
             <tr>

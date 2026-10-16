@@ -29,7 +29,7 @@ export const DemoAccountsSelector: React.FC<DemoAccountsSelectorProps> = ({
     <div className="mt-8 pt-6 border-t border-slate-200">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-[#2254E1]" />
+          <ShieldCheck className="w-4 h-4 text-[#2254E1]" />
           <h4 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">
             Quick Login Portals
           </h4>

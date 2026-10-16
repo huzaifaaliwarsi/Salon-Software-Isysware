@@ -25,11 +25,12 @@ export const TAX_RULES = [
 ];
 
 export const USERS = [
-  { id: 'usr-super-01', name: 'Super Administrator', email: 'superadmin@isysware.com', role: 'SUPER_ADMIN', branchId: null, title: 'Chief Executive Officer', phone: '+92 (300) 111-2233', createdAt: '2026-01-15', password: 'Super@Salon2026' },
-  { id: 'usr-admin-01', name: 'Aamina Sheikh', email: 'admin.gulberg@isysware.com', role: 'ADMIN', branchId: 'branch-1', title: 'Branch General Manager', phone: '+92 (300) 222-3344', createdAt: '2026-01-20', password: 'Admin@Gulberg2026' },
-  { id: 'usr-admin-02', name: 'Kamran Akram', email: 'admin.clifton@isysware.com', role: 'ADMIN', branchId: 'branch-2', title: 'Branch Managing Director', phone: '+92 (321) 555-8899', createdAt: '2026-01-22', password: 'Admin@Clifton2026' },
-  { id: 'usr-acc-01', name: 'Usman Farooq', email: 'accountant.gulberg@isysware.com', role: 'ACCOUNTANT', branchId: 'branch-1', title: 'Branch Cashier & Accountant', phone: '+92 (300) 333-4455', createdAt: '2026-02-01', password: 'Accountant@2026' },
-  { id: 'usr-staff-01', name: 'Zara Alvi', email: 'zara.stylist@isysware.com', role: 'STAFF', branchId: 'branch-1', staffId: 'staff-1', title: 'Senior Hair Stylist & Colorist', phone: '+92 (300) 444-5566', createdAt: '2026-02-15', password: 'Staff@Zara2026' },
+  { id: 'usr-super-01', name: 'Super Administrator', email: 'superadmin@isysware.com', role: 'SUPER_ADMIN', branchId: null, title: 'Chief Executive Officer', phone: '+92 (300) 111-2233', createdAt: '2026-01-15', password: 'admin123' },
+  { id: '85887989-7308-4579-b32d-05d660dcdb8d', name: 'Huzaifa', email: 'huzaifawarsi2006@gmail.com', role: 'ADMIN', branchId: 'branch-1', title: 'Branch Manager', phone: '03132220567', createdAt: '2026-10-01', password: 'admin123' },
+  { id: 'usr-admin-01', name: 'Aamina Sheikh', email: 'admin.gulberg@isysware.com', role: 'ADMIN', branchId: 'branch-1', title: 'Branch General Manager', phone: '+92 (300) 222-3344', createdAt: '2026-01-20', password: 'admin123' },
+  { id: 'usr-admin-02', name: 'Kamran Akram', email: 'admin.clifton@isysware.com', role: 'ADMIN', branchId: 'branch-2', title: 'Branch Managing Director', phone: '+92 (321) 555-8899', createdAt: '2026-01-22', password: 'admin123' },
+  { id: 'usr-acc-01', name: 'Usman Farooq', email: 'accountant.gulberg@isysware.com', role: 'ACCOUNTANT', branchId: 'branch-1', title: 'Branch Cashier & Accountant', phone: '+92 (300) 333-4455', createdAt: '2026-02-01', password: 'admin123' },
+  { id: 'usr-staff-01', name: 'Zara Alvi', email: 'zara.stylist@isysware.com', role: 'STAFF', branchId: 'branch-1', staffId: 'staff-1', title: 'Senior Hair Stylist & Colorist', phone: '+92 (300) 444-5566', createdAt: '2026-02-15', password: 'admin123' },
 ];
 
 const noDeduction = { enabled: false, type: 'FIXED', amount: 0 };

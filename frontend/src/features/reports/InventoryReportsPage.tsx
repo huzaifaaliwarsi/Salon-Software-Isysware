@@ -463,7 +463,7 @@ export const InventoryReportsPage: React.FC = () => {
           {/* Table Container */}
           <div className="bg-white overflow-x-auto rounded-b-xl border-t border-blue-200/40">
             {activeTab === 'valuation' && (
-              <table className="w-full text-left border-collapse min-w-[1000px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[1000px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Item & SKU</th>
@@ -526,7 +526,7 @@ export const InventoryReportsPage: React.FC = () => {
             )}
 
             {activeTab === 'movements' && (
-              <table className="w-full text-left border-collapse min-w-[1000px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[1000px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Date & Time</th>
@@ -591,7 +591,7 @@ export const InventoryReportsPage: React.FC = () => {
             )}
 
             {activeTab === 'purchases' && (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Date</th>
@@ -700,7 +700,7 @@ export const InventoryReportsPage: React.FC = () => {
                   </div>
                 )}
 
-                <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+                <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                   <thead>
                     <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                       <th className="py-3.5 px-4">Date</th>
@@ -783,7 +783,7 @@ export const InventoryReportsPage: React.FC = () => {
           )}
 
             {activeTab === 'consumption' && (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Date</th>
@@ -839,7 +839,7 @@ export const InventoryReportsPage: React.FC = () => {
             )}
 
             {activeTab === 'expiry' && (
-              <table className="w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
+              <table className="report-records w-full text-left border-collapse min-w-[900px] font-['Inter',sans-serif] text-[13px] antialiased">
                 <thead>
                   <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                     <th className="py-3.5 px-4">Item & SKU</th>
