@@ -305,22 +305,6 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         description: 'Universal double-entry ledger across Payment Accounts and Cash Drawer',
       },
       {
-        id: 'rep-payment-accounts',
-        label: 'Payment Accounts',
-        href: '/reports/payment-accounts',
-        iconName: 'Landmark',
-        allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],
-        description: 'Named bank and online accounts opening, cashflow and closing balance',
-      },
-      {
-        id: 'rep-cash-drawer',
-        label: 'Cash Drawer Logs',
-        href: '/reports/cash-drawer',
-        iconName: 'Wallet',
-        allowedRoles: ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT'],
-        description: 'Physical cash custody by session: expected, counted and variance',
-      },
-      {
         id: 'rep-detailed-expenses',
         label: 'Detailed Expenses',
         href: '/reports/detailed-expenses',

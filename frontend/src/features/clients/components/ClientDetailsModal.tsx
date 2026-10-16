@@ -438,7 +438,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                     </div>
                   ) : (
                     <div className="overflow-x-auto border border-slate-200/80 rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
+                      <table className="report-records w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold text-[11px]">
                             <th className="py-2.5 px-3">Date & Time</th>
@@ -544,7 +544,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                     </div>
                   ) : (
                     <div className="overflow-x-auto border border-slate-200/80 rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
+                      <table className="report-records w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold text-[11px]">
                             <th className="py-2.5 px-3">Date</th>
@@ -629,7 +629,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                     </div>
                   ) : (
                     <div className="overflow-x-auto border border-slate-200/80 rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
+                      <table className="report-records w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold text-[11px]">
                             <th className="py-2.5 px-3">Date & Time</th>
@@ -745,7 +745,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
                     </div>
                   ) : (
                     <div className="overflow-x-auto border border-slate-200/80 rounded-lg">
-                      <table className="w-full text-left text-xs border-collapse">
+                      <table className="report-records w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold text-[11px]">
                             <th className="py-2.5 px-3">Date & Time</th>

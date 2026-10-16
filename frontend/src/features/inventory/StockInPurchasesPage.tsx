@@ -515,7 +515,7 @@ export const StockInPurchasesPage: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[950px] text-left border-collapse text-[13px]">
+            <table className="report-records w-full min-w-[950px] text-left border-collapse text-[13px]">
               <thead>
                 <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                   <th className="py-3.5 px-4 text-center w-12">#</th>

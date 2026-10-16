@@ -355,7 +355,7 @@ export const UsersAccessPage: React.FC = () => {
   const roleBadgeVariants: Record<Role, { variant: 'primary' | 'secondary' | 'success' | 'warning'; label: string }> = {
     SUPER_ADMIN: { variant: 'primary', label: 'Super Admin' },
     ADMIN: { variant: 'secondary', label: 'Branch Admin' },
-    ACCOUNTANT: { variant: 'success', label: 'Accountant' },
+    ACCOUNTANT: { variant: 'success', label: 'Sales & Billing' },
     STAFF: { variant: 'warning', label: 'Staff / Stylist' },
   };
 

@@ -74,9 +74,9 @@ export const Header: React.FC<HeaderProps> = ({
   const userRole = user ? roleMeta[user.role] : { label: 'User', variant: 'secondary' as const };
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between shadow-2xs font-sans">
+    <header className="sticky top-0 z-30 min-h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 py-3 sm:py-0 flex flex-wrap sm:flex-nowrap items-center justify-between gap-y-2 shadow-2xs font-sans">
       {/* LEFT ZONE: Toggle button + Breadcrumbs */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto sm:flex-1">
         {/* Mobile Hamburger */}
         <button
           onClick={onOpenMobileDrawer}
@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Breadcrumb Trail */}
-        <nav className="flex items-center text-xs font-medium text-slate-500" aria-label="Breadcrumb">
+        <nav className="flex min-w-0 items-center text-xs font-medium text-slate-500" aria-label="Breadcrumb">
           {breadcrumbs.map((crumb, idx) => {
             const isLast = idx === breadcrumbs.length - 1;
             return (
@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* RIGHT ZONE: Branch Selector + Demo Date + User Profile Menu */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="flex w-full sm:w-auto shrink-0 items-center justify-between gap-2 sm:gap-3">
         {/* SHARED DEMO DATE SELECTOR */}
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50/80 hover:bg-slate-100 transition-colors text-xs">
           <Calendar className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />

@@ -47,8 +47,6 @@ import { GeneralLedgerPage } from '../features/ledger/GeneralLedgerPage';
 import { ActivityLogPage } from '../features/audit/ActivityLogPage';
 import { IncomeExpenseReportPage } from '../features/reports/IncomeExpenseReportPage';
 import { TaxReportPage } from '../features/reports/TaxReportPage';
-import { PaymentAccountsReportPage } from '../features/reports/PaymentAccountsReportPage';
-import { CashDrawerLogsReportPage } from '../features/reports/CashDrawerLogsReportPage';
 import { DebitCreditStatementPage } from '../features/reports/DebitCreditStatementPage';
 import { DetailedExpensesReportPage } from '../features/reports/DetailedExpensesReportPage';
 import { StaffSalaryReportPage } from '../features/reports/StaffSalaryReportPage';
@@ -59,7 +57,14 @@ import { AccessDeniedView } from '../features/scaffold/AccessDeniedView';
 
 export const AppRouter: React.FC = () => {
   const { user, session, isLoading } = useAuth();
-  const { pathname, navigate } = useRouter();
+  const { pathname, currentRoute, navigate } = useRouter();
+
+  useEffect(() => {
+    if (!user || isLoading || !canAccessRoute(user, pathname)) return;
+    if (pathname === '/reports/payment-accounts' || pathname === '/reports/cash-drawer') {
+      navigate(pathname === '/reports/cash-drawer' ? '/reports/debit-credit?tab=cash' : '/reports/debit-credit', { replace: true });
+    }
+  }, [user, isLoading, pathname, navigate]);
 
   // Redirect root '/' to role's default dashboard when authenticated
   useEffect(() => {
@@ -136,9 +141,6 @@ export const AppRouter: React.FC = () => {
     if (pathname === '/admin/attendance-settings') {
       return <AttendanceSettingsPage />;
     }
-    if (pathname === '/reports/payment-accounts') {
-      return <PaymentAccountsReportPage />;
-    }
 
     // 5. Phase 3A: POS Billing and Invoice Management
     if (pathname === '/pos' || pathname === '/operations/pos') {
@@ -173,13 +175,14 @@ export const AppRouter: React.FC = () => {
       return <AccountSettlementPage />;
     }
     if (pathname === '/reports/debit-credit' || pathname === '/reports/debit-credit-statement') {
-      return <DebitCreditStatementPage />;
+      const tab = new URLSearchParams(currentRoute.split('?')[1] || '').get('tab');
+      return <DebitCreditStatementPage key={tab || 'accounts'} initialTab={tab === 'cash' ? 'CASH_DRAWER' : 'PAYMENT_ACCOUNTS'} />;
     }
     if (pathname === '/reports/payment-accounts') {
-      return <PaymentAccountsReportPage />;
+      return <DebitCreditStatementPage />;
     }
     if (pathname === '/reports/cash-drawer') {
-      return <CashDrawerLogsReportPage />;
+      return <DebitCreditStatementPage initialTab="CASH_DRAWER" />;
     }
 
     // 7B. Phase 3D: General Ledger

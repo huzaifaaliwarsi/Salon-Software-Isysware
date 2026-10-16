@@ -104,7 +104,7 @@ export const PayrollExtrasPanel: React.FC<Props> = ({ view, branchId, month, sta
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="report-records w-full text-xs">
             <thead className="bg-slate-100/70 text-slate-600 font-semibold">
               <tr>
                 <th className={th}>Employee</th>
@@ -213,7 +213,7 @@ export const PayrollExtrasPanel: React.FC<Props> = ({ view, branchId, month, sta
             <input className={input} type="number" min="1" step="0.01" placeholder="Amount / month" required value={allowanceForm.amount} onChange={(e) => setAllowanceForm({ ...allowanceForm, amount: e.target.value })} />
             <button disabled={busy} className={`${primaryBtn} justify-center`}><Plus className="w-3.5 h-3.5" /> Add Allowance</button>
           </form>
-          <table className="w-full text-xs">
+          <table className="report-records w-full text-xs">
             <thead className="bg-slate-100/70 text-slate-600 font-semibold">
               <tr><th className={th}>Employee</th><th className={th}>Allowance</th><th className={`${th} text-right`}>Amount</th><th className={`${th} text-right`}>Status</th></tr>
             </thead>
@@ -261,7 +261,7 @@ export const PayrollExtrasPanel: React.FC<Props> = ({ view, branchId, month, sta
               <button disabled={busy} className={primaryBtn}><Plus className="w-3.5 h-3.5" /> Add Adjustment</button>
             </div>
           </form>
-          <table className="w-full text-xs">
+          <table className="report-records w-full text-xs">
             <thead className="bg-slate-100/70 text-slate-600 font-semibold">
               <tr><th className={th}>Employee</th><th className={th}>Type</th><th className={th}>Title</th><th className={`${th} text-right`}>Amount</th><th className={`${th} text-right`}></th></tr>
             </thead>
@@ -354,7 +354,7 @@ export const PayrollExtrasPanel: React.FC<Props> = ({ view, branchId, month, sta
 
       <div className={card}>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="report-records w-full text-xs">
             <thead className="bg-slate-100/70 text-slate-600 font-semibold">
               <tr>
                 <th className={th}>Advance #</th><th className={th}>Employee</th><th className={th}>Issued</th>

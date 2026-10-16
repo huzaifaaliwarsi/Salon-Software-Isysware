@@ -758,7 +758,7 @@ export const TipsManagementPage: React.FC = () => {
             {/* VIEW 1: TIP RECEIPTS */}
             {activeTab === 'RECEIPTS' && (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                <table className="report-records w-full text-left text-xs text-slate-700 border-collapse">
                   <thead className="bg-slate-50/75 border-b border-slate-100 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
                     <tr>
                       <th className="py-3 px-4">Receipt #</th>
@@ -855,7 +855,7 @@ export const TipsManagementPage: React.FC = () => {
             {/* VIEW 2: STAFF ALLOCATIONS */}
             {activeTab === 'ALLOCATIONS' && (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                <table className="report-records w-full text-left text-xs text-slate-700 border-collapse">
                   <thead className="bg-slate-50/75 border-b border-slate-100 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
                     <tr>
                       <th className="py-3 px-4">Allocation #</th>
@@ -958,7 +958,7 @@ export const TipsManagementPage: React.FC = () => {
             {/* VIEW 3: PAYOUT HISTORY */}
             {activeTab === 'PAYOUTS' && (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                <table className="report-records w-full text-left text-xs text-slate-700 border-collapse">
                   <thead className="bg-slate-50/75 border-b border-slate-100 text-slate-500 font-semibold uppercase text-[11px] tracking-wider">
                     <tr>
                       <th className="py-3 px-4">Payout #</th>

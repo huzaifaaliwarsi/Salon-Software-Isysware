@@ -1214,7 +1214,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ mode = 'GENERATE' }) =
           {generatedPayslipRows.length > 0 ? (
             <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1100px] text-xs">
+                <table className="report-records w-full text-left border-collapse min-w-[1100px] text-xs">
                   <thead>
                     <tr className="bg-[#EAF2FB] text-[#475569] text-[11px] font-semibold border-b border-blue-100 uppercase tracking-wider">
                       <th className="py-3 px-4 text-left whitespace-nowrap">Staff</th>
@@ -1443,7 +1443,7 @@ export const PayrollPage: React.FC<PayrollPageProps> = ({ mode = 'GENERATE' }) =
               {/* Table */}
               <p className="text-xs text-slate-600">Base + Paid Leave/Holidays + OT + Allowances + Commission − Deductions − Loan = Net Payable. Finalization reserves commission; payment settles it.</p>
               <div className="border border-slate-200 rounded-2xl overflow-x-auto">
-                <table className="w-full text-left">
+                <table className="report-records w-full text-left">
                   <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                     <tr>
                       <th className="py-2.5 px-3">Employee</th>

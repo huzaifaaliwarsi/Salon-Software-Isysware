@@ -1549,10 +1549,11 @@ export const POSBillingPage: React.FC = () => {
 
     const customService: ServiceItem = {
       id: `custom-${Date.now()}`,
+      branchId: activeBranchId,
       name: name.trim(),
       code: 'CUST-01',
       category: 'Custom Service',
-      gender: 'UNISEX',
+      taxTreatment: 'BRANCH_DEFAULT',
       price: price,
       durationMinutes: 30,
       isActive: true,

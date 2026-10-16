@@ -33,7 +33,9 @@ export function canAccessRoute(user: User | null, routePath: string): boolean {
 
   // Check against NAVIGATION_GROUPS with path synonym support
   const normalizedPath =
-    path === '/admin/users-access'
+    path === '/reports/payment-accounts' || path === '/reports/cash-drawer' || path === '/reports/debit-credit-statement'
+      ? '/reports/debit-credit'
+      : path === '/admin/users-access'
       ? '/admin/users'
       : path === '/invoices/sales'
       ? '/reports/sales-invoices'

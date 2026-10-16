@@ -225,8 +225,8 @@ export const LoginPage: React.FC = () => {
                 <TabsTrigger value="ADMIN" className="text-xs py-1.5 px-1 truncate">
                   Admin
                 </TabsTrigger>
-                <TabsTrigger value="ACCOUNTANT" className="text-xs py-1.5 px-1 truncate">
-                  Accountant
+                <TabsTrigger value="ACCOUNTANT" className="text-xs py-1.5 px-1 truncate" title="Sales & Billing Portal">
+                  Sales & Billing
                 </TabsTrigger>
                 <TabsTrigger value="STAFF" className="text-xs py-1.5 px-1 truncate">
                   Staff

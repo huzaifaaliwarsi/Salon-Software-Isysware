@@ -161,7 +161,7 @@ const LeaveManagementContent: React.FC = () => {
           <button onClick={() => { setStaffFilter('ALL'); setDesignationFilter('ALL'); setSearchQuery(''); setLeaveTypeFilter('ALL'); setLeaveStatusFilter('ALL'); }} className="text-xs font-semibold text-blue-700 hover:underline">Reset record filters</button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="report-records w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 border-y border-slate-200"><tr>{['Employee / Voucher', 'Branch', 'Leave period', 'Working days', 'Type', 'Status', 'Reason / Audit', 'Action'].map((title) => <th key={title} className="px-4 py-3 font-semibold">{title}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? <tr><td colSpan={8} className="p-8 text-center text-slate-500">Loading leaves...</td></tr> : filteredLeaves.length === 0 ? <tr><td colSpan={8} className="p-8 text-center text-slate-500">No leaves match your filters. Choose another day or month, or add a leave.</td></tr> : filteredLeaves.map((leave) => (

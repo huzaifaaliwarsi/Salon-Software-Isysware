@@ -1371,7 +1371,7 @@ export const ExpenseManagementPage: React.FC = () => {
 
               {/* Voucher Core Table */}
               <div className="border border-slate-200 rounded-md overflow-hidden">
-                <table className="w-full text-left">
+                <table className="report-records w-full text-left">
                   <tbody>
                     <tr className="border-b border-slate-100 bg-slate-50">
                       <td className="p-2 font-semibold text-slate-600 w-1/3">Payee / Beneficiary:</td>
@@ -1582,7 +1582,7 @@ export const ExpenseManagementPage: React.FC = () => {
 
             {/* List Existing Categories */}
             <div className="border border-slate-200 rounded-lg overflow-hidden max-h-[240px] overflow-y-auto">
-              <table className="w-full text-left">
+              <table className="report-records w-full text-left">
                 <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-medium">
                   <tr>
                     <th className="p-2">Name</th>

@@ -680,19 +680,19 @@ export const StaffAttendancePage: React.FC = () => {
 
         {/* ── MAIN ATTENDANCE TABLE ────────────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="report-records min-w-[1100px] w-full text-left text-xs border-collapse whitespace-nowrap">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold uppercase text-[11px] tracking-wider">
-                  <th className="py-3 px-4 w-[110px]">Emp. ID</th>
-                  <th className="py-3 px-4 min-w-[180px]">Name</th>
-                  <th className="py-3 px-4 min-w-[140px]">Phone / Info</th>
-                  <th className="py-3 px-4 min-w-[140px]">Designation</th>
-                  <th className="py-3 px-4 min-w-[160px]">Attendance Status</th>
-                  <th className="py-3 px-4 min-w-[140px]">Arrival Timing</th>
-                  <th className="py-3 px-4 min-w-[140px]">Exit Timing</th>
-                  <th className="py-3 px-4 min-w-[120px]">Late Arrival</th>
-                  <th className="py-3 px-4 min-w-[120px]">Early Exit</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-semibold uppercase text-[11px] tracking-wider whitespace-nowrap">
+                  <th className="py-3 px-4 w-[110px] whitespace-nowrap">Emp. ID</th>
+                  <th className="py-3 px-4 min-w-[180px] whitespace-nowrap">Name</th>
+                  <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">Phone / Info</th>
+                  <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">Designation</th>
+                  <th className="py-3 px-4 min-w-[160px] whitespace-nowrap">Attendance Status</th>
+                  <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">Arrival Timing</th>
+                  <th className="py-3 px-4 min-w-[140px] whitespace-nowrap">Exit Timing</th>
+                  <th className="py-3 px-4 min-w-[120px] whitespace-nowrap">Late Arrival</th>
+                  <th className="py-3 px-4 min-w-[120px] whitespace-nowrap">Early Exit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

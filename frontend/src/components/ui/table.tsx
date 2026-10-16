@@ -8,7 +8,7 @@ const Table = React.forwardRef<
   <div className="relative w-full overflow-auto">
     <table
       ref={ref}
-      className={cn('w-full caption-bottom text-sm font-sans', className)}
+      className={cn('report-records w-full caption-bottom font-sans', className)}
       {...props}
     />
   </div>
@@ -75,6 +75,7 @@ const TableHead = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <th
     ref={ref}
+    scope="col"
     className={cn(
       'h-10 px-4 text-left align-middle font-medium text-xs text-slate-500 uppercase tracking-wider [&:has([role=checkbox])]:pr-0',
       className

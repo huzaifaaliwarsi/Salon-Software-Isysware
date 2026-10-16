@@ -677,7 +677,7 @@ export const StaffCommissionPage: React.FC = () => {
 
               {/* Table of Commission Statements */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="report-records w-full text-left text-xs">
                   <thead className="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-100">
                     <tr>
                       <th className="py-3 px-4">Employee</th>
@@ -828,7 +828,7 @@ export const StaffCommissionPage: React.FC = () => {
 
             <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
               <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                <table className="w-full text-left">
+                <table className="report-records w-full text-left">
                   <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                     <tr>
                       <th className="py-2.5 px-3">Employee</th>
@@ -941,7 +941,7 @@ export const StaffCommissionPage: React.FC = () => {
 
             <div className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
               <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                <table className="w-full text-left">
+                <table className="report-records w-full text-left">
                   <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                     <tr>
                       <th className="py-2.5 px-3">Date</th>

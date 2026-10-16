@@ -435,8 +435,9 @@ export const SuppliersVendorsPage: React.FC = () => {
       <html>
       <head>
         <title>Supplier Khata Statement - ${ledgerSupplier.name}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 32px; color: #1e293b; line-height: 1.4; }
+          body { font-family: 'Inter', sans-serif; padding: 32px; color: #1e293b; line-height: 1.4; }
           .header { border-bottom: 2px solid #0047ab; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
           .title { font-size: 22px; font-weight: bold; color: #0b2545; }
           .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
@@ -490,7 +491,7 @@ export const SuppliersVendorsPage: React.FC = () => {
                 <td>${idx + 1}</td>
                 <td>${formatDate(e.date)}</td>
                 <td>${e.entryType || e.type || 'Transaction'}</td>
-                <td style="font-family: monospace;">${e.referenceNumber || e.reference || '—'}</td>
+                <td>${e.referenceNumber || e.reference || '—'}</td>
                 <td>${e.description || '—'}</td>
                 <td class="text-right">${e.debit > 0 ? 'PKR ' + formatPKR(e.debit) : '—'}</td>
                 <td class="text-right">${e.credit > 0 ? 'PKR ' + formatPKR(e.credit) : '—'}</td>
@@ -513,9 +514,9 @@ export const SuppliersVendorsPage: React.FC = () => {
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
+    printWindow.document.fonts.ready.then(() => {
       printWindow.print();
-    }, 250);
+    });
   };
 
   // Export Ledger CSV
@@ -713,7 +714,7 @@ export const SuppliersVendorsPage: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[950px] text-left border-collapse text-[13px]">
+                <table className="report-records w-full min-w-[950px] text-left border-collapse text-[13px]">
                   <thead>
                     <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                       <th className="py-3.5 px-4 text-center w-12">#</th>
@@ -1071,7 +1072,7 @@ export const SuppliersVendorsPage: React.FC = () => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-left border-collapse text-[13px]">
+                <table className="report-records w-full min-w-[900px] text-left border-collapse text-[13px]">
                   <thead>
                     <tr className="bg-[#EAF2FB] border-b border-blue-100 text-[#475569] font-medium text-[13px]">
                       <th className="py-3 px-4 w-12 text-center">#</th>
@@ -1397,7 +1398,7 @@ export const SuppliersVendorsPage: React.FC = () => {
                   No recorded ledger transactions for this supplier yet.
                 </div>
               ) : (
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="report-records w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                       <th className="py-2.5 px-3">Date</th>

@@ -585,7 +585,7 @@ export const ManualOvertimePage: React.FC = () => {
       {/* OVERTIME TABLE */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="report-records w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                 <th className="py-3 px-4">Voucher & Date</th>
@@ -1215,7 +1215,7 @@ export const ManualOvertimePage: React.FC = () => {
                 </div>
               </div>
 
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="report-records w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b-2 border-slate-300 font-semibold text-slate-800 text-[11px]">
                     <th className="py-2">Voucher</th>

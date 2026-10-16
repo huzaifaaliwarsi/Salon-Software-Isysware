@@ -145,7 +145,7 @@ export const SuperAdminDashboard: React.FC = () => {
         cashDrawers={data.cashDrawers}
         onNavigateAppointments={() => navigate('/operations/appointments')}
         onNavigateInvoices={() => navigate('/reports/sales-invoices')}
-        onNavigateAccounts={() => navigate('/reports/payment-accounts')}
+        onNavigateAccounts={() => navigate('/reports/debit-credit')}
         onNavigateSettlement={() => navigate('/accounts/account-settlement')}
       />
 
@@ -165,7 +165,7 @@ export const SuperAdminDashboard: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
+            <table className="report-records w-full text-xs text-left">
               <thead className="bg-slate-50/75 text-slate-600 font-medium border-b border-slate-200/80">
                 <tr>
                   <th className="py-3 px-5">Branch Name & Code</th>

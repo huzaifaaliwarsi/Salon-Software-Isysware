@@ -373,18 +373,18 @@ export const ClientsPage: React.FC = () => {
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto w-full">
+            <table className="report-records min-w-[1000px] w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Contact</th>
-                  <th className="py-3 px-4">Branch</th>
-                  <th className="py-3 px-4">Acquisition Source</th>
-                  <th className="py-3 px-4 text-center">Visits</th>
-                  <th className="py-3 px-4 text-right">Outstanding Dues</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Customer</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Contact</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Branch</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Acquisition Source</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Visits</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Outstanding Dues</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

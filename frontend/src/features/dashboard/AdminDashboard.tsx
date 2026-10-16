@@ -199,7 +199,7 @@ export const AdminDashboard: React.FC = () => {
         cashDrawers={data.cashDrawers}
         onNavigateAppointments={() => navigate('/operations/appointments')}
         onNavigateInvoices={() => navigate('/reports/sales-invoices')}
-        onNavigateAccounts={() => navigate('/reports/payment-accounts')}
+        onNavigateAccounts={() => navigate('/reports/debit-credit')}
         onNavigateSettlement={() => navigate('/accounts/account-settlement')}
       />
 

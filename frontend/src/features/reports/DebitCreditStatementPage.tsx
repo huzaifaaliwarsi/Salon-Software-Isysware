@@ -64,7 +64,7 @@ const formatDateDisplay = (dateStr: string) => {
   }
 };
 
-export const DebitCreditStatementPage: React.FC = () => {
+export const DebitCreditStatementPage: React.FC<{ initialTab?: 'PAYMENT_ACCOUNTS' | 'CASH_DRAWER' }> = ({ initialTab = 'PAYMENT_ACCOUNTS' }) => {
   const { user, activeBranchId, allBranches } = useAuth();
 
   // Role guard: Super Admin, Admin, and Accountant
@@ -73,7 +73,7 @@ export const DebitCreditStatementPage: React.FC = () => {
   }
 
   // Active Main Tab: 'PAYMENT_ACCOUNTS' | 'CASH_DRAWER'
-  const [activeTab, setActiveTab] = useState<'PAYMENT_ACCOUNTS' | 'CASH_DRAWER'>('PAYMENT_ACCOUNTS');
+  const [activeTab, setActiveTab] = useState<'PAYMENT_ACCOUNTS' | 'CASH_DRAWER'>(initialTab);
 
   // Cash Drawer Sub-view: 'TRANSACTIONS' (Debit/Credit Ledger) | 'SHIFTS' (Shift Reconciliation)
   const [cashSubView, setCashSubView] = useState<'TRANSACTIONS' | 'SHIFTS'>('TRANSACTIONS');
@@ -103,6 +103,7 @@ export const DebitCreditStatementPage: React.FC = () => {
   const fetchReport = useCallback(
     async (tab: 'PAYMENT_ACCOUNTS' | 'CASH_DRAWER') => {
       setIsLoading(true);
+      setHasFiltered(true);
       setErrorMessage(null);
       try {
         if (tab === 'PAYMENT_ACCOUNTS') {
@@ -293,7 +294,7 @@ export const DebitCreditStatementPage: React.FC = () => {
   };
 
   // Export handlers for Cash Drawer
-  const handleExportCashCsv = () => {
+  const getCashExportData = () => {
     if (!drawerReport) return;
     if (cashSubView === 'TRANSACTIONS') {
       const headers = ['#', 'Date', 'Time', 'Type', 'Reference', 'Actual User', 'Description', 'Debit (Cash In)', 'Credit (Cash Out)'];
@@ -308,7 +309,7 @@ export const DebitCreditStatementPage: React.FC = () => {
         (t.direction === 'IN' ? t.amount : 0).toFixed(2),
         (t.direction === 'OUT' ? t.amount : 0).toFixed(2),
       ]);
-      downloadReportCsv('debit-credit-cash-transactions', [], [{ headers, rows }]);
+      return { fileName: 'debit-credit-cash-transactions', headers, rows };
     } else {
       const headers = ['#', 'Date', 'Custodian', 'Branch', 'Status', 'Opening Float', 'Debits (In)', 'Credits (Out)', 'Expected Cash', 'Counted Cash', 'Variance'];
       const rows = (drawerReport.rows || []).map((r, i) => [
@@ -324,12 +325,37 @@ export const DebitCreditStatementPage: React.FC = () => {
         r.countedCash !== null ? r.countedCash.toFixed(2) : '—',
         r.variance == null ? '\u2014' : r.variance.toFixed(2),
       ]);
-      downloadReportCsv('debit-credit-cash-shifts', [], [{ headers, rows }]);
+      return { fileName: 'debit-credit-cash-shifts', headers, rows };
     }
   };
 
+  const handleExportCashCsv = () => {
+    const data = getCashExportData();
+    if (data) downloadReportCsv(data.fileName, [], [data]);
+  };
+
+  const handleExportCashExcel = () => {
+    const data = getCashExportData();
+    if (data) downloadReportExcel(data.fileName, [], [data]);
+  };
+
+  const handlePrintCash = () => {
+    const data = getCashExportData();
+    if (!data) return;
+    printReportWindow({
+      title: cashSubView === 'TRANSACTIONS' ? 'Cash Transactions — Debit / Credit' : 'Cash Shift Reconciliation',
+      meta: [
+        ['Branch', selectedBranch === 'ALL' ? 'All Branches' : allBranches.find((branch) => branch.id === selectedBranch)?.name || selectedBranch],
+        ['From', drawerReport?.meta.from || fromDate || 'All dates'],
+        ['To', drawerReport?.meta.to || toDate || 'All dates'],
+      ],
+      headers: data.headers,
+      rows: data.rows,
+    });
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
@@ -815,6 +841,15 @@ export const DebitCreditStatementPage: React.FC = () => {
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                   CSV
+                </button>
+                <button type="button" onClick={handleExportCashExcel} className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+                </button>
+                <button type="button" onClick={handlePrintCash} className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" /> PDF
+                </button>
+                <button type="button" onClick={handlePrintCash} className="bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5" /> Print
                 </button>
               </div>
             </div>

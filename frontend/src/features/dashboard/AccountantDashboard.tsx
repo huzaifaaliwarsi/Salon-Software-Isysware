@@ -62,7 +62,7 @@ export const AccountantDashboard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <Badge variant="primary" dot>
-              Cashier & Accounts Custody
+              Sales & Billing Counter
             </Badge>
             <span className="text-xs text-slate-400">·</span>
             <div className="flex items-center gap-1 text-xs font-semibold text-slate-700">
@@ -72,7 +72,7 @@ export const AccountantDashboard: React.FC = () => {
             </div>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
-            Cash Drawer Custody & Daily Settlement
+            Sales & Billing (Cash Drawer & Settlement)
           </h1>
         </div>
 
@@ -278,11 +278,11 @@ export const AccountantDashboard: React.FC = () => {
             <p className="text-[11px] text-slate-500 mt-0.5">Approved revenue statement</p>
           </button>
           <button
-            onClick={() => navigate('/reports/cash-drawer')}
+            onClick={() => navigate('/reports/debit-credit?tab=cash')}
             className="p-3 rounded-lg bg-white border border-slate-200 hover:border-[#2254E1] hover:bg-blue-50/30 transition-all text-left cursor-pointer"
           >
-            <p className="font-semibold text-slate-900">Cash Drawer Log</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">Audit log of all shift floats</p>
+            <p className="font-semibold text-slate-900">Cash Debit / Credit</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Cash transactions and shift reconciliation</p>
           </button>
         </div>
       </Card>

@@ -186,7 +186,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="report-records w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                   <th className="py-3 px-4">Date</th>
@@ -312,7 +312,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
               <h3 className="font-bold text-slate-900 text-sm">Approved Leave History</h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="report-records w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                     <th className="py-3 px-4">Leave Voucher #</th>
@@ -399,7 +399,7 @@ export const StaffPersonalAttendancePage: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="report-records w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
                     <th className="py-3 px-4">Voucher #</th>

@@ -350,7 +350,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
             <span className="text-xs text-slate-500 font-medium">Showing {payslips.length} monthly runs</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="report-records w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 font-semibold uppercase text-[10px]">
                   <th className="py-3 px-4">Month</th>
@@ -435,7 +435,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
             <span className="text-xs text-slate-500 font-medium">Showing {commissions.length} statements</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="report-records w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 font-semibold uppercase text-[10px]">
                   <th className="py-3 px-4">Period</th>
@@ -591,7 +591,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
                 </button>
               </div>
               <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="report-records w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 uppercase text-[10px] font-semibold border-b border-slate-100">
                       <th className="py-2.5 px-3">Date</th>
@@ -660,7 +660,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
                 </span>
               </div>
               <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="report-records w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 uppercase text-[10px] font-semibold border-b border-slate-100">
                       <th className="py-2.5 px-3">Receipt #</th>
@@ -818,7 +818,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="report-records w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 font-semibold uppercase text-[10px]">
                     <th className="py-3 px-4">Date</th>
@@ -1180,7 +1180,7 @@ export const StaffPersonalReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              <table className="w-full text-left text-[11px] border border-slate-200 mt-2">
+              <table className="report-records w-full text-left text-[11px] border border-slate-200 mt-2">
                 <thead className="bg-slate-100 font-semibold text-slate-700">
                   <tr>
                     <th className="py-1.5 px-2">Date</th>
