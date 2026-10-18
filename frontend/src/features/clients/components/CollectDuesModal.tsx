@@ -129,6 +129,9 @@ export const CollectDuesModal: React.FC<CollectDuesModalProps> = ({
 
       toast.success(`Payment of ${formatCurrency(paymentAmount)} recorded successfully.`);
       onSuccess(updated);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('refresh-notifications'));
+      }
     } catch (err: any) {
       console.error('Failed to collect dues payment', err);
       toast.error(err.message || 'Payment collection failed.');

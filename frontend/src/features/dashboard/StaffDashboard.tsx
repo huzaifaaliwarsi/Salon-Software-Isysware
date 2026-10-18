@@ -7,6 +7,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScissorLoader } from '@/components/ui/ScissorLoader';
 import {
   Scissors,
   Banknote,
@@ -55,9 +56,8 @@ export const StaffDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center space-y-3">
-        <RefreshCw className="w-8 h-8 text-[#2254E1] animate-spin" />
-        <p className="text-xs text-slate-500 font-medium">Loading personal performance and shift records...</p>
+      <div className="py-24 flex items-center justify-center font-sans">
+        <ScissorLoader size="lg" />
       </div>
     );
   }

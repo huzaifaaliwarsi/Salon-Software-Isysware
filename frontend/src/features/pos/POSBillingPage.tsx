@@ -34,6 +34,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ScissorLoader } from '@/components/ui/ScissorLoader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -492,6 +493,9 @@ export const POSBillingPage: React.FC = () => {
       setPostedInvoice(updatedInvoice);
       setIsCollectionModalOpen(false);
       setIsReceiptOpen(true);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('refresh-notifications'));
+      }
     } catch (err: any) {
       const msg = err.message || 'Failed to process collection payment.';
       setCollectionError(msg);
@@ -1664,8 +1668,16 @@ export const POSBillingPage: React.FC = () => {
 
   const currentCartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
+  if (isLoading && !currentBranch) {
+    return (
+      <div className="h-full min-h-[500px] flex flex-col items-center justify-center p-8 bg-slate-50">
+        <ScissorLoader size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full flex flex-col gap-2 font-sans overflow-hidden">
+    <div className="min-h-full h-auto lg:h-full flex flex-col gap-2 font-sans overflow-y-auto lg:overflow-hidden pb-20 lg:pb-0">
       {/* 1. Consolidated Executive Top Header Bar */}
       <div className="shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white px-3.5 py-2 rounded-2xl border border-slate-200/90 shadow-2xs">
         {/* Left: Branding & Active Branch */}
@@ -1877,9 +1889,9 @@ export const POSBillingPage: React.FC = () => {
       </div>
 
       {/* 2. Main Desktop Grid: Left Catalogue (lg:col-span-7), Right Current Sale Card (lg:col-span-5) */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-visible lg:overflow-hidden">
         {/* Left Column: Search, Category Filter Pills & Product Cards (lg:col-span-7) */}
-        <div className="lg:col-span-7 flex flex-col h-full overflow-hidden space-y-1.5">
+        <div className="lg:col-span-7 flex flex-col min-h-[360px] lg:h-full overflow-visible lg:overflow-hidden space-y-1.5">
           {/* Search Input Bar */}
           <div className="relative shrink-0">
             <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
@@ -1931,7 +1943,7 @@ export const POSBillingPage: React.FC = () => {
           </div>
 
           {/* Catalogue Items Grid Container */}
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-[260px] lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden">
             <div className="shrink-0 flex items-center justify-between text-[10px] text-slate-400 px-1 pb-1">
               <span className="font-medium text-slate-600">
                 Available Items ({filteredCatalogueItems.length})
@@ -1939,7 +1951,7 @@ export const POSBillingPage: React.FC = () => {
               <span>Click card to add directly</span>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 max-h-[420px] lg:max-h-none overflow-y-auto pr-1">
               {filteredCatalogueItems.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400 text-xs space-y-1">
                   <Search className="w-7 h-7 mx-auto text-slate-300 stroke-1" />
@@ -1947,7 +1959,7 @@ export const POSBillingPage: React.FC = () => {
                   <p className="text-[11px] text-slate-400">Try adjusting your search query or category filter.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 pb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2">
                   {filteredCatalogueItems.map((item) => {
                     const isProd = item.type === 'PRODUCT';
                     const isPkg = item.type === 'PACKAGE';
@@ -1963,66 +1975,66 @@ export const POSBillingPage: React.FC = () => {
                         onClick={() => {
                           if (!isOut) handleItemCardClick(item);
                         }}
-                        className={`p-3 rounded-2xl border transition-all flex flex-col justify-between gap-2 cursor-pointer group bg-white shadow-2xs ${
+                        className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 cursor-pointer group bg-white min-h-[145px] ${
                           isOut
                             ? 'border-slate-200 bg-slate-50/60 opacity-60 cursor-not-allowed'
                             : inCartQty > 0
-                            ? 'border-[#2254E1]/60 ring-1 ring-[#2254E1]/30 bg-blue-50/20 hover:border-[#2254E1] hover:shadow-xs'
-                            : 'border-slate-200/90 hover:border-[#2254E1] hover:shadow-xs hover:-translate-y-0.5'
+                            ? 'border-[#2254E1] ring-1 ring-[#2254E1] bg-white shadow-xs'
+                            : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs hover:shadow-xs hover:-translate-y-0.5'
                         }`}
                       >
-                        <div className="space-y-1.5">
+                        <div>
                           <div className="flex items-start justify-between gap-1.5">
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
                               {isProd ? (
-                                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                                  <ShoppingBag className="w-3.5 h-3.5" />
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                  <ShoppingBag className="w-4 h-4" />
                                 </div>
                               ) : isPkg ? (
-                                <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                                  <Package className="w-3.5 h-3.5" />
+                                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                                  <Package className="w-4 h-4" />
                                 </div>
                               ) : (
-                                <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#2254E1] flex items-center justify-center">
-                                  <Scissors className="w-3.5 h-3.5" />
+                                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2254E1] flex items-center justify-center">
+                                  <Scissors className="w-4 h-4" />
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1 flex-wrap justify-end">
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
                               {inCartQty > 0 && (
-                                <span className="text-[10px] font-bold bg-[#2254E1] text-white px-2 py-0.5 rounded-full shadow-2xs">
+                                <span className="text-[11px] font-bold bg-[#2254E1] text-white px-2.5 py-0.5 rounded-full shadow-2xs">
                                   {inCartQty} in cart
                                 </span>
                               )}
                               {isOut ? (
-                                <span className="text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full uppercase">
+                                <span className="text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full uppercase">
                                   Out of Stock
                                 </span>
                               ) : isLow ? (
-                                <span className="text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
                                   Low: {item.stock} left
                                 </span>
                               ) : isPkg ? (
-                                <span className="text-[9px] font-medium bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-full">
+                                <span className="text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
                                   {((item.raw as PackageItem).components || []).length} items
                                 </span>
                               ) : (
-                                <span className="text-[9px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                                <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">
                                   {item.category}
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <h3 className="font-bold text-slate-900 text-xs tracking-tight line-clamp-2 group-hover:text-[#2254E1] transition-colors pt-0.5">
+                          <h3 className="font-bold text-slate-900 text-sm tracking-tight line-clamp-2 pt-2 group-hover:text-[#2254E1] transition-colors">
                             {item.name}
                           </h3>
                         </div>
 
-                        <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 text-xs">
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs mt-auto">
                           <div>
-                            <span className="font-mono font-bold text-slate-900 text-xs group-hover:text-[#2254E1] transition-colors">
+                            <span className="font-mono font-bold text-slate-900 text-sm group-hover:text-[#2254E1] transition-colors">
                               {formatCurrency(item.price)}
                             </span>
                           </div>
@@ -2034,16 +2046,16 @@ export const POSBillingPage: React.FC = () => {
                               e.stopPropagation();
                               if (!isOut) handleItemCardClick(item);
                             }}
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                            className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                               isOut
                                 ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                 : inCartQty > 0
-                                ? 'bg-[#2254E1] text-white shadow-2xs'
-                                : 'bg-slate-100 text-slate-700 group-hover:bg-[#2254E1] group-hover:text-white'
+                                ? 'bg-[#2254E1] text-white shadow-xs hover:bg-blue-700'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                             title={isOut ? 'Out of Stock' : 'Add to Sale Card'}
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -2056,305 +2068,308 @@ export const POSBillingPage: React.FC = () => {
         </div>
 
         {/* Right Column: Current Sale Card (lg:col-span-5) */}
-        <div className="lg:col-span-5 flex flex-col justify-start overflow-y-auto">
-          <Card className="w-full flex flex-col p-3 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-hidden transition-all">
-            {/* Sale Card Header */}
-            <div className="shrink-0 flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-7.5 h-7.5 rounded-xl bg-gradient-to-br from-[#2254E1] to-blue-700 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="font-bold text-slate-900 text-xs tracking-tight">Current Sale</h3>
-                    <Badge variant="neutral" className="text-[10px] font-bold bg-blue-50 text-[#2254E1] border-blue-200 py-0 px-1.5">
-                      {currentCartCount} item{currentCartCount !== 1 ? 's' : ''}
-                    </Badge>
+        <div id="pos-cart-panel" className="lg:col-span-5 flex flex-col min-h-[520px] lg:h-full overflow-visible lg:overflow-hidden">
+          <Card className="w-full h-full flex flex-col justify-between p-3.5 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-visible lg:overflow-hidden transition-all">
+            {/* Top Zone: Header + Cart Items */}
+            <div className="flex-1 min-h-[160px] lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden">
+              {/* Sale Card Header */}
+              <div className="shrink-0 flex items-center justify-between pb-2.5 border-b border-slate-100 flex-wrap gap-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#2254E1] to-blue-700 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                    <ShoppingCart className="w-4 h-4" />
                   </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-slate-900 text-xs tracking-tight">Current Sale</h3>
+                      <Badge variant="neutral" className="text-[10px] font-bold bg-blue-50 text-[#2254E1] border-blue-200 py-0 px-1.5">
+                        {currentCartCount} item{currentCartCount !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {cart.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearCart}
+                      className="text-xs h-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 rounded-lg cursor-pointer transition-colors"
+                      title="Clear Sale Card"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear
+                    </Button>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                {cart.length > 0 && (
+              {/* Linked Appointment Badge */}
+              {loadedAppointment && (
+                <div className="shrink-0 p-2 my-2 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <div>
+                      <span className="font-bold">Linked:</span> {loadedAppointment.appointmentNumber || loadedAppointment.id}
+                      <span className="text-blue-700 block text-[10px]">{loadedAppointment.clientName} • {loadedAppointment.startTime || loadedAppointment.time || '10:00 AM'}</span>
+                    </div>
+                  </div>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={handleClearCart}
-                    className="text-xs h-6.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 rounded-lg cursor-pointer transition-colors"
-                    title="Clear Sale Card"
+                    onClick={() => {
+                      setLoadedAppointment(null);
+                      setAcknowledgedPriceDiscrepancy(false);
+                    }}
+                    className="h-5 w-5 p-0 text-blue-500 hover:text-blue-800"
+                    title="Unlink Appointment"
                   >
-                    <Trash2 className="w-3 h-3 mr-1" /> Clear
+                    <X className="w-3.5 h-3.5" />
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Price Quote Discrepancy Banner */}
+              {bookingPriceDiscrepancy && (
+                <div className="shrink-0 p-2 my-2 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
+                  <div className="flex items-start gap-1.5 text-amber-900">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-[11px]">Price Quote Discrepancy</span>
+                      <p className="text-[10px] text-amber-800">
+                        Booking: {formatCurrency(bookingPriceDiscrepancy.quoted)}, active: {formatCurrency(bookingPriceDiscrepancy.canonical)}.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900 cursor-pointer pt-0.5 border-t border-amber-200/60">
+                    <input
+                      type="checkbox"
+                      checked={acknowledgedPriceDiscrepancy}
+                      onChange={(e) => setAcknowledgedPriceDiscrepancy(e.target.checked)}
+                      className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
+                    />
+                    <span>Confirm adjustment</span>
+                  </label>
+                </div>
+              )}
+
+              {/* Cart Items List OR Clean Empty State */}
+              {cart.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-2.5 px-4 py-8 text-center">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-2 border border-blue-100">
+                    <ShoppingCart className="w-5 h-5 opacity-75" />
+                  </div>
+                  <span className="font-bold text-slate-700 text-xs">Sale Card is empty</span>
+                  <span className="text-[10px] text-slate-400 mt-1 max-w-[200px]">Click any service, product, or package on the left catalogue to add</span>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-[90px] overflow-y-auto space-y-2 my-2 pr-1 scrollbar-thin">
+                  {cart.map((ci) => (
+                    <div
+                      key={ci.cartInstanceId}
+                      className="p-2 bg-slate-50/80 rounded-xl border border-slate-200/70 space-y-1.5 text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="font-bold text-slate-900 truncate text-[11px]">{ci.item.name}</span>
+                            {ci.type === 'PACKAGE' ? (
+                              <Badge variant="neutral" className="text-[8px] bg-blue-100 text-blue-800 py-0">
+                                Pkg
+                              </Badge>
+                            ) : ci.type === 'PRODUCT' ? (
+                              <Badge variant="neutral" className="text-[8px] bg-blue-100 text-blue-800 py-0">
+                                Prd
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <span className="font-mono text-[10px] text-slate-400">
+                            {formatCurrency(getCatalogueSellingPrice(ci.item))}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Quantity Adjuster */}
+                          <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg p-0.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleUpdateQuantity(ci.cartInstanceId, -1)}
+                              className="w-4.5 h-4.5 h-auto p-0"
+                            >
+                              <Minus className="w-2.5 h-2.5 text-slate-600" />
+                            </Button>
+                            <span className="font-mono font-bold px-1 text-[11px] text-slate-900">
+                              {ci.quantity}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleUpdateQuantity(ci.cartInstanceId, 1)}
+                              className="w-4.5 h-4.5 h-auto p-0"
+                            >
+                              <Plus className="w-2.5 h-2.5 text-slate-600" />
+                            </Button>
+                          </div>
+
+                          <span className="font-mono font-bold text-slate-900 w-16 text-right text-xs">
+                            {formatCurrency(getCatalogueSellingPrice(ci.item) * ci.quantity)}
+                          </span>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItem(ci.cartInstanceId)}
+                            className="w-5 h-5 text-slate-400 hover:text-rose-600 p-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Staff Assignment */}
+                      {ci.type === 'SERVICE' || ci.type === 'PRODUCT' ? (
+                        <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-200/60">
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            {ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}
+                          </span>
+                          <Select
+                            value={ci.staffId || 'unassigned'}
+                            onValueChange={(val) => handleAssignStaff(ci.cartInstanceId, val)}
+                          >
+                            <SelectTrigger
+                              className={`w-[150px] text-[10px] h-6 bg-white transition-colors ${
+                                !ci.staffId || ci.staffId === 'unassigned'
+                                  ? 'border-amber-400 text-amber-800 bg-amber-50/60 font-semibold'
+                                  : 'border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              <SelectValue placeholder="Staff..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unassigned" className="text-xs text-amber-700 italic font-medium">
+                                -- Select Staff --
+                              </SelectItem>
+                              <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                                House / Salon (No Staff)
+                              </SelectItem>
+                              {staffList.map((st) => (
+                                <SelectItem key={st.id} value={st.id} className="text-xs">
+                                  {st.name} ({st.roleTitle})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        /* Package Multi-Staff Allocation */
+                        <div className="pt-1 border-t border-slate-200/60 space-y-1">
+                          <div className="flex items-center justify-between flex-wrap gap-1">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <Users className="w-3 h-3 text-[#2254E1]" />
+                              <span>Staff ({ci.assignedStaff?.length || 0}):</span>
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              {ci.assignedStaff && ci.assignedStaff.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleEqualizeStaffPackageAmounts(ci.cartInstanceId)}
+                                  className="text-[9px] font-medium text-[#2254E1] hover:underline cursor-pointer"
+                                >
+                                  Split Evenly
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {ci.assignedStaff && ci.assignedStaff.length > 0 && (
+                            <div className="space-y-0.5 bg-white p-1 rounded-lg border border-slate-200">
+                              {ci.assignedStaff.map((st) => {
+                                const lineTotalAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
+                                const currentAmount = st.allocatedAmount ?? (ci.assignedStaff?.length === 1 ? lineTotalAmount : Math.round(lineTotalAmount / (ci.assignedStaff?.length || 1)));
+
+                                return (
+                                  <div
+                                    key={st.staffId}
+                                    className="flex items-center justify-between gap-1 text-[11px] py-0.2"
+                                  >
+                                    <span className="font-semibold text-slate-800 truncate text-[10px]">{st.staffName}</span>
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={lineTotalAmount}
+                                        value={st.allocatedAmount ?? currentAmount}
+                                        onChange={(e) =>
+                                          handleUpdateStaffPackageAmount(
+                                            ci.cartInstanceId,
+                                            st.staffId,
+                                            Number(e.target.value) || 0
+                                          )
+                                        }
+                                        className="w-14 h-5 px-1 text-right font-mono font-bold text-[10px] bg-slate-50 border border-slate-200 rounded"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveStaffFromPackage(ci.cartInstanceId, st.staffId)}
+                                        className="p-0.2 text-slate-400 hover:text-rose-600 rounded"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {staffList.filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id)).length > 0 && (
+                            <div className="pt-0.5">
+                              <Select
+                                value=""
+                                onValueChange={(val) => {
+                                  if (val) handleAddStaffToPackage(ci.cartInstanceId, val);
+                                }}
+                              >
+                                <SelectTrigger className="text-[10px] h-5 bg-blue-50/60 border-blue-200 text-[#2254E1] px-2 font-medium">
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <Plus className="w-2.5 h-2.5 text-[#2254E1] shrink-0" />
+                                    <SelectValue placeholder="Add Staff" />
+                                  </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {!ci.assignedStaff?.some((as) => as.staffId === 'house') && (
+                                    <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                                      House / Salon (No Staff)
+                                    </SelectItem>
+                                  )}
+                                  {staffList
+                                    .filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id))
+                                    .map((st) => (
+                                      <SelectItem key={st.id} value={st.id} className="text-xs">
+                                        {st.name} ({st.roleTitle})
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Linked Appointment Badge */}
-            {loadedAppointment && (
-              <div className="shrink-0 p-1.5 my-1.5 bg-blue-50/80 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-900">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <div>
-                    <span className="font-bold">Linked:</span> {loadedAppointment.appointmentNumber || loadedAppointment.id}
-                    <span className="text-blue-700 block text-[10px]">{loadedAppointment.clientName} • {loadedAppointment.startTime || loadedAppointment.time || '10:00 AM'}</span>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setLoadedAppointment(null);
-                    setAcknowledgedPriceDiscrepancy(false);
-                  }}
-                  className="h-5 w-5 p-0 text-blue-500 hover:text-blue-800"
-                  title="Unlink Appointment"
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            )}
-
-            {/* Price Quote Discrepancy Banner */}
-            {bookingPriceDiscrepancy && (
-              <div className="shrink-0 p-1.5 my-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-1">
-                <div className="flex items-start gap-1.5 text-amber-900">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-[11px]">Price Quote Discrepancy</span>
-                    <p className="text-[10px] text-amber-800">
-                      Booking: {formatCurrency(bookingPriceDiscrepancy.quoted)}, active: {formatCurrency(bookingPriceDiscrepancy.canonical)}.
-                    </p>
-                  </div>
-                </div>
-
-                <label className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900 cursor-pointer pt-0.5 border-t border-amber-200/60">
-                  <input
-                    type="checkbox"
-                    checked={acknowledgedPriceDiscrepancy}
-                    onChange={(e) => setAcknowledgedPriceDiscrepancy(e.target.checked)}
-                    className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
-                  />
-                  <span>Confirm adjustment</span>
-                </label>
-              </div>
-            )}
-
-            {/* Cart Items List OR Compact Empty State */}
-            {cart.length === 0 ? (
-              <div className="py-6 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-2 px-3 text-center">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-1.5 border border-blue-100">
-                  <ShoppingCart className="w-4 h-4 opacity-75" />
-                </div>
-                <span className="font-bold text-slate-700 text-xs">Sale Card is empty</span>
-                <span className="text-[10px] text-slate-400 mt-0.5">Click any service, product, or package on the left to add</span>
-              </div>
-            ) : (
-              <div className="max-h-[260px] overflow-y-auto space-y-1.5 my-2 pr-1">
-                {cart.map((ci) => (
-                  <div
-                    key={ci.cartInstanceId}
-                    className="p-1.5 bg-slate-50/80 rounded-lg border border-slate-200/70 space-y-1 text-xs"
-                  >
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-bold text-slate-900 truncate text-[11px]">{ci.item.name}</span>
-                          {ci.type === 'PACKAGE' ? (
-                            <Badge variant="neutral" className="text-[8px] bg-blue-100 text-blue-800 py-0">
-                              Pkg
-                            </Badge>
-                          ) : ci.type === 'PRODUCT' ? (
-                            <Badge variant="neutral" className="text-[8px] bg-blue-100 text-blue-800 py-0">
-                              Prd
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <span className="font-mono text-[10px] text-slate-400">
-                          {formatCurrency(getCatalogueSellingPrice(ci.item))}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        {/* Quantity Adjuster */}
-                        <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded p-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleUpdateQuantity(ci.cartInstanceId, -1)}
-                            className="w-4 h-4 h-auto p-0"
-                          >
-                            <Minus className="w-2.5 h-2.5 text-slate-600" />
-                          </Button>
-                          <span className="font-mono font-bold px-1 text-[11px] text-slate-900">
-                            {ci.quantity}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleUpdateQuantity(ci.cartInstanceId, 1)}
-                            className="w-4 h-4 h-auto p-0"
-                          >
-                            <Plus className="w-2.5 h-2.5 text-slate-600" />
-                          </Button>
-                        </div>
-
-                        <span className="font-mono font-bold text-slate-900 w-14 text-right text-xs">
-                          {formatCurrency(getCatalogueSellingPrice(ci.item) * ci.quantity)}
-                        </span>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveItem(ci.cartInstanceId)}
-                          className="w-5 h-5 text-slate-400 hover:text-rose-600 p-0"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Staff Assignment */}
-                    {ci.type === 'SERVICE' || ci.type === 'PRODUCT' ? (
-                      <div className="flex items-center justify-between gap-1.5 pt-0.5 border-t border-slate-200/60">
-                        <span className="text-[10px] text-slate-500 font-medium">
-                          {ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}
-                        </span>
-                        <Select
-                          value={ci.staffId || 'unassigned'}
-                          onValueChange={(val) => handleAssignStaff(ci.cartInstanceId, val)}
-                        >
-                          <SelectTrigger
-                            className={`w-[145px] text-[10px] h-5.5 bg-white transition-colors ${
-                              !ci.staffId || ci.staffId === 'unassigned'
-                                ? 'border-amber-400 text-amber-800 bg-amber-50/60 font-semibold'
-                                : 'border-slate-200 text-slate-800'
-                            }`}
-                          >
-                            <SelectValue placeholder="Staff..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unassigned" className="text-xs text-amber-700 italic font-medium">
-                              -- Select Staff --
-                            </SelectItem>
-                            <SelectItem value="house" className="text-xs font-semibold text-slate-700">
-                              House / Salon (No Staff)
-                            </SelectItem>
-                            {staffList.map((st) => (
-                              <SelectItem key={st.id} value={st.id} className="text-xs">
-                                {st.name} ({st.roleTitle})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      /* Package Multi-Staff Allocation */
-                      <div className="pt-0.5 border-t border-slate-200/60 space-y-1">
-                        <div className="flex items-center justify-between flex-wrap gap-1">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                            <Users className="w-3 h-3 text-[#2254E1]" />
-                            <span>Staff ({ci.assignedStaff?.length || 0}):</span>
-                          </span>
-
-                          <div className="flex items-center gap-1">
-                            {ci.assignedStaff && ci.assignedStaff.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleEqualizeStaffPackageAmounts(ci.cartInstanceId)}
-                                className="text-[9px] font-medium text-[#2254E1] hover:underline cursor-pointer"
-                              >
-                                Split Evenly
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {ci.assignedStaff && ci.assignedStaff.length > 0 && (
-                          <div className="space-y-0.5 bg-white p-1 rounded border border-slate-200">
-                            {ci.assignedStaff.map((st) => {
-                              const lineTotalAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
-                              const currentAmount = st.allocatedAmount ?? (ci.assignedStaff?.length === 1 ? lineTotalAmount : Math.round(lineTotalAmount / (ci.assignedStaff?.length || 1)));
-
-                              return (
-                                <div
-                                  key={st.staffId}
-                                  className="flex items-center justify-between gap-1 text-[11px] py-0.2"
-                                >
-                                  <span className="font-semibold text-slate-800 truncate text-[10px]">{st.staffName}</span>
-                                  <div className="flex items-center gap-1">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max={lineTotalAmount}
-                                      value={st.allocatedAmount ?? currentAmount}
-                                      onChange={(e) =>
-                                        handleUpdateStaffPackageAmount(
-                                          ci.cartInstanceId,
-                                          st.staffId,
-                                          Number(e.target.value) || 0
-                                        )
-                                      }
-                                      className="w-14 h-5 px-1 text-right font-mono font-bold text-[10px] bg-slate-50 border border-slate-200 rounded"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveStaffFromPackage(ci.cartInstanceId, st.staffId)}
-                                      className="p-0.2 text-slate-400 hover:text-rose-600 rounded"
-                                    >
-                                      <X className="w-2.5 h-2.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {staffList.filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id)).length > 0 && (
-                          <div className="pt-0.5">
-                            <Select
-                              value=""
-                              onValueChange={(val) => {
-                                if (val) handleAddStaffToPackage(ci.cartInstanceId, val);
-                              }}
-                            >
-                              <SelectTrigger className="text-[10px] h-5 bg-blue-50/60 border-blue-200 text-[#2254E1] px-2 font-medium">
-                                <div className="flex items-center gap-1 min-w-0">
-                                  <Plus className="w-2.5 h-2.5 text-[#2254E1] shrink-0" />
-                                  <SelectValue placeholder="Add Staff" />
-                                </div>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {!ci.assignedStaff?.some((as) => as.staffId === 'house') && (
-                                  <SelectItem value="house" className="text-xs font-semibold text-slate-700">
-                                    House / Salon (No Staff)
-                                  </SelectItem>
-                                )}
-                                {staffList
-                                  .filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id))
-                                  .map((st) => (
-                                    <SelectItem key={st.id} value={st.id} className="text-xs">
-                                      {st.name} ({st.roleTitle})
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Bottom Section: Client Info, Financial Summary & Collect Payment Button */}
-            <div className="shrink-0 space-y-2 pt-2 border-t border-slate-100">
+            {/* Bottom Zone: Client Info, Financial Controls & Checkout (Cleanly Anchored at Bottom) */}
+            <div className="shrink-0 space-y-2.5 pt-2.5 border-t border-slate-100 mt-auto">
               {cart.length === 0 ? (
                 /* Clean placeholder when cart is empty */
                 <div className="space-y-2 pt-1">
-                  <div className="px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+                  <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">Net Payable</span>
                       <span className="text-[9px] text-slate-400">Cart is empty</span>
@@ -2366,18 +2381,18 @@ export const POSBillingPage: React.FC = () => {
 
                   <Button
                     disabled
-                    className="w-full bg-slate-100 text-slate-400 font-bold h-9 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/60"
+                    className="w-full bg-slate-100 text-slate-400 font-bold h-10 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/60"
                   >
-                    <CreditCard className="w-3.5 h-3.5 opacity-40" />
+                    <CreditCard className="w-4 h-4 opacity-40" />
                     <span>Select Items to Checkout</span>
                   </Button>
                 </div>
               ) : (
                 /* Active Cart Summary & Checkout */
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {/* Client Identification Row */}
                   {selectedClient ? (
-                    <div className="h-7.5 px-2.5 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between text-xs text-slate-800">
+                    <div className="h-8 px-3 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between text-xs text-slate-800">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <UserCheck className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />
                         <span className="font-bold text-slate-900 truncate text-xs">{selectedClient.name}</span>
@@ -2398,7 +2413,7 @@ export const POSBillingPage: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2">
                       <Input
                         type="text"
                         placeholder="Customer Name (Walk-in)"
@@ -2408,7 +2423,7 @@ export const POSBillingPage: React.FC = () => {
                           setClientName(val);
                           if (val.trim()) setIsWalkIn(false);
                         }}
-                        className="text-xs h-7 bg-white border-slate-200 rounded-lg font-medium placeholder:text-slate-400"
+                        className="text-xs h-8 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400"
                       />
                       <Input
                         type="tel"
@@ -2419,46 +2434,62 @@ export const POSBillingPage: React.FC = () => {
                           setClientPhone(val);
                           if (val.trim()) setIsWalkIn(false);
                         }}
-                        className="text-xs h-7 bg-white border-slate-200 rounded-lg font-mono placeholder:text-slate-400"
+                        className="text-xs h-8 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400"
                       />
                     </div>
                   )}
 
-                  {/* Discount, Tip & Tax Row */}
-                  <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
-                    {/* Discount */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                        <Tag className="w-2.5 h-2.5 text-slate-400" />
-                        Discount:
-                      </span>
-                      <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden bg-white shadow-2xs">
+                  {/* 1. Discount & Tip (Spaced Side-by-Side) */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Discount Field */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                          <Tag className="w-3 h-3 text-[#2254E1]" />
+                          Discount
+                        </label>
                         <button
                           type="button"
                           onClick={() => setDiscountType(discountType === 'FIXED' ? 'PERCENTAGE' : 'FIXED')}
-                          className="px-1.5 py-0.5 text-[9px] font-extrabold bg-blue-50 text-[#2254E1] hover:bg-blue-100 transition-colors cursor-pointer border-r border-slate-200"
+                          className="text-[10px] font-extrabold text-[#2254E1] hover:underline cursor-pointer"
                         >
-                          {discountType === 'FIXED' ? 'PKR' : '%'}
+                          {discountType === 'FIXED' ? '% Switch' : 'PKR Switch'}
                         </button>
+                      </div>
+                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8">
+                        <span className="px-2.5 text-[10px] font-bold bg-blue-50 text-[#2254E1] border-r border-slate-200 h-full flex items-center shrink-0">
+                          {discountType === 'FIXED' ? 'PKR' : '%'}
+                        </span>
                         <input
                           type="number"
                           min="0"
                           placeholder="0"
                           value={discountValue || ''}
                           onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                          className="w-14 h-6 text-right px-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none"
+                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
                         />
                       </div>
                     </div>
 
-                    {/* Tip */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                        <Coins className="w-2.5 h-2.5 text-slate-400" />
-                        Tip:
-                      </span>
-                      <div className="flex items-center rounded-lg border border-slate-200 overflow-hidden bg-white shadow-2xs">
-                        <span className="px-1.5 py-0.5 text-[9px] font-extrabold bg-amber-50 text-amber-700 border-r border-slate-200">
+                    {/* Tip Field */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                          <Coins className="w-3 h-3 text-amber-600" />
+                          Staff Tip
+                        </label>
+                        {tipAmount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setTipAmount(0)}
+                            className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8">
+                        <span className="px-2.5 text-[10px] font-bold bg-amber-50 text-amber-700 border-r border-slate-200 h-full flex items-center shrink-0">
                           PKR
                         </span>
                         <input
@@ -2467,51 +2498,61 @@ export const POSBillingPage: React.FC = () => {
                           placeholder="0"
                           value={tipAmount || ''}
                           onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
-                          className="w-14 h-6 text-right px-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none"
+                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
                         />
                       </div>
                     </div>
-
-                    {/* Tax */}
-                    <label htmlFor="pos-tax-toggle" className="flex items-center gap-1.5 cursor-pointer select-none text-[10px] text-slate-600 font-medium shrink-0">
-                      <input
-                        id="pos-tax-toggle"
-                        type="checkbox"
-                        checked={applyBranchTax}
-                        onChange={(e) => setApplyBranchTax(e.target.checked)}
-                        className="rounded border-slate-300 text-[#2254E1] focus:ring-[#2254E1] h-3 w-3 cursor-pointer"
-                      />
-                      <span>
-                        {applyBranchTax && currentBranch?.taxEnabled && calculations.totalTax > 0
-                          ? `Tax +${formatCurrency(calculations.totalTax)}`
-                          : 'Tax (Rs 0)'}
-                      </span>
-                    </label>
                   </div>
 
-                  {/* Subtotal breakdown if discount or tip is applied */}
-                  {(calculations.totalDiscount > 0 || calculations.cleanTip > 0) && (
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 px-0.5">
-                      <span>Subtotal: {formatCurrency(calculations.grossSubtotal)}</span>
-                      <div className="flex items-center gap-2">
-                        {calculations.totalDiscount > 0 && (
-                          <span className="text-emerald-600 font-bold">- Discount {formatCurrency(calculations.totalDiscount)}</span>
-                        )}
-                        {calculations.cleanTip > 0 && (
-                          <span className="text-amber-700 font-bold">+ Tip {formatCurrency(calculations.cleanTip)}</span>
-                        )}
-                      </div>
+                  {/* 2. Itemized Breakdown */}
+                  <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-[11px] font-medium">Subtotal:</span>
+                      <span className="font-mono text-slate-800 text-[11px]">{formatCurrency(calculations.grossSubtotal)}</span>
                     </div>
-                  )}
+
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-[11px] font-medium">Discount:</span>
+                      <span className={`font-mono text-[11px] ${calculations.totalDiscount > 0 ? 'text-emerald-600 font-bold' : 'text-slate-800'}`}>
+                        - {formatCurrency(calculations.totalDiscount)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span className="text-[11px] font-medium">Tip:</span>
+                      <span className={`font-mono text-[11px] ${calculations.cleanTip > 0 ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
+                        {calculations.cleanTip > 0 ? `+ ${formatCurrency(calculations.cleanTip)}` : formatCurrency(0)}
+                      </span>
+                    </div>
+
+                    {/* Integrated Interactive Tax Row */}
+                    <div className="flex items-center justify-between text-slate-600">
+                      <label htmlFor="pos-tax-toggle" className="flex items-center gap-1.5 cursor-pointer select-none text-slate-600 hover:text-[#2254E1]">
+                        <input
+                          id="pos-tax-toggle"
+                          type="checkbox"
+                          checked={applyBranchTax}
+                          onChange={(e) => setApplyBranchTax(e.target.checked)}
+                          className="rounded border-slate-300 text-[#2254E1] focus:ring-[#2254E1] h-3.5 w-3.5 cursor-pointer"
+                        />
+                        <span className="text-[11px] font-medium">
+                          Tax ({applyBranchTax && currentBranch?.taxRate ? `${currentBranch.taxRate}%` : '0%'}):
+                        </span>
+                      </label>
+                      <span className={`font-mono text-[11px] ${applyBranchTax && calculations.totalTax > 0 ? 'text-[#2254E1] font-bold' : 'text-slate-800'}`}>
+                        {applyBranchTax && calculations.totalTax > 0 ? `+${formatCurrency(calculations.totalTax)}` : formatCurrency(0)}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Net Payable Highlight Box (Royal Blue Theme) */}
-                  <div className="px-3 py-2 bg-blue-50/90 border border-blue-200/90 rounded-xl flex items-center justify-between shadow-2xs">
+                  <div className="px-3.5 py-2 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wide block">Net Payable</span>
-                      <span className="text-[9px] text-blue-700">Total amount due</span>
+                      <span className="text-[9px] text-blue-600">Total amount due</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-mono font-extrabold text-lg text-[#2254E1] tracking-tight">
+                      <span className="font-mono font-extrabold text-xl text-[#2254E1] tracking-tight">
                         {formatCurrency(calculations.fullInvoiceTotal)}
                       </span>
                     </div>
@@ -2520,11 +2561,11 @@ export const POSBillingPage: React.FC = () => {
                   {/* Collect Payment & Complete Sale Button */}
                   <Button
                     onClick={handleOpenCheckout}
-                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] text-white font-bold h-10 text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
+                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] text-white font-bold h-10 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
                   >
                     <CreditCard className="w-4 h-4" />
                     <span>Collect Payment & Complete Sale</span>
-                    <span className="ml-auto font-mono text-xs font-black bg-white/20 px-2 py-0.5 rounded-md">
+                    <span className="ml-auto font-mono text-xs font-black bg-white/20 px-2.5 py-0.5 rounded-lg">
                       {formatCurrency(calculations.fullInvoiceTotal)}
                     </span>
                   </Button>
@@ -2862,10 +2903,10 @@ export const POSBillingPage: React.FC = () => {
 
       {/* 5. Dues & Previous Invoices Collection Modal */}
       <Dialog open={isCollectionModalOpen} onOpenChange={setIsCollectionModalOpen}>
-        <DialogContent className="max-w-md font-sans p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-amber-600" />
+        <DialogContent className="max-w-md font-sans p-4 sm:p-5 space-y-2.5">
+          <DialogHeader className="pb-1 border-b border-slate-100">
+            <DialogTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Banknote className="w-4 h-4 text-amber-600" />
               Collect Previous Outstanding Dues
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -2874,9 +2915,8 @@ export const POSBillingPage: React.FC = () => {
           </DialogHeader>
 
           {isLoadingInvoices ? (
-            <div className="py-8 text-center text-xs text-slate-500">
-              <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-[#2254E1] animate-spin mx-auto mb-2" />
-              Loading customer unpaid invoices...
+            <div className="py-8 flex flex-col items-center justify-center">
+              <ScissorLoader size="sm" />
             </div>
           ) : customerOutstandingInvoices.length === 0 ? (
             <div className="py-6 text-center text-xs text-slate-500">
@@ -3165,6 +3205,40 @@ export const POSBillingPage: React.FC = () => {
         initialName={clientModalPrefill.name}
         initialPhone={clientModalPrefill.phone}
       />
+
+      {/* 10. Mobile Sticky Quick Action Bar when cart has items */}
+      {cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center justify-between border border-slate-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#2254E1] flex items-center justify-center font-bold text-xs shrink-0">
+              <ShoppingCart className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-bold font-mono tracking-tight text-white">
+                {formatCurrency(calculations.fullInvoiceTotal)}
+              </p>
+              <p className="text-[10px] text-slate-300">
+                {currentCartCount} item{currentCartCount !== 1 ? 's' : ''} in cart
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              const el = document.getElementById('pos-cart-panel');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                handleOpenCheckout();
+              }
+            }}
+            className="h-8 px-3.5 text-xs font-bold bg-[#2254E1] hover:bg-blue-600 text-white rounded-xl shadow-xs"
+          >
+            Review & Pay
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

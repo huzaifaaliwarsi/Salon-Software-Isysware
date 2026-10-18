@@ -54,6 +54,7 @@ import { StaffCommissionReportPage } from '../features/reports/StaffCommissionRe
 import { AttendanceOvertimeReportPage } from '../features/reports/AttendanceOvertimeReportPage';
 import { ScheduledModuleView } from '../features/scaffold/ScheduledModuleView';
 import { AccessDeniedView } from '../features/scaffold/AccessDeniedView';
+import { ScissorLoader } from '../components/ui/ScissorLoader';
 
 export const AppRouter: React.FC = () => {
   const { user, session, isLoading } = useAuth();
@@ -73,14 +74,11 @@ export const AppRouter: React.FC = () => {
     }
   }, [user, pathname, isLoading, navigate]);
 
-  // Loading state
+  // Loading state with Scissors Loader
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F5F7FB] flex items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin" />
-          <p className="text-xs text-slate-500 font-medium">Initializing iSysware SalonOS...</p>
-        </div>
+        <ScissorLoader size="lg" />
       </div>
     );
   }

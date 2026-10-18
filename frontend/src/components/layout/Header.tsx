@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from '@/context/RouterContext';
 import { DEMO_CREDENTIALS } from '@/config/constants';
@@ -54,21 +54,39 @@ export const Header: React.FC<HeaderProps> = ({
     href: string;
   }>>([]);
 
-  useEffect(() => {
+  const fetchNotifications = useCallback(() => {
     if (!user || user.role === 'STAFF') return;
     const branchToFetch = activeBranchId === 'ALL' ? (allBranches[0]?.id || '') : (user.branchId || activeBranchId || '');
     if (!branchToFetch) return;
 
     salonService.getAdminDashboardData(branchToFetch)
       .then((data) => {
-        if (data?.pendingActions) {
-          setNotifications(data.pendingActions);
-        }
+        setNotifications(data?.pendingActions || []);
       })
       .catch((err) => {
         console.error('Failed to load header notifications:', err);
       });
-  }, [user, activeBranchId, demoDate]);
+  }, [user, activeBranchId, allBranches]);
+
+  useEffect(() => {
+    fetchNotifications();
+
+    const handleRefresh = () => fetchNotifications();
+    window.addEventListener('refresh-notifications', handleRefresh);
+    window.addEventListener('refresh-invoices', handleRefresh);
+    window.addEventListener('invoice-settled', handleRefresh);
+    window.addEventListener('focus', handleRefresh);
+
+    const interval = setInterval(fetchNotifications, 15000);
+
+    return () => {
+      window.removeEventListener('refresh-notifications', handleRefresh);
+      window.removeEventListener('refresh-invoices', handleRefresh);
+      window.removeEventListener('invoice-settled', handleRefresh);
+      window.removeEventListener('focus', handleRefresh);
+      clearInterval(interval);
+    };
+  }, [fetchNotifications, demoDate]);
 
   const handleLogout = async () => {
     await logout();
@@ -278,7 +296,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* NOTIFICATIONS BELL DROPDOWN */}
         {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(open) => { if (open) fetchNotifications(); }}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"

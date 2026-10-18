@@ -216,11 +216,21 @@ export const BranchOperationalSections: React.FC<BranchOperationalSectionsProps>
       {/* ── 1. TOP OVERVIEW: 4 VIBRANT HIGH-IMPACT GRADIENT METRIC CARDS ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Card 1: Total Clients (Royal Blue SalonOS Gradient) */}
-        <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-[#2254E1] via-[#1B44B8] to-[#1236A8] text-white shadow-sm transition-all hover:shadow-md">
-          {/* Subtle Decorative Wave in Background */}
-          <svg className="absolute -right-4 -bottom-4 w-36 h-36 opacity-15 pointer-events-none" viewBox="0 0 100 100" fill="none">
-            <path d="M0,50 C30,20 70,80 100,50 C70,20 30,80 0,50 Z" stroke="white" strokeWidth="6" />
-            <path d="M0,70 C30,40 70,100 100,70" stroke="white" strokeWidth="4" />
+        <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-[#2254E1] via-[#1B44B8] to-[#1236A8] text-white shadow-sm transition-all hover:shadow-md group">
+          {/* Stylized Clients / Users Silhouette Watermark */}
+          <svg
+            className="absolute -right-3 -bottom-3 w-32 h-32 opacity-15 pointer-events-none transition-transform duration-500 group-hover:scale-110"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
 
           <div className="relative z-10 flex items-start justify-between">
@@ -242,21 +252,21 @@ export const BranchOperationalSections: React.FC<BranchOperationalSectionsProps>
 
         {/* Card 2: Total Appointments (Cyan / Sky Gradient) */}
         <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-[#0284C7] via-[#0369A1] to-[#075985] text-white shadow-sm transition-all hover:shadow-md group">
-          {/* Salon Shears Silhouette Watermark */}
+          {/* Stylized Calendar / Appointments Schedule Watermark */}
           <svg
-            className="absolute -right-3 -bottom-3 w-32 h-32 opacity-15 pointer-events-none -rotate-12 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-0"
+            className="absolute -right-3 -bottom-3 w-32 h-32 opacity-15 pointer-events-none -rotate-6 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke="white"
-            strokeWidth="1.6"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <circle cx="6" cy="6" r="3" />
-            <circle cx="6" cy="18" r="3" />
-            <line x1="20" y1="4" x2="8.12" y2="15.88" strokeWidth="1.8" />
-            <line x1="14.47" y1="14.48" x2="20" y2="20" strokeWidth="1.8" />
-            <line x1="8.12" y1="8.12" x2="12" y2="12" strokeWidth="1.8" />
+            <rect width="18" height="18" x="3" y="4" rx="3" />
+            <line x1="16" x2="16" y1="2" y2="6" strokeWidth="2" />
+            <line x1="8" x2="8" y1="2" y2="6" strokeWidth="2" />
+            <line x1="3" x2="21" y1="10" y2="10" strokeWidth="1.5" />
+            <path d="m9 16 2 2 4-4" strokeWidth="2" />
           </svg>
 
           <div className="relative z-10 flex items-start justify-between">
@@ -313,14 +323,25 @@ export const BranchOperationalSections: React.FC<BranchOperationalSectionsProps>
         </div>
 
         {/* Card 4: Collections & Revenue (Golden Amber / Warm Bronze Gradient) */}
-        <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-[#D97706] via-[#B45309] to-[#92400E] text-white shadow-sm transition-all hover:shadow-md">
-          <svg className="absolute -right-4 -bottom-4 w-36 h-36 opacity-15 pointer-events-none" viewBox="0 0 100 100" fill="none">
-            <path d="M10,90 Q50,10 90,90" stroke="white" strokeWidth="6" />
+        <div className="relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-[#D97706] via-[#B45309] to-[#92400E] text-white shadow-sm transition-all hover:shadow-md group">
+          {/* Stylized Cash Banknote / Collections Watermark */}
+          <svg
+            className="absolute -right-3 -bottom-3 w-32 h-32 opacity-15 pointer-events-none -rotate-12 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="20" height="12" x="2" y="6" rx="2" />
+            <circle cx="12" cy="12" r="3" strokeWidth="1.8" />
+            <path d="M6 12h.01M18 12h.01" strokeWidth="2.5" />
           </svg>
 
           <div className="relative z-10 flex items-start justify-between">
             <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-white border border-white/20 shadow-2xs">
-              <Sparkles className="w-5 h-5" />
+              <Wallet className="w-5 h-5" />
             </div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
               Collections

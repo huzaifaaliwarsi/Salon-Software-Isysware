@@ -291,7 +291,12 @@ const liveMethods: SalonServiceContract = {
   getInvoice: (id) => getOrNull<Invoice>(`/invoices/${id}`),
   postPOSInvoice: (input) => api.post<Invoice>('/pos/invoices/checkout', input, input.idempotencyKey || newIdempotencyKey()),
   collectInvoicePayment: ({ invoiceId, ...input }) =>
-    api.post<Invoice>(`/invoices/${invoiceId}/payments`, input, input.idempotencyKey || newIdempotencyKey()),
+    api.post<Invoice>(`/invoices/${invoiceId}/payments`, input, input.idempotencyKey || newIdempotencyKey()).then((res) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('refresh-notifications'));
+      }
+      return res;
+    }),
   getClientOutstandingInvoices: (branchId, clientIdOrPhone) =>
     api.get<Invoice[]>('/invoices/outstanding', { ...branchQuery(branchId), clientIdOrPhone }),
 

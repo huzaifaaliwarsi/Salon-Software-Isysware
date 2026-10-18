@@ -198,6 +198,9 @@ export const UnpaidInvoicesPage: React.FC = () => {
       setIsReceiptOpen(true);
       toast.success('Payment collected and invoice settled successfully!');
       await loadData();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('refresh-notifications'));
+      }
     } catch (err: any) {
       console.error('Failed to collect payment:', err);
       const msg = err.message || 'Payment collection failed.';
@@ -368,38 +371,39 @@ export const UnpaidInvoicesPage: React.FC = () => {
 
       {/* COLLECT PAYMENT MODAL */}
       <Dialog open={isCollectModalOpen} onOpenChange={setIsCollectModalOpen}>
-        <DialogContent className="max-w-md font-sans">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Coins className="w-5 h-5 text-emerald-600" />
-              Collect Outstanding Receivable
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+        <DialogContent className="max-w-md font-sans p-4 sm:p-5 space-y-2.5">
+          <DialogHeader className="pb-1 border-b border-slate-100">
+            <div className="flex items-center justify-between pr-4">
+              <DialogTitle className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <Coins className="w-4 h-4 text-emerald-600" />
+                Collect Outstanding Receivable
+              </DialogTitle>
+              <Badge variant="neutral" className="text-[10px] font-mono bg-blue-50 text-[#2254E1] border-blue-200">
+                {selectedInvoice?.invoiceNumber}
+              </Badge>
+            </div>
+            <DialogDescription className="text-[11px] text-slate-500">
               Record customer payment against Invoice {selectedInvoice?.invoiceNumber}.
             </DialogDescription>
           </DialogHeader>
 
           {/* Form Content */}
-
           {selectedInvoice && (
-            <div className="space-y-3.5 text-xs">
-              {/* Invoice & Customer summary */}
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/90 space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Customer:</span>
-                  <span className="font-semibold text-slate-900">{selectedInvoice.clientName}</span>
+            <div className="space-y-2.5 text-xs">
+              {/* Compact Customer & Outstanding Balance Card */}
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <span>{selectedInvoice.clientName}</span>
+                    {selectedInvoice.clientPhone && (
+                      <span className="text-[10px] font-normal font-mono text-slate-500">({selectedInvoice.clientPhone})</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400">Sale Date: {selectedInvoice.date} (retained)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Phone:</span>
-                  <span className="font-mono text-slate-700">{selectedInvoice.clientPhone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Original Sale Date:</span>
-                  <span className="text-slate-700">{selectedInvoice.date} (retained)</span>
-                </div>
-                <div className="flex justify-between pt-1 border-t border-slate-200">
-                  <span className="text-rose-700 font-bold">Outstanding Balance Due:</span>
-                  <span className="font-mono font-bold text-rose-700 text-sm">
+                <div className="text-right">
+                  <span className="text-[9px] font-bold text-rose-600 uppercase tracking-wide block">Balance Due</span>
+                  <span className="font-mono font-extrabold text-rose-700 text-sm">
                     {formatCurrency(selectedInvoice.amountDue)}
                   </span>
                 </div>
@@ -407,30 +411,30 @@ export const UnpaidInvoicesPage: React.FC = () => {
 
               {/* Method choice */}
               <div>
-                <label className="font-semibold text-slate-800 block mb-1">Receipt Payment Method</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="text-[10px] font-bold text-slate-700 block mb-1">Receipt Payment Method</label>
+                <div className="grid grid-cols-2 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setCollectMethod('CASH')}
-                    className={`p-2 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    className={`h-7.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                       collectMethod === 'CASH'
-                        ? 'bg-blue-50 border-[#2254E1] text-[#2254E1]'
+                        ? 'bg-blue-50 border-[#2254E1] text-[#2254E1] font-bold shadow-2xs'
                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <Banknote className="w-4 h-4" />
+                    <Banknote className="w-3.5 h-3.5" />
                     Physical Cash
                   </button>
                   <button
                     type="button"
                     onClick={() => setCollectMethod('ONLINE')}
-                    className={`p-2 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    className={`h-7.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                       collectMethod === 'ONLINE'
-                        ? 'bg-blue-50 border-[#2254E1] text-[#2254E1]'
+                        ? 'bg-blue-50 border-[#2254E1] text-[#2254E1] font-bold shadow-2xs'
                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <CreditCard className="w-4 h-4" />
+                    <CreditCard className="w-3.5 h-3.5" />
                     Online Account
                   </button>
                 </div>
@@ -438,15 +442,15 @@ export const UnpaidInvoicesPage: React.FC = () => {
 
               {/* Amount to Collect Input */}
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="font-semibold text-slate-800">Amount to Collect (PKR)</label>
+                <div className="flex justify-between items-center mb-0.5">
+                  <label className="text-[10px] font-bold text-slate-700">Amount to Collect (PKR)</label>
                   <button
                     type="button"
                     onClick={() => {
                       setCollectAmount(selectedInvoice.amountDue);
                       setCollectCashTendered(selectedInvoice.amountDue);
                     }}
-                    className="text-[11px] text-[#2254E1] hover:underline font-semibold cursor-pointer"
+                    className="text-[10px] text-[#2254E1] hover:underline font-bold cursor-pointer"
                   >
                     Full Balance ({formatCurrency(selectedInvoice.amountDue)})
                   </button>
@@ -461,26 +465,26 @@ export const UnpaidInvoicesPage: React.FC = () => {
                     setCollectAmount(val);
                     setCollectCashTendered(val);
                   }}
-                  className="font-mono font-bold text-sm h-9"
+                  className="font-mono font-bold text-xs h-7.5"
                 />
               </div>
 
               {/* Cash Tendered / Change */}
               {collectMethod === 'CASH' && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <div>
-                    <label className="text-[11px] text-slate-500 block mb-0.5">Cash Tendered (PKR)</label>
+                    <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Cash Tendered (PKR)</label>
                     <Input
                       type="number"
                       min="0"
                       value={collectCashTendered || ''}
                       onChange={(e) => setCollectCashTendered(parseFloat(e.target.value) || 0)}
-                      className="font-mono h-8 text-xs"
+                      className="font-mono h-7 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-slate-500 block mb-0.5">Change Returned (PKR)</label>
-                    <div className="h-8 flex items-center font-mono font-bold text-emerald-700 text-xs px-2 bg-slate-50 border border-slate-200 rounded-md">
+                    <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Change Returned</label>
+                    <div className="h-7 flex items-center font-mono font-bold text-emerald-700 text-xs px-2 bg-slate-50 border border-slate-200 rounded-md">
                       {formatCurrency(Math.max(0, collectCashTendered - collectAmount))}
                     </div>
                   </div>
@@ -490,12 +494,12 @@ export const UnpaidInvoicesPage: React.FC = () => {
               {/* Online Account Picker */}
               {collectMethod === 'ONLINE' && (
                 <div>
-                  <label className="text-[11px] text-slate-500 block mb-1">Deposit To Payment Account</label>
+                  <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Deposit To Payment Account</label>
                   <Select
                     value={selectedOnlineAccountId}
                     onValueChange={setSelectedOnlineAccountId}
                   >
-                    <SelectTrigger className="h-9 text-xs">
+                    <SelectTrigger className="h-7.5 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -513,41 +517,41 @@ export const UnpaidInvoicesPage: React.FC = () => {
 
               {/* Collection Notes */}
               <div>
-                <label className="text-[11px] text-slate-500 block mb-1">Collection Notes (Optional)</label>
+                <label className="text-[10px] text-slate-500 font-medium block mb-0.5">Collection Notes (Optional)</label>
                 <Input
                   placeholder="e.g. Cleared remaining balance via cash till"
                   value={collectionNotes}
                   onChange={(e) => setCollectionNotes(e.target.value)}
-                  className="h-8 text-xs"
+                  className="h-7 text-xs"
                 />
               </div>
 
-              <div className="p-2.5 rounded bg-blue-50/70 border border-blue-100 text-[11px] text-slate-600">
-                <span className="font-semibold text-[#2254E1] block">Financial Custody Audit:</span>
-                Receipt will be attributed to <strong>{user.name}</strong> on operating date <strong>{demoDate}</strong>.
-                The original invoice date ({selectedInvoice.date}) will remain preserved.
+              {/* Compact Audit Badge */}
+              <div className="py-1 px-2.5 rounded-lg bg-blue-50/60 border border-blue-100 text-[10px] text-slate-500 flex items-center justify-between">
+                <span>Receipt attributed to <strong className="text-slate-700">{user.name}</strong></span>
+                <span>Date: <strong className="text-slate-700">{demoDate}</strong></span>
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2 pt-2">
+          <DialogFooter className="gap-2 pt-1 border-t border-slate-100 sm:justify-end">
             <Button
               variant="outline"
               disabled={isCollecting}
               onClick={() => setIsCollectModalOpen(false)}
-              className="text-xs"
+              className="text-xs h-7.5 px-3"
             >
               Cancel
             </Button>
             <Button
               disabled={isCollecting || collectAmount <= 0}
               onClick={handleSubmitCollection}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7.5 px-3.5 gap-1.5 cursor-pointer font-bold"
             >
               {isCollecting ? (
                 <>
-                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
-                  Recording Receipt...
+                  <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block" />
+                  Recording...
                 </>
               ) : (
                 <>
