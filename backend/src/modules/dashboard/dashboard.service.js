@@ -79,6 +79,62 @@ const metricsFor = (b, date) => computeBranchMetrics([b.id], date, b);
 const recentInvoices = async (where, take = 5) =>
   (await prisma.invoice.findMany({ where, include: invoiceInclude, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }], take })).map(toInvoiceDTO);
 
+const computeRevenueTrend = async (scope) => {
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const start = new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0));
+    const end = new Date(Date.UTC(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999));
+    months.push({
+      start,
+      end,
+      label: d.toLocaleString('en-US', { month: 'short' }),
+    });
+  }
+
+  const results = await Promise.all(
+    months.map(async (m) => {
+      const [invAgg, expAgg, payAgg] = await Promise.all([
+        prisma.invoice.aggregate({
+          where: { ...scope, lifecycle: { not: 'VOIDED' }, date: { gte: m.start, lte: m.end } },
+          _sum: { netSales: true },
+        }),
+        prisma.expense.aggregate({
+          where: { ...scope, status: 'POSTED', isReversalRecord: false, expenseDate: { gte: m.start, lte: m.end } },
+          _sum: { amount: true },
+        }),
+        prisma.invoicePayment.aggregate({
+          where: { ...scope, date: { gte: m.start, lte: m.end } },
+          _sum: { amount: true },
+        }),
+      ]);
+      return {
+        label: m.label,
+        revenue: n(invAgg._sum?.netSales ?? 0),
+        expenses: n(expAgg._sum?.amount ?? 0),
+        collections: n(payAgg._sum?.amount ?? 0),
+      };
+    })
+  );
+
+  return results;
+};
+
+const computeCategoryBreakdown = async (scope) => {
+  const items = await prisma.invoiceLine.groupBy({
+    by: ['type'],
+    where: { invoice: { ...scope, lifecycle: { not: 'VOIDED' } } },
+    _sum: { netSales: true },
+    _count: true,
+  });
+  return items.map((it) => ({
+    type: it.type,
+    count: it._count,
+    revenue: n(it._sum?.netSales ?? 0),
+  }));
+};
+
 // ═══ SUPER ADMIN ══════════════════════════════════════════════════════════════
 
 export const superAdminDashboard = async (actor, { branchId = 'ALL' } = {}) => {
@@ -94,7 +150,7 @@ export const superAdminDashboard = async (actor, { branchId = 'ALL' } = {}) => {
   const scope = inBranches(ids);
   const label = isConsolidated ? { id: 'ALL', name: 'All Branches (Consolidated)', code: 'ALL' } : target;
 
-  const [metrics, branchStats, accounts, todayAppointments, invoices, drawers, pending] = await Promise.all([
+  const [metrics, branchStats, accounts, todayAppointments, invoices, drawers, pending, totalClientsCount, totalServicesCount, totalAppointmentsCount, staffList, revenueTrend, categoryBreakdown] = await Promise.all([
     computeBranchMetrics(ids, date, label),
     Promise.all(active.map((b) => metricsFor(b, date))),
     prisma.paymentAccount.findMany({ where: scope, orderBy: { createdAt: 'asc' } }),
@@ -102,6 +158,12 @@ export const superAdminDashboard = async (actor, { branchId = 'ALL' } = {}) => {
     recentInvoices(scope),
     prisma.cashDrawer.findMany({ where: { ...scope, kind: 'DRAWER' }, orderBy: { createdAt: 'desc' } }),
     prisma.settlement.findMany({ where: { ...scope, status: 'SUBMITTED' } }),
+    prisma.client.count({ where: scope }),
+    prisma.service.count({ where: { ...scope, isActive: true } }),
+    prisma.appointment.count({ where: scope }),
+    prisma.staff.findMany({ where: { ...scope, isActive: true }, select: { id: true, name: true, roleTitle: true } }),
+    computeRevenueTrend(scope),
+    computeCategoryBreakdown(scope),
   ]);
   const balances = await accountBalances(accounts.map((a) => a.id));
 
@@ -114,6 +176,12 @@ export const superAdminDashboard = async (actor, { branchId = 'ALL' } = {}) => {
     cashDrawers: await drawerDTOs(prisma, drawers),
     pendingSettlementsCount: pending.length,
     pendingSettlementsTotal: n(pending.reduce((s, x) => s.plus(x.handoverAmount), toDec(0))),
+    totalClientsCount,
+    totalServicesCount,
+    totalAppointmentsCount,
+    staffList,
+    revenueTrend,
+    categoryBreakdown,
   };
 };
 
@@ -136,7 +204,7 @@ export const adminDashboard = async (actor, { branchId } = {}) => {
   const date = await getBusinessDate();
   const scope = { branchId: branch.id };
 
-  const [metrics, present, totalCount, todayAppointments, invoices, expenses, pending, unpaid, accounts, drawers] = await Promise.all([
+  const [metrics, present, totalCount, todayAppointments, invoices, expenses, pending, unpaid, accounts, drawers, totalClientsCount, totalServicesCount, totalAppointmentsCount, staffList, revenueTrend, categoryBreakdown] = await Promise.all([
     metricsFor(branch, date),
     prisma.attendanceRecord.findMany({ where: { ...scope, workDate: dateOnly(date), status: { in: ON_DUTY } }, select: { staffId: true } }),
     prisma.staff.count({ where: { ...scope, isActive: true } }),
@@ -147,6 +215,12 @@ export const adminDashboard = async (actor, { branchId } = {}) => {
     prisma.invoice.count({ where: { ...scope, lifecycle: { not: 'VOIDED' }, status: { in: ['UNPAID', 'PARTIAL'] } } }),
     prisma.paymentAccount.findMany({ where: scope, orderBy: { createdAt: 'asc' } }),
     prisma.cashDrawer.findMany({ where: { ...scope, kind: 'DRAWER' }, orderBy: { createdAt: 'desc' } }),
+    prisma.client.count({ where: scope }),
+    prisma.service.count({ where: { ...scope, isActive: true } }),
+    prisma.appointment.count({ where: scope }),
+    prisma.staff.findMany({ where: { ...scope, isActive: true }, select: { id: true, name: true, roleTitle: true } }),
+    computeRevenueTrend(scope),
+    computeCategoryBreakdown(scope),
   ]);
   const balances = await accountBalances(accounts.map((a) => a.id));
   const names = await prisma.staff.findMany({ where: { id: { in: present.map((p) => p.staffId) } }, select: { name: true } });
@@ -172,6 +246,12 @@ export const adminDashboard = async (actor, { branchId } = {}) => {
     recentInvoices: invoices, recentExpenses: expenses.map(toExpenseDTO),
     onlineAccounts: accounts.map((a) => toOnlineAccountDTO(a, balances.get(a.id))),
     cashDrawers: await drawerDTOs(prisma, drawers),
+    totalClientsCount,
+    totalServicesCount,
+    totalAppointmentsCount,
+    staffList,
+    revenueTrend,
+    categoryBreakdown,
   };
 };
 

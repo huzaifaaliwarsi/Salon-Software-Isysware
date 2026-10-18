@@ -496,13 +496,22 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   };
 
   const timeOptions = [
+    '08:00 AM', '08:30 AM',
     '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
     '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
     '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
     '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
     '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
-    '07:00 PM', '07:30 PM', '08:00 PM',
+    '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM',
+    '09:00 PM', '09:30 PM', '10:00 PM',
   ];
+
+  const effectiveTimeOptions = useMemo(() => {
+    if (startTime && !timeOptions.includes(startTime)) {
+      return [startTime, ...timeOptions];
+    }
+    return timeOptions;
+  }, [startTime]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -659,12 +668,19 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
 
           {/* SECTION 2: SCHEDULE & BRANCH */}
           <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4 text-[#2254E1]" />
-              2. Branch & Date
-            </h3>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-[#2254E1]" />
+                2. Branch, Date & Time Schedule
+              </h3>
+              {totalEstimatedMinutes > 0 && (
+                <span className="text-xs text-slate-500 font-mono bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                  Estimated Slot: <strong className="text-[#2254E1]">{startTime}</strong> to <strong className="text-[#2254E1]">{estimatedEndTime}</strong> ({totalEstimatedMinutes} mins)
+                </span>
+              )}
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Branch</Label>
                 <select
@@ -674,7 +690,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
                     setSelectedBranchId(e.target.value);
                     setSelectedItems([]);
                   }}
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 disabled:opacity-70"
+                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 disabled:opacity-70 h-9"
                 >
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -685,14 +701,36 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
               </div>
 
               <div>
-                <Label className="text-xs">Appointment Date</Label>
+                <Label className="text-xs flex items-center gap-1">
+                  <CalendarIcon className="w-3.5 h-3.5 text-[#2254E1]" />
+                  Appointment Date *
+                </Label>
                 <Input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="bg-white mt-1"
+                  className="bg-white mt-1 h-9 text-xs"
                   required
                 />
+              </div>
+
+              <div>
+                <Label className="text-xs flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-[#2254E1]" />
+                  Appointment Start Time *
+                </Label>
+                <select
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 h-9 cursor-pointer"
+                  required
+                >
+                  {effectiveTimeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

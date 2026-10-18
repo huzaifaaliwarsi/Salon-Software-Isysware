@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BranchOperationalSections } from './components/BranchOperationalSections';
+import { ScissorLoader } from '@/components/ui/ScissorLoader';
 import {
   Building2,
   RefreshCw,
@@ -51,9 +52,8 @@ export const SuperAdminDashboard: React.FC = () => {
 
   if (isLoading && !data) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center space-y-3 font-sans">
-        <div className="w-8 h-8 rounded-full border-[2.5px] border-blue-100 border-t-[#2254E1] animate-spin" />
-        <p className="text-xs text-slate-500 font-medium">Loading multi-branch financial intelligence...</p>
+      <div className="py-32 flex items-center justify-center font-sans">
+        <ScissorLoader size="lg" />
       </div>
     );
   }
@@ -143,6 +143,12 @@ export const SuperAdminDashboard: React.FC = () => {
         todayAppointments={data.todayAppointments}
         recentInvoices={data.recentInvoices}
         cashDrawers={data.cashDrawers}
+        totalClientsCount={data.totalClientsCount}
+        totalServicesCount={data.totalServicesCount}
+        totalAppointmentsCount={data.totalAppointmentsCount}
+        staffList={data.staffList}
+        revenueTrend={data.revenueTrend}
+        categoryBreakdown={data.categoryBreakdown}
         onNavigateAppointments={() => navigate('/operations/appointments')}
         onNavigateInvoices={() => navigate('/reports/sales-invoices')}
         onNavigateAccounts={() => navigate('/reports/debit-credit')}

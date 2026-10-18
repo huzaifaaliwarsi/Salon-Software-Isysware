@@ -81,7 +81,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           breadcrumbs={generateBreadcrumbs()}
         />
 
-        <main className="flex-1 px-4 sm:px-5 lg:px-6 py-5 w-full min-w-0">
+        <main className={`flex-1 w-full min-w-0 ${pathname === '/pos' ? 'p-2 sm:p-2.5 h-[calc(100vh-4rem)] overflow-hidden flex flex-col' : 'px-4 sm:px-5 lg:px-6 py-5'}`}>
           {children}
         </main>
       </div>

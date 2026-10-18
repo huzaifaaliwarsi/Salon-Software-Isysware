@@ -151,6 +151,12 @@ export interface SuperAdminDashboardData {
   cashDrawers: CashDrawer[];
   pendingSettlementsCount: number;
   pendingSettlementsTotal: number;
+  totalClientsCount?: number;
+  totalServicesCount?: number;
+  totalAppointmentsCount?: number;
+  staffList?: Array<{ id: string; name: string; roleTitle: string }>;
+  revenueTrend?: Array<{ label: string; revenue: number; expenses: number; collections: number }>;
+  categoryBreakdown?: Array<{ type: string; count: number; revenue: number }>;
 }
 
 export interface AdminDashboardData {
@@ -174,6 +180,12 @@ export interface AdminDashboardData {
   recentExpenses: Expense[];
   onlineAccounts: OnlineAccount[];
   cashDrawers: CashDrawer[];
+  totalClientsCount?: number;
+  totalServicesCount?: number;
+  totalAppointmentsCount?: number;
+  staffList?: Array<{ id: string; name: string; roleTitle: string }>;
+  revenueTrend?: Array<{ label: string; revenue: number; expenses: number; collections: number }>;
+  categoryBreakdown?: Array<{ type: string; count: number; revenue: number }>;
 }
 
 export interface AccountantDashboardData {
