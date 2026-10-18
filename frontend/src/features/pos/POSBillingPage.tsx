@@ -1889,9 +1889,9 @@ export const POSBillingPage: React.FC = () => {
       </div>
 
       {/* 2. Main Desktop Grid: Left Catalogue (lg:col-span-7), Right Current Sale Card (lg:col-span-5) */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-visible lg:overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
         {/* Left Column: Search, Category Filter Pills & Product Cards (lg:col-span-7) */}
-        <div className="lg:col-span-7 flex flex-col min-h-[360px] lg:h-full overflow-visible lg:overflow-hidden space-y-1.5">
+        <div className="lg:col-span-7 flex flex-col h-full overflow-hidden space-y-1.5">
           {/* Search Input Bar */}
           <div className="relative shrink-0">
             <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
@@ -2068,10 +2068,10 @@ export const POSBillingPage: React.FC = () => {
         </div>
 
         {/* Right Column: Current Sale Card (lg:col-span-5) */}
-        <div id="pos-cart-panel" className="lg:col-span-5 flex flex-col min-h-[520px] lg:h-full overflow-visible lg:overflow-hidden">
-          <Card className="w-full h-full flex flex-col justify-between p-3.5 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-visible lg:overflow-hidden transition-all">
+        <div id="pos-cart-panel" className="lg:col-span-5 flex flex-col h-full overflow-hidden">
+          <Card className="w-full h-full flex flex-col justify-between p-3 sm:p-3.5 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-hidden transition-all">
             {/* Top Zone: Header + Cart Items */}
-            <div className="flex-1 min-h-[160px] lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {/* Sale Card Header */}
               <div className="shrink-0 flex items-center justify-between pb-2.5 border-b border-slate-100 flex-wrap gap-1.5">
                 <div className="flex items-center gap-2">
@@ -2154,17 +2154,17 @@ export const POSBillingPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Cart Items List OR Clean Empty State */}
+              {/* Cart Items List OR Clean Empty State with Dedicated Scroller */}
               {cart.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-2.5 px-4 py-8 text-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-2 border border-blue-100">
-                    <ShoppingCart className="w-5 h-5 opacity-75" />
+                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-1 py-4 px-4 text-center">
+                  <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-1.5 border border-blue-100">
+                    <ShoppingCart className="w-4 h-4 opacity-75" />
                   </div>
                   <span className="font-bold text-slate-700 text-xs">Sale Card is empty</span>
-                  <span className="text-[10px] text-slate-400 mt-1 max-w-[200px]">Click any service, product, or package on the left catalogue to add</span>
+                  <span className="text-[10px] text-slate-400 mt-0.5 max-w-[200px]">Click any service, product, or package on the left catalogue to add</span>
                 </div>
               ) : (
-                <div className="flex-1 min-h-[90px] overflow-y-auto space-y-2 my-2 pr-1 scrollbar-thin">
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 my-1 pr-1 scrollbar-thin">
                   {cart.map((ci) => (
                     <div
                       key={ci.cartInstanceId}
@@ -2364,8 +2364,8 @@ export const POSBillingPage: React.FC = () => {
               )}
             </div>
 
-            {/* Bottom Zone: Client Info, Financial Controls & Checkout (Cleanly Anchored at Bottom) */}
-            <div className="shrink-0 space-y-2.5 pt-2.5 border-t border-slate-100 mt-auto">
+            {/* Bottom Zone: Client Info, Financial Controls & Checkout */}
+            <div className="shrink-0 space-y-2 pt-1.5 border-t border-slate-100 mt-auto">
               {cart.length === 0 ? (
                 /* Clean placeholder when cart is empty */
                 <div className="space-y-2 pt-1">
@@ -2381,7 +2381,7 @@ export const POSBillingPage: React.FC = () => {
 
                   <Button
                     disabled
-                    className="w-full bg-slate-100 text-slate-400 font-bold h-10 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/60"
+                    className="w-full bg-slate-100 text-slate-400 font-bold h-9 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/60 mb-1"
                   >
                     <CreditCard className="w-4 h-4 opacity-40" />
                     <span>Select Items to Checkout</span>
@@ -2389,7 +2389,7 @@ export const POSBillingPage: React.FC = () => {
                 </div>
               ) : (
                 /* Active Cart Summary & Checkout */
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {/* Client Identification Row */}
                   {selectedClient ? (
                     <div className="h-8 px-3 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between text-xs text-slate-800">
@@ -2423,7 +2423,7 @@ export const POSBillingPage: React.FC = () => {
                           setClientName(val);
                           if (val.trim()) setIsWalkIn(false);
                         }}
-                        className="text-xs h-8 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400"
+                        className="text-xs h-7.5 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400"
                       />
                       <Input
                         type="tel"
@@ -2434,13 +2434,13 @@ export const POSBillingPage: React.FC = () => {
                           setClientPhone(val);
                           if (val.trim()) setIsWalkIn(false);
                         }}
-                        className="text-xs h-8 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400"
+                        className="text-xs h-7.5 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400"
                       />
                     </div>
                   )}
 
                   {/* 1. Discount & Tip (Spaced Side-by-Side) */}
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-2 gap-2">
                     {/* Discount Field */}
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
@@ -2456,7 +2456,7 @@ export const POSBillingPage: React.FC = () => {
                           {discountType === 'FIXED' ? '% Switch' : 'PKR Switch'}
                         </button>
                       </div>
-                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8">
+                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-7.5">
                         <span className="px-2.5 text-[10px] font-bold bg-blue-50 text-[#2254E1] border-r border-slate-200 h-full flex items-center shrink-0">
                           {discountType === 'FIXED' ? 'PKR' : '%'}
                         </span>
@@ -2488,7 +2488,7 @@ export const POSBillingPage: React.FC = () => {
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8">
+                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-7.5">
                         <span className="px-2.5 text-[10px] font-bold bg-amber-50 text-amber-700 border-r border-slate-200 h-full flex items-center shrink-0">
                           PKR
                         </span>
@@ -2505,7 +2505,7 @@ export const POSBillingPage: React.FC = () => {
                   </div>
 
                   {/* 2. Itemized Breakdown */}
-                  <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                  <div className="space-y-1 pt-1.5 border-t border-slate-100 text-xs">
                     <div className="flex items-center justify-between text-slate-500">
                       <span className="text-[11px] font-medium">Subtotal:</span>
                       <span className="font-mono text-slate-800 text-[11px]">{formatCurrency(calculations.grossSubtotal)}</span>
@@ -2546,7 +2546,7 @@ export const POSBillingPage: React.FC = () => {
                   </div>
 
                   {/* Net Payable Highlight Box (Royal Blue Theme) */}
-                  <div className="px-3.5 py-2 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between">
+                  <div className="px-3.5 py-1.5 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wide block">Net Payable</span>
                       <span className="text-[9px] text-blue-600">Total amount due</span>
@@ -2561,7 +2561,7 @@ export const POSBillingPage: React.FC = () => {
                   {/* Collect Payment & Complete Sale Button */}
                   <Button
                     onClick={handleOpenCheckout}
-                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] text-white font-bold h-10 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
+                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] text-white font-bold h-9.5 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0 mb-1.5"
                   >
                     <CreditCard className="w-4 h-4" />
                     <span>Collect Payment & Complete Sale</span>
