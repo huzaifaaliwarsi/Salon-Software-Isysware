@@ -447,8 +447,6 @@ export const salesInvoicesReport = async (actor, q = {}) => {
       }
     }
   }
-  totalCashCollected = max0(totalCashCollected);
-  totalOnlineCollected = max0(totalOnlineCollected);
 
   const onlineAccountsBreakdown = Array.from(onlineAccountsMap.values()).map((a) => ({
     accountId: a.accountId,
@@ -2105,8 +2103,6 @@ export const cashDrawerReport = async (actor, query = {}) => {
       }
     }
   }
-  overallCashReceipts = max0(overallCashReceipts);
-  overallOnlineReceipts = max0(overallOnlineReceipts);
 
   const onlineAccountsBreakdown = Array.from(onlineAccountMap.values()).map((a) => ({
     accountId: a.accountId,

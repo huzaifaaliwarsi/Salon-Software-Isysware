@@ -58,8 +58,8 @@ export const computeBranchMetrics = async (branchIds, date, { id, name, code }) 
   const grossOnlineCollected = sumOf(byMethod('ONLINE_ACCOUNT') ?? {}, 'amount');
   const tipsCollected = payments.reduce((s, p) => s.plus(sumOf(p, 'tipAmountAllocated')), toDec(0));
 
-  const cashCollected = max0(grossCashCollected.minus(cashRefundsPaid));
-  const onlineCollected = max0(grossOnlineCollected.minus(onlineRefundsPaid));
+  const cashCollected = grossCashCollected.minus(cashRefundsPaid);
+  const onlineCollected = grossOnlineCollected.minus(onlineRefundsPaid);
   const actualCollections = cashCollected.plus(onlineCollected);
   const totalExpensesPaid = sumOf(expenses, 'amount').minus(sumOf(reversals, 'amount'));
   const custody = (await drawerDTOs(prisma, drawers)).reduce((s, d) => s.plus(d.expectedInDrawer), toDec(0));
