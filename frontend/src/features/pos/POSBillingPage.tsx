@@ -80,6 +80,7 @@ import {
   UserCheck,
   History,
   X,
+  ChevronLeft,
   ChevronRight,
   Users,
   Printer,
@@ -128,6 +129,13 @@ export const POSBillingPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const categoryScrollerRef = useRef<HTMLDivElement>(null);
+
+  const handleCategoryWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (categoryScrollerRef.current && e.deltaY !== 0) {
+      categoryScrollerRef.current.scrollLeft += e.deltaY;
+    }
+  };
 
   // Shortcut: '/' to focus search input
   useEffect(() => {
@@ -1364,8 +1372,13 @@ export const POSBillingPage: React.FC = () => {
     );
     if (unassignedService) {
       toast.warning(`Please select an assigned staff member for '${unassignedService.item.name}' before checkout.`);
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setMobileCartOpen(true);
+      }
       return;
     }
+
+    setMobileCartOpen(false);
     
     // Auto-assign House / Salon to any package that doesn't have assigned staff
     setCart((prev) =>
@@ -1668,6 +1681,527 @@ export const POSBillingPage: React.FC = () => {
 
   const currentCartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
+  const renderCartPanel = (isMobileSheet = false) => (
+    <div className="w-full h-full min-h-0 flex flex-col justify-between overflow-hidden">
+      {/* Top Zone: Header + Cart Items */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {/* Sale Card Header */}
+        <div className="shrink-0 flex items-center justify-between pb-2.5 border-b border-slate-100 flex-wrap gap-1.5">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#2254E1] to-blue-700 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+              <ShoppingCart className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">Current Sale</h3>
+                <Badge variant="neutral" className="text-[10px] font-bold bg-blue-50 text-[#2254E1] border-blue-200 py-0.5 px-2">
+                  {currentCartCount} item{currentCartCount !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {cart.length > 0 && staffList.length > 0 && (
+              <Select onValueChange={(val) => handleAssignStaffToAll(val)}>
+                <SelectTrigger className="text-[11px] h-7 px-2 bg-blue-50/70 border-blue-200 text-[#2254E1] font-semibold rounded-lg shadow-2xs">
+                  <SelectValue placeholder="Assign all..." />
+                </SelectTrigger>
+                <SelectContent className="z-[70]">
+                  <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                    House / Salon (No Staff)
+                  </SelectItem>
+                  {staffList.map((st) => (
+                    <SelectItem key={st.id} value={st.id} className="text-xs">
+                      {st.name} ({st.roleTitle})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {cart.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearCart}
+                className="text-xs h-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 rounded-lg cursor-pointer transition-colors"
+                title="Clear Sale Card"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear
+              </Button>
+            )}
+
+            {isMobileSheet && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileCartOpen(false)}
+                className="h-7 w-7 text-slate-400 hover:text-slate-700 rounded-lg p-0 cursor-pointer"
+                title="Close Cart"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Linked Appointment Badge */}
+        {loadedAppointment && (
+          <div className="shrink-0 p-2 my-2 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <div>
+                <span className="font-bold">Linked:</span> {loadedAppointment.appointmentNumber || loadedAppointment.id}
+                <span className="text-blue-700 block text-[10px]">{loadedAppointment.clientName} • {loadedAppointment.startTime || loadedAppointment.time || '10:00 AM'}</span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setLoadedAppointment(null);
+                setAcknowledgedPriceDiscrepancy(false);
+              }}
+              className="h-5 w-5 p-0 text-blue-500 hover:text-blue-800"
+              title="Unlink Appointment"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        )}
+
+        {/* Price Quote Discrepancy Banner */}
+        {bookingPriceDiscrepancy && (
+          <div className="shrink-0 p-2 my-2 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
+            <div className="flex items-start gap-1.5 text-amber-900">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-[11px]">Price Quote Discrepancy</span>
+                <p className="text-[10px] text-amber-800">
+                  Booking: {formatCurrency(bookingPriceDiscrepancy.quoted)}, active: {formatCurrency(bookingPriceDiscrepancy.canonical)}.
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900 cursor-pointer pt-0.5 border-t border-amber-200/60">
+              <input
+                type="checkbox"
+                checked={acknowledgedPriceDiscrepancy}
+                onChange={(e) => setAcknowledgedPriceDiscrepancy(e.target.checked)}
+                className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
+              />
+              <span>Confirm adjustment</span>
+            </label>
+          </div>
+        )}
+
+        {/* Cart Items List OR Clean Empty State with Dedicated Scroller */}
+        {cart.length === 0 ? (
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-2 py-6 px-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-2 border border-blue-100">
+              <ShoppingCart className="w-5 h-5 opacity-75" />
+            </div>
+            <span className="font-bold text-slate-700 text-xs sm:text-sm">Sale Card is empty</span>
+            <span className="text-[11px] text-slate-400 mt-0.5 max-w-[220px]">Click any service, product, or package on the catalogue to add</span>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2 py-2 pr-1 pos-cart-scroller">
+            {cart.map((ci) => (
+              <div
+                key={ci.cartInstanceId}
+                className="p-2.5 sm:p-3 rounded-xl border transition-all space-y-2 bg-slate-50/80 hover:bg-slate-50/95 border-slate-200/80"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-slate-900 truncate text-xs sm:text-[13px]">{ci.item.name}</span>
+                      {ci.type === 'PACKAGE' ? (
+                        <Badge variant="neutral" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 py-0 px-1.5 font-bold">
+                          Pkg
+                        </Badge>
+                      ) : ci.type === 'PRODUCT' ? (
+                        <Badge variant="neutral" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 py-0 px-1.5 font-bold">
+                          Prd
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <span className="font-mono text-[11px] text-slate-400 font-medium">
+                      {formatCurrency(getCatalogueSellingPrice(ci.item))}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Quantity Adjuster */}
+                    <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUpdateQuantity(ci.cartInstanceId, -1)}
+                        className="w-5.5 h-5.5 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="font-mono font-bold px-1.5 text-xs text-slate-900 min-w-5 text-center">
+                        {ci.quantity}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUpdateQuantity(ci.cartInstanceId, 1)}
+                        className="w-5.5 h-5.5 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+
+                    <span className="font-mono font-bold text-slate-900 w-20 text-right text-xs sm:text-[13px]">
+                      {formatCurrency(getCatalogueSellingPrice(ci.item) * ci.quantity)}
+                    </span>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveItem(ci.cartInstanceId)}
+                      className="w-6 h-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md p-0 transition-colors"
+                      title="Remove item"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Staff Assignment */}
+                {ci.type === 'SERVICE' || ci.type === 'PRODUCT' ? (
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
+                    <span className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5 shrink-0">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <span>
+                        {ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}
+                      </span>
+                    </span>
+                    <Select
+                      value={ci.staffId || 'unassigned'}
+                      onValueChange={(val) => handleAssignStaff(ci.cartInstanceId, val)}
+                    >
+                      <SelectTrigger
+                        className="flex-1 sm:w-[170px] text-xs h-7.5 bg-white border-slate-200 text-slate-700 rounded-lg shadow-2xs font-normal"
+                      >
+                        <SelectValue placeholder="Select Staff..." />
+                      </SelectTrigger>
+                      <SelectContent className="z-[70]">
+                        <SelectItem value="unassigned" className="text-xs text-slate-400 italic">
+                          Select Staff...
+                        </SelectItem>
+                        <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                          House / Salon (No Staff)
+                        </SelectItem>
+                        {staffList.map((st) => (
+                          <SelectItem key={st.id} value={st.id} className="text-xs">
+                            {st.name} ({st.roleTitle})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  /* Package Multi-Staff Allocation */
+                  <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                        <Users className="w-3 h-3 text-[#2254E1]" />
+                        <span>Staff ({ci.assignedStaff?.length || 0}):</span>
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        {ci.assignedStaff && ci.assignedStaff.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleEqualizeStaffPackageAmounts(ci.cartInstanceId)}
+                            className="text-[10px] font-semibold text-[#2254E1] hover:underline cursor-pointer"
+                          >
+                            Split Evenly
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {ci.assignedStaff && ci.assignedStaff.length > 0 && (
+                      <div className="space-y-1 bg-white p-1.5 rounded-lg border border-slate-200">
+                        {ci.assignedStaff.map((st) => {
+                          const lineTotalAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
+                          const currentAmount = st.allocatedAmount ?? (ci.assignedStaff?.length === 1 ? lineTotalAmount : Math.round(lineTotalAmount / (ci.assignedStaff?.length || 1)));
+
+                          return (
+                            <div
+                              key={st.staffId}
+                              className="flex items-center justify-between gap-1.5 text-xs py-0.5"
+                            >
+                              <span className="font-semibold text-slate-800 truncate text-[11px]">{st.staffName}</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={lineTotalAmount}
+                                  value={st.allocatedAmount ?? currentAmount}
+                                  onChange={(e) =>
+                                    handleUpdateStaffPackageAmount(
+                                      ci.cartInstanceId,
+                                      st.staffId,
+                                      Number(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-16 h-6 px-1.5 text-right font-mono font-bold text-xs bg-slate-50 border border-slate-200 rounded-md"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveStaffFromPackage(ci.cartInstanceId, st.staffId)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {staffList.filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id)).length > 0 && (
+                      <div className="pt-0.5">
+                        <Select
+                          value=""
+                          onValueChange={(val) => {
+                            if (val) handleAddStaffToPackage(ci.cartInstanceId, val);
+                          }}
+                        >
+                          <SelectTrigger className="text-xs h-6 bg-blue-50/60 border-blue-200 text-[#2254E1] px-2 font-medium rounded-md">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <Plus className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />
+                              <SelectValue placeholder="Add Staff" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent className="z-[70]">
+                            {!ci.assignedStaff?.some((as) => as.staffId === 'house') && (
+                              <SelectItem value="house" className="text-xs font-semibold text-slate-700">
+                                House / Salon (No Staff)
+                              </SelectItem>
+                            )}
+                            {staffList
+                              .filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id))
+                              .map((st) => (
+                                <SelectItem key={st.id} value={st.id} className="text-xs">
+                                  {st.name} ({st.roleTitle})
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Zone: Customer Attribution + Discount & Tip + Breakdown + Action */}
+      {cart.length > 0 && (
+        <div className="shrink-0 pt-2 border-t border-slate-200/90 space-y-2 bg-white">
+          {/* Customer Attribution (Walk-in or Custom Name/Phone) */}
+          {!selectedClient ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <User className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Customer Name (Walk-in)"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  className="pl-8 text-xs h-8 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400 focus:border-[#2254E1]"
+                />
+              </div>
+              <div className="relative">
+                <Phone className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                <Input
+                  type="tel"
+                  placeholder="Phone (Optional)"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  className="pl-8 text-xs h-8 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400 focus:border-[#2254E1]"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs">
+              <div className="flex items-center gap-2 truncate">
+                <UserCheck className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />
+                <span className="font-bold text-slate-800 truncate">{selectedClient.name}</span>
+                <span className="text-[11px] text-slate-500 font-mono">{selectedClient.phone}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSetWalkIn}
+                className="text-[10px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
+          {/* 1. Discount & Tip (Spaced Side-by-Side) */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Discount Field */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-[#2254E1]" />
+                  <span>Discount</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setDiscountType(discountType === 'FIXED' ? 'PERCENTAGE' : 'FIXED')}
+                  className="text-[10px] font-bold text-[#2254E1] hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                >
+                  {discountType === 'FIXED' ? '% Switch' : 'PKR Switch'}
+                </button>
+              </div>
+              <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8 focus-within:border-[#2254E1] focus-within:ring-2 focus-within:ring-[#2254E1]/10 transition-all">
+                <span className="px-2.5 text-[10px] font-bold bg-slate-50 text-slate-600 border-r border-slate-200 h-full flex items-center shrink-0">
+                  {discountType === 'FIXED' ? 'PKR' : '%'}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={discountValue || ''}
+                  onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                  className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Tip Field */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                  <Coins className="w-3 h-3 text-amber-600" />
+                  <span>Staff Tip</span>
+                </label>
+                {tipAmount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setTipAmount(0)}
+                    className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 cursor-pointer transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/10 transition-all">
+                <span className="px-2.5 text-[10px] font-bold bg-amber-50/70 text-amber-700 border-r border-slate-200 h-full flex items-center shrink-0">
+                  PKR
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={tipAmount || ''}
+                  onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Itemized Breakdown */}
+          <div className="space-y-1.5 py-1.5 border-t border-slate-100 text-xs">
+            <div className="flex items-center justify-between text-slate-600">
+              <span className="text-xs sm:text-[13px] font-medium">Subtotal:</span>
+              <span className="font-mono text-xs sm:text-sm font-semibold text-slate-800">
+                {formatCurrency(calculations.grossSubtotal)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-slate-600">
+              <span className="text-xs sm:text-[13px] font-medium">Discount:</span>
+              <span className={`font-mono text-xs sm:text-sm font-semibold ${calculations.calculatedDiscount > 0 ? 'text-emerald-600 font-bold' : 'text-slate-800'}`}>
+                {calculations.calculatedDiscount > 0 ? `- ${formatCurrency(calculations.calculatedDiscount)}` : formatCurrency(0)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between text-slate-600">
+              <span className="text-xs sm:text-[13px] font-medium">Staff Tip:</span>
+              <span className={`font-mono text-xs sm:text-sm font-semibold ${calculations.cleanTip > 0 ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
+                {calculations.cleanTip > 0 ? `+ ${formatCurrency(calculations.cleanTip)}` : formatCurrency(0)}
+              </span>
+            </div>
+
+            {/* Integrated Interactive Tax Row */}
+            <div className="flex items-center justify-between text-slate-600">
+              <label htmlFor="pos-tax-toggle" className="flex items-center gap-1.5 cursor-pointer select-none hover:text-[#2254E1]">
+                <input
+                  id="pos-tax-toggle"
+                  type="checkbox"
+                  checked={applyBranchTax}
+                  onChange={(e) => setApplyBranchTax(e.target.checked)}
+                  className="rounded border-slate-300 text-[#2254E1] focus:ring-[#2254E1] h-3.5 w-3.5 cursor-pointer"
+                />
+                <span className="text-xs sm:text-[13px] font-medium">
+                  Tax ({applyBranchTax && currentBranch?.taxRate ? `${currentBranch.taxRate}%` : '0%'}):
+                </span>
+              </label>
+              <span className={`font-mono text-xs sm:text-sm font-semibold ${applyBranchTax && calculations.totalTax > 0 ? 'text-[#2254E1] font-bold' : 'text-slate-800'}`}>
+                {applyBranchTax && calculations.totalTax > 0 ? `+${formatCurrency(calculations.totalTax)}` : formatCurrency(0)}
+              </span>
+            </div>
+          </div>
+
+          {/* Net Payable Highlight Box */}
+          <div className="px-3.5 py-2 bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-blue-50/90 border border-blue-200/90 rounded-xl flex items-center justify-between shadow-2xs">
+            <div>
+              <span className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wider block">Net Payable</span>
+              <span className="text-[10px] text-blue-600 font-medium">Total amount due</span>
+            </div>
+            <div className="text-right">
+              <span className="font-mono font-extrabold text-xl text-[#2254E1] tracking-tight">
+                {formatCurrency(calculations.fullInvoiceTotal)}
+              </span>
+            </div>
+          </div>
+
+          {/* Collect Payment & Complete Sale Button */}
+          <Button
+            onClick={() => {
+              if (isMobileSheet) {
+                const unassignedService = cart.find(
+                  (ci) => ci.type === 'SERVICE' && (!ci.staffId || ci.staffId === 'unassigned')
+                );
+                if (unassignedService) {
+                  toast.warning(`Please select an assigned staff member for '${unassignedService.item.name}' before checkout.`);
+                  return;
+                }
+                setMobileCartOpen(false);
+              }
+              handleOpenCheckout();
+            }}
+            className="w-full bg-[#2254E1] hover:bg-[#1B44B8] active:scale-[0.99] text-white font-bold h-10 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-between px-3.5 cursor-pointer transition-all shrink-0 mb-0.5"
+          >
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              <span>Collect Payment & Complete Sale</span>
+            </div>
+            <span className="font-mono text-xs font-black bg-white/20 px-2.5 py-0.5 rounded-lg">
+              {formatCurrency(calculations.fullInvoiceTotal)}
+            </span>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
   if (isLoading && !currentBranch) {
     return (
       <div className="h-full min-h-[500px] flex flex-col items-center justify-center p-8 bg-slate-50">
@@ -1832,12 +2366,30 @@ export const POSBillingPage: React.FC = () => {
 
         {/* Right: Actions, Branch Switcher & Queue */}
         <div className="flex items-center gap-1.5 shrink-0 justify-end">
+          {/* Mobile Cart Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setMobileCartOpen(true)}
+            className="lg:hidden h-8.5 px-2.5 text-xs gap-1.5 font-bold border-blue-200 bg-blue-50/60 text-[#2254E1] hover:bg-blue-100 rounded-xl"
+            title="Open Cart"
+          >
+            <ShoppingCart className="w-3.5 h-3.5 text-[#2254E1]" />
+            <span>Cart</span>
+            {currentCartCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-[#2254E1] text-white">
+                {currentCartCount}
+              </span>
+            )}
+          </Button>
+
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setIsQueueOpen(true)}
-            className="h-8.5 px-3 text-xs gap-1.5 font-bold border-blue-200 bg-blue-50/60 text-[#2254E1] hover:bg-blue-100 rounded-xl"
+            className="h-8.5 px-2.5 sm:px-3 text-xs gap-1.5 font-bold border-blue-200 bg-blue-50/60 text-[#2254E1] hover:bg-blue-100 rounded-xl"
           >
             <Calendar className="w-3.5 h-3.5 text-[#2254E1]" />
             Queue
@@ -1914,36 +2466,71 @@ export const POSBillingPage: React.FC = () => {
             )}
           </div>
 
-          {/* Category Filter Pills (Theme Royal Blue) */}
-          <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-            {categoryPills.map((pill) => {
-              const isActive = selectedCategory === pill.key;
-              return (
-                <button
-                  key={pill.key}
-                  type="button"
-                  onClick={() => setSelectedCategory(pill.key)}
-                  className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
-                    isActive
-                      ? 'bg-[#2254E1] text-white shadow-xs font-bold'
-                      : 'bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
-                  }`}
-                >
-                  <span>{pill.label}</span>
-                  <span
-                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                      isActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
+          {/* Category Filter Pills (Theme Royal Blue) with Horizontal Scroll & Arrow Controls */}
+          <div className="relative shrink-0 flex items-center group">
+            {/* Left Scroll Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (categoryScrollerRef.current) {
+                  categoryScrollerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+                }
+              }}
+              className="hidden sm:flex items-center justify-center w-6 h-6 rounded-lg bg-white border border-slate-200 shadow-2xs text-slate-500 hover:text-[#2254E1] hover:bg-slate-50 shrink-0 mr-1 cursor-pointer transition-colors"
+              title="Scroll categories left"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Scrollable Pills Container with Visible Scrollbar */}
+            <div
+              ref={categoryScrollerRef}
+              onWheel={handleCategoryWheel}
+              className="flex-1 flex items-center gap-1.5 overflow-x-auto pb-1.5 pos-category-scroller"
+            >
+              {categoryPills.map((pill) => {
+                const isActive = selectedCategory === pill.key;
+                return (
+                  <button
+                    key={pill.key}
+                    type="button"
+                    onClick={() => setSelectedCategory(pill.key)}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'bg-[#2254E1] text-white shadow-xs font-bold'
+                        : 'bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
                     }`}
                   >
-                    {pill.count}
-                  </span>
-                </button>
-              );
-            })}
+                    <span>{pill.label}</span>
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                        isActive ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {pill.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right Scroll Button */}
+            <button
+              type="button"
+              onClick={() => {
+                if (categoryScrollerRef.current) {
+                  categoryScrollerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+                }
+              }}
+              className="hidden sm:flex items-center justify-center w-6 h-6 rounded-lg bg-white border border-slate-200 shadow-2xs text-slate-500 hover:text-[#2254E1] hover:bg-slate-50 shrink-0 ml-1 cursor-pointer transition-colors"
+              title="Scroll categories right"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Catalogue Items Grid Container */}
-          <div className="flex-1 min-h-[260px] lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <div className="shrink-0 flex items-center justify-between text-[10px] text-slate-400 px-1 pb-1">
               <span className="font-medium text-slate-600">
                 Available Items ({filteredCatalogueItems.length})
@@ -1951,7 +2538,7 @@ export const POSBillingPage: React.FC = () => {
               <span>Click card to add directly</span>
             </div>
 
-            <div className="flex-1 min-h-0 max-h-[420px] lg:max-h-none overflow-y-auto pr-1">
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-20 lg:pb-2">
               {filteredCatalogueItems.length === 0 ? (
                 <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400 text-xs space-y-1">
                   <Search className="w-7 h-7 mx-auto text-slate-300 stroke-1" />
@@ -1959,7 +2546,7 @@ export const POSBillingPage: React.FC = () => {
                   <p className="text-[11px] text-slate-400">Try adjusting your search query or category filter.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 pb-2">
+                <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 pb-2">
                   {filteredCatalogueItems.map((item) => {
                     const isProd = item.type === 'PRODUCT';
                     const isPkg = item.type === 'PACKAGE';
@@ -1975,66 +2562,65 @@ export const POSBillingPage: React.FC = () => {
                         onClick={() => {
                           if (!isOut) handleItemCardClick(item);
                         }}
-                        className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3 cursor-pointer group bg-white min-h-[145px] ${
+                        className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all flex flex-col justify-between gap-2 sm:gap-3 cursor-pointer group bg-white min-h-[115px] sm:min-h-[145px] ${
                           isOut
                             ? 'border-slate-200 bg-slate-50/60 opacity-60 cursor-not-allowed'
-                            : inCartQty > 0
-                            ? 'border-[#2254E1] ring-1 ring-[#2254E1] bg-white shadow-xs'
-                            : 'border-slate-200 bg-white hover:border-slate-300 shadow-2xs hover:shadow-xs hover:-translate-y-0.5'
+                            : 'border-slate-200/90 bg-white hover:border-slate-300 shadow-2xs hover:shadow-xs hover:-translate-y-0.5'
                         }`}
                       >
                         <div>
-                          <div className="flex items-start justify-between gap-1.5">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="flex items-start justify-between gap-1">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
                               {isProd ? (
-                                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                                  <ShoppingBag className="w-4 h-4" />
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                  <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </div>
                               ) : isPkg ? (
-                                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                                  <Package className="w-4 h-4" />
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                                  <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </div>
                               ) : (
-                                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#2254E1] flex items-center justify-center">
-                                  <Scissors className="w-4 h-4" />
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-50 text-[#2254E1] flex items-center justify-center">
+                                  <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            <div className="flex items-center gap-1 flex-wrap justify-end">
                               {inCartQty > 0 && (
-                                <span className="text-[11px] font-bold bg-[#2254E1] text-white px-2.5 py-0.5 rounded-full shadow-2xs">
-                                  {inCartQty} in cart
+                                <span className="text-[9px] sm:text-[10px] font-semibold bg-blue-50 text-[#2254E1] border border-blue-200/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#2254E1]" />
+                                  <span>{inCartQty} in cart</span>
                                 </span>
                               )}
                               {isOut ? (
-                                <span className="text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full uppercase">
-                                  Out of Stock
+                                <span className="text-[9px] sm:text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 px-1.5 sm:px-2 py-0.5 rounded-full uppercase">
+                                  Out
                                 </span>
                               ) : isLow ? (
-                                <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
-                                  Low: {item.stock} left
+                                <span className="text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 sm:px-2 py-0.5 rounded-full">
+                                  {item.stock} left
                                 </span>
                               ) : isPkg ? (
-                                <span className="text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full">
+                                <span className="text-[9px] sm:text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200 px-1.5 sm:px-2 py-0.5 rounded-full">
                                   {((item.raw as PackageItem).components || []).length} items
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full">
+                                <span className="text-[9px] sm:text-[10px] font-medium bg-slate-100 text-slate-600 px-1.5 sm:px-2.5 py-0.5 rounded-full truncate max-w-[70px] sm:max-w-none">
                                   {item.category}
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <h3 className="font-bold text-slate-900 text-sm tracking-tight line-clamp-2 pt-2 group-hover:text-[#2254E1] transition-colors">
+                          <h3 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight line-clamp-2 pt-1.5 sm:pt-2 group-hover:text-[#2254E1] transition-colors leading-snug">
                             {item.name}
                           </h3>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs mt-auto">
+                        <div className="flex items-center justify-between pt-1.5 sm:pt-2 border-t border-slate-100 text-xs mt-auto">
                           <div>
-                            <span className="font-mono font-bold text-slate-900 text-sm group-hover:text-[#2254E1] transition-colors">
+                            <span className="font-mono font-bold text-slate-900 text-xs sm:text-sm group-hover:text-[#2254E1] transition-colors">
                               {formatCurrency(item.price)}
                             </span>
                           </div>
@@ -2046,16 +2632,16 @@ export const POSBillingPage: React.FC = () => {
                               e.stopPropagation();
                               if (!isOut) handleItemCardClick(item);
                             }}
-                            className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                            className={`w-6.5 h-6.5 sm:w-7.5 sm:h-7.5 rounded-lg sm:rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                               isOut
                                 ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
                                 : inCartQty > 0
-                                ? 'bg-[#2254E1] text-white shadow-xs hover:bg-blue-700'
+                                ? 'bg-blue-50 text-[#2254E1] border border-blue-200 hover:bg-[#2254E1] hover:text-white'
                                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                             title={isOut ? 'Out of Stock' : 'Add to Sale Card'}
                           >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       </div>
@@ -2068,520 +2654,9 @@ export const POSBillingPage: React.FC = () => {
         </div>
 
         {/* Right Column: Current Sale Card (lg:col-span-5) */}
-        <div id="pos-cart-panel" className="lg:col-span-5 flex flex-col h-full min-h-0 overflow-hidden">
+        <div id="pos-cart-panel" className="hidden lg:flex lg:col-span-5 flex-col h-full min-h-0 overflow-hidden">
           <Card className="w-full h-full min-h-0 flex flex-col justify-between p-3.5 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-hidden transition-all">
-            {/* Top Zone: Header + Cart Items */}
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {/* Sale Card Header */}
-              <div className="shrink-0 flex items-center justify-between pb-2.5 border-b border-slate-100 flex-wrap gap-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#2254E1] to-blue-700 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-                    <ShoppingCart className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">Current Sale</h3>
-                      <Badge variant="neutral" className="text-[10px] font-bold bg-blue-50 text-[#2254E1] border-blue-200 py-0.5 px-2">
-                        {currentCartCount} item{currentCartCount !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  {cart.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearCart}
-                      className="text-xs h-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 rounded-lg cursor-pointer transition-colors"
-                      title="Clear Sale Card"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-1" /> Clear
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Linked Appointment Badge */}
-              {loadedAppointment && (
-                <div className="shrink-0 p-2 my-2 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <div>
-                      <span className="font-bold">Linked:</span> {loadedAppointment.appointmentNumber || loadedAppointment.id}
-                      <span className="text-blue-700 block text-[10px]">{loadedAppointment.clientName} • {loadedAppointment.startTime || loadedAppointment.time || '10:00 AM'}</span>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setLoadedAppointment(null);
-                      setAcknowledgedPriceDiscrepancy(false);
-                    }}
-                    className="h-5 w-5 p-0 text-blue-500 hover:text-blue-800"
-                    title="Unlink Appointment"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Price Quote Discrepancy Banner */}
-              {bookingPriceDiscrepancy && (
-                <div className="shrink-0 p-2 my-2 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
-                  <div className="flex items-start gap-1.5 text-amber-900">
-                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-[11px]">Price Quote Discrepancy</span>
-                      <p className="text-[10px] text-amber-800">
-                        Booking: {formatCurrency(bookingPriceDiscrepancy.quoted)}, active: {formatCurrency(bookingPriceDiscrepancy.canonical)}.
-                      </p>
-                    </div>
-                  </div>
-
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900 cursor-pointer pt-0.5 border-t border-amber-200/60">
-                    <input
-                      type="checkbox"
-                      checked={acknowledgedPriceDiscrepancy}
-                      onChange={(e) => setAcknowledgedPriceDiscrepancy(e.target.checked)}
-                      className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
-                    />
-                    <span>Confirm adjustment</span>
-                  </label>
-                </div>
-              )}
-
-              {/* Cart Items List OR Clean Empty State with Dedicated Scroller */}
-              {cart.length === 0 ? (
-                <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-2 py-6 px-4 text-center">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-2 border border-blue-100">
-                    <ShoppingCart className="w-5 h-5 opacity-75" />
-                  </div>
-                  <span className="font-bold text-slate-700 text-xs sm:text-sm">Sale Card is empty</span>
-                  <span className="text-[11px] text-slate-400 mt-0.5 max-w-[220px]">Click any service, product, or package on the left catalogue to add</span>
-                </div>
-              ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-2 py-2 pr-1.5 pos-cart-scroller">
-                  {cart.map((ci) => (
-                    <div
-                      key={ci.cartInstanceId}
-                      className="p-2.5 sm:p-3 bg-slate-50/80 hover:bg-slate-50/95 rounded-xl border border-slate-200/80 transition-all space-y-2"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-slate-900 truncate text-xs sm:text-[13px]">{ci.item.name}</span>
-                            {ci.type === 'PACKAGE' ? (
-                              <Badge variant="neutral" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 py-0 px-1.5 font-bold">
-                                Pkg
-                              </Badge>
-                            ) : ci.type === 'PRODUCT' ? (
-                              <Badge variant="neutral" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 py-0 px-1.5 font-bold">
-                                Prd
-                              </Badge>
-                            ) : null}
-                          </div>
-                          <span className="font-mono text-[11px] text-slate-400 font-medium">
-                            {formatCurrency(getCatalogueSellingPrice(ci.item))}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          {/* Quantity Adjuster */}
-                          <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleUpdateQuantity(ci.cartInstanceId, -1)}
-                              className="w-5.5 h-5.5 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <span className="font-mono font-bold px-1.5 text-xs text-slate-900 min-w-5 text-center">
-                              {ci.quantity}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleUpdateQuantity(ci.cartInstanceId, 1)}
-                              className="w-5.5 h-5.5 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-
-                          <span className="font-mono font-bold text-slate-900 w-20 text-right text-xs sm:text-[13px]">
-                            {formatCurrency(getCatalogueSellingPrice(ci.item) * ci.quantity)}
-                          </span>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveItem(ci.cartInstanceId)}
-                            className="w-6 h-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md p-0 transition-colors"
-                            title="Remove item"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Staff Assignment */}
-                      {ci.type === 'SERVICE' || ci.type === 'PRODUCT' ? (
-                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
-                          <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-                            <User className="w-3 h-3 text-slate-400" />
-                            <span>{ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}</span>
-                          </span>
-                          <Select
-                            value={ci.staffId || 'unassigned'}
-                            onValueChange={(val) => handleAssignStaff(ci.cartInstanceId, val)}
-                          >
-                            <SelectTrigger
-                              className={`w-[160px] text-xs h-7.5 bg-white transition-all rounded-lg shadow-2xs ${
-                                !ci.staffId || ci.staffId === 'unassigned'
-                                  ? 'border-slate-300 text-slate-600 hover:border-slate-400'
-                                  : 'border-blue-300 bg-blue-50/40 text-blue-900 font-semibold'
-                              }`}
-                            >
-                              <SelectValue placeholder="Select Staff..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned" className="text-xs text-slate-500 italic">
-                                -- Select Staff --
-                              </SelectItem>
-                              <SelectItem value="house" className="text-xs font-semibold text-slate-700">
-                                House / Salon (No Staff)
-                              </SelectItem>
-                              {staffList.map((st) => (
-                                <SelectItem key={st.id} value={st.id} className="text-xs">
-                                  {st.name} ({st.roleTitle})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ) : (
-                        /* Package Multi-Staff Allocation */
-                        <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
-                          <div className="flex items-center justify-between flex-wrap gap-1">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                              <Users className="w-3 h-3 text-[#2254E1]" />
-                              <span>Staff ({ci.assignedStaff?.length || 0}):</span>
-                            </span>
-
-                            <div className="flex items-center gap-1">
-                              {ci.assignedStaff && ci.assignedStaff.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleEqualizeStaffPackageAmounts(ci.cartInstanceId)}
-                                  className="text-[10px] font-semibold text-[#2254E1] hover:underline cursor-pointer"
-                                >
-                                  Split Evenly
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {ci.assignedStaff && ci.assignedStaff.length > 0 && (
-                            <div className="space-y-1 bg-white p-1.5 rounded-lg border border-slate-200">
-                              {ci.assignedStaff.map((st) => {
-                                const lineTotalAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
-                                const currentAmount = st.allocatedAmount ?? (ci.assignedStaff?.length === 1 ? lineTotalAmount : Math.round(lineTotalAmount / (ci.assignedStaff?.length || 1)));
-
-                                return (
-                                  <div
-                                    key={st.staffId}
-                                    className="flex items-center justify-between gap-1.5 text-xs py-0.5"
-                                  >
-                                    <span className="font-semibold text-slate-800 truncate text-[11px]">{st.staffName}</span>
-                                    <div className="flex items-center gap-1">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max={lineTotalAmount}
-                                        value={st.allocatedAmount ?? currentAmount}
-                                        onChange={(e) =>
-                                          handleUpdateStaffPackageAmount(
-                                            ci.cartInstanceId,
-                                            st.staffId,
-                                            Number(e.target.value) || 0
-                                          )
-                                        }
-                                        className="w-16 h-6 px-1.5 text-right font-mono font-bold text-xs bg-slate-50 border border-slate-200 rounded-md"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveStaffFromPackage(ci.cartInstanceId, st.staffId)}
-                                        className="p-1 text-slate-400 hover:text-rose-600 rounded"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {staffList.filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id)).length > 0 && (
-                            <div className="pt-0.5">
-                              <Select
-                                value=""
-                                onValueChange={(val) => {
-                                  if (val) handleAddStaffToPackage(ci.cartInstanceId, val);
-                                }}
-                              >
-                                <SelectTrigger className="text-xs h-6 bg-blue-50/60 border-blue-200 text-[#2254E1] px-2 font-medium rounded-md">
-                                  <div className="flex items-center gap-1 min-w-0">
-                                    <Plus className="w-3 h-3 text-[#2254E1] shrink-0" />
-                                    <SelectValue placeholder="Add Staff" />
-                                  </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {!ci.assignedStaff?.some((as) => as.staffId === 'house') && (
-                                    <SelectItem value="house" className="text-xs font-semibold text-slate-700">
-                                      House / Salon (No Staff)
-                                    </SelectItem>
-                                  )}
-                                  {staffList
-                                    .filter((s) => !ci.assignedStaff?.some((as) => as.staffId === s.id))
-                                    .map((st) => (
-                                      <SelectItem key={st.id} value={st.id} className="text-xs">
-                                        {st.name} ({st.roleTitle})
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Zone: Client Info, Financial Controls & Checkout */}
-            <div className="shrink-0 space-y-2.5 pt-2 border-t border-slate-100 mt-auto">
-              {cart.length === 0 ? (
-                /* Clean placeholder when cart is empty */
-                <div className="space-y-2.5 pt-1">
-                  <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">Net Payable</span>
-                      <span className="text-[10px] text-slate-400">Cart is empty</span>
-                    </div>
-                    <span className="font-mono font-extrabold text-lg text-slate-400">
-                      {formatCurrency(0)}
-                    </span>
-                  </div>
-
-                  <Button
-                    disabled
-                    className="w-full bg-slate-100 text-slate-400 font-bold h-10 text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200/60 mb-0.5"
-                  >
-                    <CreditCard className="w-4 h-4 opacity-40" />
-                    <span>Select Items to Checkout</span>
-                  </Button>
-                </div>
-              ) : (
-                /* Active Cart Summary & Checkout */
-                <div className="space-y-2.5">
-                  {/* Client Identification Row */}
-                  {selectedClient ? (
-                    <div className="h-8.5 px-3 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between text-xs text-slate-800">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <UserCheck className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />
-                        <span className="font-bold text-slate-900 truncate text-xs">{selectedClient.name}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">({selectedClient.phone})</span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Badge variant="primary" className="text-[9px] py-0 px-1.5 font-bold">
-                          CRM
-                        </Badge>
-                        <button
-                          type="button"
-                          onClick={handleSetWalkIn}
-                          className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer transition-colors ml-1"
-                          title="Switch to Walk-in"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="relative">
-                        <User className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                        <Input
-                          type="text"
-                          placeholder="Customer Name (Walk-in)"
-                          value={clientName}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setClientName(val);
-                            if (val.trim()) setIsWalkIn(false);
-                          }}
-                          className="pl-8 text-xs h-8 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400 focus:border-[#2254E1]"
-                        />
-                      </div>
-                      <div className="relative">
-                        <Phone className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                        <Input
-                          type="tel"
-                          placeholder="Phone (Optional)"
-                          value={clientPhone}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setClientPhone(val);
-                            if (val.trim()) setIsWalkIn(false);
-                          }}
-                          className="pl-8 text-xs h-8 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400 focus:border-[#2254E1]"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 1. Discount & Tip (Spaced Side-by-Side) */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Discount Field */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                          <Tag className="w-3 h-3 text-[#2254E1]" />
-                          <span>Discount</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setDiscountType(discountType === 'FIXED' ? 'PERCENTAGE' : 'FIXED')}
-                          className="text-[10px] font-bold text-[#2254E1] hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                        >
-                          {discountType === 'FIXED' ? '% Switch' : 'PKR Switch'}
-                        </button>
-                      </div>
-                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8 focus-within:border-[#2254E1] focus-within:ring-2 focus-within:ring-[#2254E1]/10 transition-all">
-                        <span className="px-2.5 text-[10px] font-bold bg-slate-50 text-slate-600 border-r border-slate-200 h-full flex items-center shrink-0">
-                          {discountType === 'FIXED' ? 'PKR' : '%'}
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={discountValue || ''}
-                          onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Tip Field */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                          <Coins className="w-3 h-3 text-amber-600" />
-                          <span>Staff Tip</span>
-                        </label>
-                        {tipAmount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setTipAmount(0)}
-                            className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 cursor-pointer transition-colors"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/10 transition-all">
-                        <span className="px-2.5 text-[10px] font-bold bg-amber-50/70 text-amber-700 border-r border-slate-200 h-full flex items-center shrink-0">
-                          PKR
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={tipAmount || ''}
-                          onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
-                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 2. Itemized Breakdown */}
-                  <div className="space-y-1 py-1.5 border-t border-slate-100 text-xs">
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-[11px] font-medium">Subtotal:</span>
-                      <span className="font-mono text-slate-800 text-[11px] font-semibold">{formatCurrency(calculations.grossSubtotal)}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-[11px] font-medium">Discount:</span>
-                      <span className={`font-mono text-[11px] ${calculations.calculatedDiscount > 0 ? 'text-emerald-600 font-bold' : 'text-slate-800'}`}>
-                        - {formatCurrency(calculations.calculatedDiscount)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-slate-500">
-                      <span className="text-[11px] font-medium">Tip:</span>
-                      <span className={`font-mono text-[11px] ${calculations.cleanTip > 0 ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
-                        {calculations.cleanTip > 0 ? `+ ${formatCurrency(calculations.cleanTip)}` : formatCurrency(0)}
-                      </span>
-                    </div>
-
-                    {/* Integrated Interactive Tax Row */}
-                    <div className="flex items-center justify-between text-slate-600">
-                      <label htmlFor="pos-tax-toggle" className="flex items-center gap-1.5 cursor-pointer select-none text-slate-600 hover:text-[#2254E1]">
-                        <input
-                          id="pos-tax-toggle"
-                          type="checkbox"
-                          checked={applyBranchTax}
-                          onChange={(e) => setApplyBranchTax(e.target.checked)}
-                          className="rounded border-slate-300 text-[#2254E1] focus:ring-[#2254E1] h-3.5 w-3.5 cursor-pointer"
-                        />
-                        <span className="text-[11px] font-medium">
-                          Tax ({applyBranchTax && currentBranch?.taxRate ? `${currentBranch.taxRate}%` : '0%'}):
-                        </span>
-                      </label>
-                      <span className={`font-mono text-[11px] ${applyBranchTax && calculations.totalTax > 0 ? 'text-[#2254E1] font-bold' : 'text-slate-800'}`}>
-                        {applyBranchTax && calculations.totalTax > 0 ? `+${formatCurrency(calculations.totalTax)}` : formatCurrency(0)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Net Payable Highlight Box */}
-                  <div className="px-3.5 py-2 bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-blue-50/90 border border-blue-200/90 rounded-xl flex items-center justify-between shadow-2xs">
-                    <div>
-                      <span className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wider block">Net Payable</span>
-                      <span className="text-[10px] text-blue-600 font-medium">Total amount due</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-mono font-extrabold text-xl text-[#2254E1] tracking-tight">
-                        {formatCurrency(calculations.fullInvoiceTotal)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Collect Payment & Complete Sale Button */}
-                  <Button
-                    onClick={handleOpenCheckout}
-                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] active:scale-[0.99] text-white font-bold h-10 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-between px-3.5 cursor-pointer transition-all shrink-0 mb-0.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" />
-                      <span>Collect Payment & Complete Sale</span>
-                    </div>
-                    <span className="font-mono text-xs font-black bg-white/20 px-2.5 py-0.5 rounded-lg">
-                      {formatCurrency(calculations.fullInvoiceTotal)}
-                    </span>
-                  </Button>
-                </div>
-              )}
-            </div>
+            {renderCartPanel(false)}
           </Card>
         </div>
       </div>
@@ -3223,7 +3298,10 @@ export const POSBillingPage: React.FC = () => {
 
       {/* 10. Mobile Sticky Quick Action Bar when cart has items */}
       {cart.length > 0 && (
-        <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center justify-between border border-slate-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div
+          onClick={() => setMobileCartOpen(true)}
+          className="lg:hidden fixed bottom-3 left-3 right-3 z-40 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center justify-between border border-slate-800 animate-in fade-in slide-in-from-bottom-2 duration-200 cursor-pointer"
+        >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#2254E1] flex items-center justify-center font-bold text-xs shrink-0">
               <ShoppingCart className="w-4 h-4 text-white" />
@@ -3240,20 +3318,25 @@ export const POSBillingPage: React.FC = () => {
           <Button
             type="button"
             size="sm"
-            onClick={() => {
-              const el = document.getElementById('pos-cart-panel');
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-              } else {
-                handleOpenCheckout();
-              }
+            onClick={(e) => {
+              e.stopPropagation();
+              setMobileCartOpen(true);
             }}
-            className="h-8 px-3.5 text-xs font-bold bg-[#2254E1] hover:bg-blue-600 text-white rounded-xl shadow-xs"
+            className="h-8 px-3.5 text-xs font-bold bg-[#2254E1] hover:bg-blue-600 text-white rounded-xl shadow-xs cursor-pointer"
           >
             Review & Pay
           </Button>
         </div>
       )}
+
+      {/* 11. Mobile Cart Drawer Sheet (strictly mobile only) */}
+      <Sheet open={mobileCartOpen} onOpenChange={setMobileCartOpen}>
+        <SheetContent side="bottom" className="lg:hidden h-[92vh] max-h-[92vh] p-0 flex flex-col rounded-t-3xl overflow-hidden bg-white z-50 border-t border-slate-200 shadow-2xl">
+          <div className="flex-1 min-h-0 flex flex-col p-3.5 sm:p-4 overflow-hidden">
+            {renderCartPanel(true)}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

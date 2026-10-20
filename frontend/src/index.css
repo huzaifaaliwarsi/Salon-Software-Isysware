@@ -186,6 +186,28 @@
   background: #94a3b8;
 }
 
+/* POS Category Pills Dedicated Visible Horizontal Scrollbar */
+.pos-category-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.pos-category-scroller::-webkit-scrollbar {
+  height: 5px;
+}
+.pos-category-scroller::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+.pos-category-scroller::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+}
+.pos-category-scroller::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 @media print {
   body * {
     visibility: hidden !important;
