@@ -8,7 +8,7 @@ import prisma from '../../config/prisma.js';
 import { forbidden, notFound } from '../../lib/AppError.js';
 import { resolveReadBranch } from '../../lib/scope.js';
 import { dateOnly, getBusinessDate, ymd, startOfDay, endOfDay, toDateString, toTimeString } from '../../lib/dates.js';
-import { round2, toDec } from '../../lib/money.js';
+import { max0, round2, toDec } from '../../lib/money.js';
 import { listAppointments } from '../appointments/appointments.service.js';
 import { inventorySummary } from '../inventory/inventory.service.js';
 import { resolveReportContext, formatReportResponse } from '../../lib/reportRange.js';
@@ -428,12 +428,32 @@ export const salesInvoicesReport = async (actor, q = {}) => {
         onlineAccountsMap.set(accName, existing);
       }
     }
+    // Deduct actually paid refunds from cash & online collection totals
+    if (inv.lifecycle !== 'VOIDED') {
+      for (const r of inv.refunds) {
+        const cashOut = toDec(r.cashOut || 0);
+        if (cashOut.greaterThan(0)) {
+          if (r.method === 'CASH') {
+            totalCashCollected = totalCashCollected.minus(cashOut);
+          } else {
+            totalOnlineCollected = totalOnlineCollected.minus(cashOut);
+            for (const acc of onlineAccountsMap.values()) {
+              if (r.accountId && acc.accountId === r.accountId) {
+                acc.amount = acc.amount.minus(cashOut);
+              }
+            }
+          }
+        }
+      }
+    }
   }
+  totalCashCollected = max0(totalCashCollected);
+  totalOnlineCollected = max0(totalOnlineCollected);
 
   const onlineAccountsBreakdown = Array.from(onlineAccountsMap.values()).map((a) => ({
     accountId: a.accountId,
     accountName: a.accountName,
-    amount: n(a.amount),
+    amount: n(max0(a.amount)),
     count: a.count,
   }));
 
@@ -480,6 +500,15 @@ export const salesInvoicesReport = async (actor, q = {}) => {
       if (p.method === 'CASH') rowCash = rowCash.plus(toDec(p.amount));
       else rowOnline = rowOnline.plus(toDec(p.amount));
     }
+    if (inv.lifecycle !== 'VOIDED') {
+      for (const r of inv.refunds) {
+        const cashOut = toDec(r.cashOut || 0);
+        if (cashOut.greaterThan(0)) {
+          if (r.method === 'CASH') rowCash = max0(rowCash.minus(cashOut));
+          else rowOnline = max0(rowOnline.minus(cashOut));
+        }
+      }
+    }
 
     return {
       id: inv.id,
@@ -510,6 +539,8 @@ export const salesInvoicesReport = async (actor, q = {}) => {
       total: n(total),
       paid: n(paid),
       refunded: n(totalRefund),
+      refundedAmount: n(totalRefund),
+      refundedCashOut: n(refundedCashOut),
       outstanding: n(outstanding),
       cashPaid: n(rowCash),
       onlinePaid: n(rowOnline),
@@ -584,7 +615,7 @@ export const incomeExpenseReport = async (actor, query = {}) => {
   const utcRange = { gte: ctx.fromDate, lte: ctx.toDate };
   const branchFilter = ctx.branchId ? { branchId: ctx.branchId } : {};
 
-  const [branches, staffMembers, users, invoices, refunds, expenses, payrollRuns, commissionEvents, inventoryLosses, retailCogsAgg, consumableUsageAgg] = await Promise.all([
+  const [branches, staffMembers, users, invoices, refunds, expenses, payrollRuns, commissionEvents, inventoryLosses, retailCogsAgg, consumableUsageAgg, returnedCogsAgg] = await Promise.all([
     prisma.branch.findMany({ select: { id: true, name: true, city: true } }),
     prisma.staff.findMany({ select: { id: true, name: true, employeeCode: true, branchId: true } }),
     prisma.user.findMany({ select: { id: true, name: true, role: true, branchId: true } }),
@@ -632,6 +663,10 @@ export const incomeExpenseReport = async (actor, query = {}) => {
         refundNumber: true,
         refundDate: true,
         netReversed: true,
+        taxReversed: true,
+        tipReversed: true,
+        cashOut: true,
+        receivableCancelled: true,
         method: true,
         reason: true,
         byName: true,
@@ -748,6 +783,17 @@ export const incomeExpenseReport = async (actor, query = {}) => {
           },
           _sum: { totalCost: true },
         }),
+    // 9. Stock returns reversing retail COGS
+    actor.role === 'ACCOUNTANT' || !prisma.stockMovement?.aggregate
+      ? Promise.resolve({ _sum: { totalCost: 0 } })
+      : prisma.stockMovement.aggregate({
+          where: {
+            createdAt: utcRange,
+            movementType: { in: ['POS_RETURN_IN', 'SALES_RETURN_IN'] },
+            ...branchFilter,
+          },
+          _sum: { totalCost: true },
+        }),
   ]);
 
   const branchMap = new Map(branches.map((b) => [b.id, b.name]));
@@ -787,9 +833,10 @@ export const incomeExpenseReport = async (actor, query = {}) => {
     });
   }
 
-  // Refunds -> Recognized Income Reversal (Negative Income)
+  // Refunds -> Recognized Income Reversal (Negative Income) & Actual Outflow Deduction
   for (const ref of refunds) {
     const reversedNet = toDec(ref.netReversed);
+    const actualCashOut = toDec(ref.cashOut || 0);
     const bId = ref.invoice?.branchId || '';
     rawRows.push({
       id: `ref-${ref.id}`,
@@ -804,7 +851,8 @@ export const incomeExpenseReport = async (actor, query = {}) => {
       description: `Refund for ${ref.invoice?.invoiceNumber || 'Invoice'} (${ref.reason || 'Client Refund'})`,
       income: -n(reversedNet),
       expense: 0,
-      paid: -n(reversedNet),
+      paid: -n(actualCashOut),
+      collectionAmount: -n(actualCashOut),
       discount: 0,
       remaining: 0,
       paymentMethod: ref.method || 'CASH',
@@ -1125,7 +1173,8 @@ export const incomeExpenseReport = async (actor, query = {}) => {
     .plus(totalCommissionExpenses)
     .plus(totalInventoryLoss);
 
-  const retailCogs = toDec(retailCogsAgg?._sum?.cogsAmount || 0);
+  const returnedCogs = toDec(returnedCogsAgg?._sum?.totalCost || 0);
+  const retailCogs = max0(toDec(retailCogsAgg?._sum?.cogsAmount || 0).minus(returnedCogs));
   const consumableUsage = toDec(consumableUsageAgg?._sum?.totalCost || 0);
   const totalCogs = round2(retailCogs.plus(consumableUsage));
   const grossContribution = round2(totalIncome.minus(totalCogs));
@@ -1142,11 +1191,15 @@ export const incomeExpenseReport = async (actor, query = {}) => {
   // Extract distinct categories for filter dropdown
   const allCategories = [...new Set(rawRows.map((r) => r.category).filter(Boolean))].sort();
 
+  const totalRevenueReversals = refunds.reduce((s, r) => s.plus(toDec(r.netReversed)), toDec(0));
+  const totalRefundsPaid = refunds.reduce((s, r) => s.plus(toDec(r.cashOut || 0)), toDec(0));
+
   const kpis = {
     totalRecognizedIncome: n(totalIncome),
     totalCollections: n(totalCollections),
     cogs: n(totalCogs),
     retailCogs: n(retailCogs),
+    returnedCogs: n(returnedCogs),
     consumableUsage: n(consumableUsage),
     grossContribution: n(grossContribution),
     directExpenses: n(totalDirectExpenses),
@@ -1157,6 +1210,8 @@ export const incomeExpenseReport = async (actor, query = {}) => {
     netOperatingPosition: n(netOperatingPosition),
     operatingMarginPercent,
     totalTransactions: filteredRows.length,
+    totalRevenueReversals: n(totalRevenueReversals),
+    totalRefundsPaid: n(totalRefundsPaid),
   };
 
   const totals = {
@@ -1169,6 +1224,8 @@ export const incomeExpenseReport = async (actor, query = {}) => {
     discount: n(totalDiscount),
     remaining: n(totalRemaining),
     net: n(netOperatingPosition),
+    revenueReversals: n(totalRevenueReversals),
+    refundsPaid: n(totalRefundsPaid),
   };
 
   return formatReportResponse(ctx.meta, {
@@ -1202,8 +1259,6 @@ const resolvePriorPeriodDates = (fromStr, toStr) => {
     priorToDate: endOfDay(pToStr),
   };
 };
-
-const max0 = (d) => (d.isNegative() ? toDec(0) : d);
 
 const computePeriodMetrics = async (branchId, fromStr, toStr, fromDate, toDate) => {
   const branchFilter = branchId ? { branchId } : {};
@@ -2013,12 +2068,52 @@ export const cashDrawerReport = async (actor, query = {}) => {
     }
   }
 
+  const refundRecords = await prisma.invoiceRefund.findMany({
+    where: {
+      refundDate: dateRange,
+      invoice: {
+        ...branchFilter,
+        ...(actor.role === 'ACCOUNTANT'
+          ? { processedByUserId: actor.id }
+          : (query.custodianUserId && query.custodianUserId !== 'ALL' ? { processedByUserId: query.custodianUserId } : {})),
+      },
+    },
+    select: {
+      id: true,
+      refundNumber: true,
+      cashOut: true,
+      method: true,
+      accountId: true,
+      drawerId: true,
+    },
+  });
+
+  for (const ref of refundRecords) {
+    const out = toDec(ref.cashOut || 0);
+    if (out.greaterThan(0)) {
+      if (ref.method === 'CASH') {
+        overallCashReceipts = overallCashReceipts.minus(out);
+      } else {
+        overallOnlineReceipts = overallOnlineReceipts.minus(out);
+        if (ref.accountId) {
+          for (const acc of onlineAccountMap.values()) {
+            if (acc.accountId === ref.accountId) {
+              acc.amount = acc.amount.minus(out);
+            }
+          }
+        }
+      }
+    }
+  }
+  overallCashReceipts = max0(overallCashReceipts);
+  overallOnlineReceipts = max0(overallOnlineReceipts);
+
   const onlineAccountsBreakdown = Array.from(onlineAccountMap.values()).map((a) => ({
     accountId: a.accountId,
     accountName: a.accountName,
     accountType: a.accountType,
     providerName: a.providerName,
-    amount: n(a.amount),
+    amount: n(max0(a.amount)),
     count: a.count,
   }));
 
@@ -3645,6 +3740,9 @@ export const detailedIncomeReport = async (actor, query = {}) => {
             tipReversed: true,
             cashOut: true,
             receivableCancelled: true,
+            method: true,
+            reason: true,
+            byName: true,
             lines: {
               select: {
                 id: true,
@@ -3781,6 +3879,27 @@ export const detailedIncomeReport = async (actor, query = {}) => {
         lifecycle: inv.lifecycle,
         createdByName: inv.processedByName,
         payments: invPayments,
+        refunds: inv.refunds.map((r) => ({
+          id: r.id,
+          refundNumber: r.refundNumber,
+          type: r.type,
+          refundDate: ymd(r.refundDate),
+          method: r.method,
+          reason: r.reason,
+          byName: r.byName,
+          netReversed: n(r.netReversed),
+          taxReversed: n(r.taxReversed),
+          tipReversed: n(r.tipReversed),
+          cashOut: n(r.cashOut),
+          receivableCancelled: n(r.receivableCancelled),
+          lineRefund: r.lines?.find((rl) => rl.lineId === line.id)
+            ? {
+                quantity: Number(r.lines.find((rl) => rl.lineId === line.id).quantity),
+                net: n(r.lines.find((rl) => rl.lineId === line.id).net),
+                tax: n(r.lines.find((rl) => rl.lineId === line.id).tax),
+              }
+            : null,
+        })),
         components: (line.components || []).map((c) => ({
           id: c.id,
           serviceCode: c.serviceCode,

@@ -726,8 +726,13 @@ export const SalesInvoicesPage: React.FC = () => {
                         </td>
 
                         {/* 15. Paid */}
-                        <td className="py-3.5 px-4 text-right tabular-nums font-semibold text-[#10B981] text-[13px] whitespace-nowrap">
-                          {formatPKR(row.paid)}
+                        <td className="py-3.5 px-4 text-right tabular-nums text-[13px] whitespace-nowrap">
+                          <div className="font-semibold text-[#10B981]">{formatPKR(row.paid)}</div>
+                          {(row.refunded > 0 || (row.refundedAmount ?? 0) > 0) && (
+                            <div className="text-[11px] text-rose-500 font-medium">
+                              Refund: -{formatPKR(row.refundedAmount ?? row.refunded)}
+                            </div>
+                          )}
                         </td>
 
                         {/* 16. Remaining */}

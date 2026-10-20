@@ -27,6 +27,7 @@ import {
   PackageCheck,
   CreditCard,
   Search,
+  RotateCw,
 } from 'lucide-react';
 
 const selectClass =
@@ -596,8 +597,13 @@ export const DetailedIncomeReportPage: React.FC = () => {
                             </td>
 
                             {/* Recognized Net */}
-                            <td className="py-3.5 px-3 text-right tabular-nums font-bold text-[#0047AB] whitespace-nowrap">
-                              PKR {formatPKR(row.recognizedNet)}
+                            <td className="py-3.5 px-3 text-right tabular-nums whitespace-nowrap">
+                              <div className="font-bold text-[#0047AB]">PKR {formatPKR(row.recognizedNet)}</div>
+                              {row.refundedNet > 0 && (
+                                <div className="text-[10px] text-rose-600 font-medium">
+                                  Reversal: -PKR {formatPKR(row.refundedNet)}
+                                </div>
+                              )}
                             </td>
 
                             {/* Tax */}
@@ -687,6 +693,31 @@ export const DetailedIncomeReportPage: React.FC = () => {
                                       <span className="text-slate-400">No payment records yet (Bill is Unpaid).</span>
                                     )}
                                   </div>
+
+                                  {/* Refunds & Reversals linked to this invoice */}
+                                  {row.refunds && row.refunds.length > 0 && (
+                                    <div className="bg-white p-3 rounded-lg border border-rose-200">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="font-bold text-rose-800">Linked Refund & Reversal Entries ({row.invoiceNumber}):</span>
+                                        <span className="text-[11px] text-slate-500 italic">
+                                          * Linked reversals deducted from recognized turnover; actual refunds paid out on refund date.
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {row.refunds.map((r) => (
+                                          <div key={r.id} className="px-3 py-1.5 rounded bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                                            <RotateCw className="w-3.5 h-3.5 text-rose-600" />
+                                            <span className="font-semibold">{r.refundNumber}</span>
+                                            <span>{r.refundDate}</span>
+                                            <span>Reversal: <strong className="text-rose-700">PKR {formatPKR(r.netReversed)}</strong></span>
+                                            {r.cashOut > 0 && <span>(Cash Out: PKR {formatPKR(r.cashOut)})</span>}
+                                            {r.lineRefund && <span>[Line Net: -PKR {formatPKR(r.lineRefund.net)}]</span>}
+                                            {r.reason && <span className="text-[11px] text-slate-500 italic">({r.reason})</span>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
 
                                   <div className="text-[11px] text-slate-400">
                                     Created & Posted by: <strong className="text-slate-700">{row.createdByName}</strong> • Campus: <strong className="text-slate-700">{row.branchName}</strong>

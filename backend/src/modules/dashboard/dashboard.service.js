@@ -7,7 +7,7 @@ import prisma from '../../config/prisma.js';
 import { forbidden, notFound } from '../../lib/AppError.js';
 import { assertBranchAccess, resolveReadBranch } from '../../lib/scope.js';
 import { dateOnly, getBusinessDate, ymd } from '../../lib/dates.js';
-import { round2, toDec } from '../../lib/money.js';
+import { max0, round2, toDec } from '../../lib/money.js';
 import { accountBalances } from '../../lib/balances.js';
 import { toDTOs as branchDTOs } from '../branches/branches.service.js';
 import { toStaffDTO } from '../staff/staff.mapper.js';
@@ -32,7 +32,7 @@ export const computeBranchMetrics = async (branchIds, date, { id, name, code }) 
 
   const [sales, refunds, dues, payments, expenses, reversals, onDuty, apptCount, drawers, accounts] = await Promise.all([
     prisma.invoice.aggregate({ where: { ...live, date: day }, _sum: { subtotal: true, discount: true, netSales: true, tax: true }, _count: true }),
-    prisma.invoiceRefund.aggregate({ where: { refundDate: day, invoice: scope }, _sum: { netReversed: true, taxReversed: true } }),
+    prisma.invoiceRefund.findMany({ where: { refundDate: day, invoice: scope }, select: { netReversed: true, taxReversed: true, tipReversed: true, cashOut: true, method: true } }),
     prisma.invoice.aggregate({ where: { ...live, amountDue: { gt: 0 } }, _sum: { amountDue: true } }),
     prisma.invoicePayment.groupBy({ by: ['method'], where: { ...scope, date: day }, _sum: { amount: true, tipAmountAllocated: true } }),
     prisma.expense.aggregate({ where: { ...scope, status: { in: ['POSTED', 'REVERSED'] }, isReversalRecord: false, expenseDate: day }, _sum: { amount: true } }),
@@ -43,10 +43,23 @@ export const computeBranchMetrics = async (branchIds, date, { id, name, code }) 
     prisma.paymentAccount.findMany({ where: scope, select: { id: true } }),
   ]);
 
+  const netReversed = refunds.reduce((s, r) => s.plus(toDec(r.netReversed)), toDec(0));
+  const taxReversed = refunds.reduce((s, r) => s.plus(toDec(r.taxReversed)), toDec(0));
+  const cashRefundsPaid = refunds
+    .filter((r) => r.method === 'CASH')
+    .reduce((s, r) => s.plus(toDec(r.cashOut || 0)), toDec(0));
+  const onlineRefundsPaid = refunds
+    .filter((r) => r.method === 'ONLINE_ACCOUNT')
+    .reduce((s, r) => s.plus(toDec(r.cashOut || 0)), toDec(0));
+  const totalRefundsPaid = cashRefundsPaid.plus(onlineRefundsPaid);
+
   const byMethod = (m) => payments.find((p) => p.method === m);
-  const cashCollected = sumOf(byMethod('CASH') ?? {}, 'amount');
-  const onlineCollected = sumOf(byMethod('ONLINE_ACCOUNT') ?? {}, 'amount');
+  const grossCashCollected = sumOf(byMethod('CASH') ?? {}, 'amount');
+  const grossOnlineCollected = sumOf(byMethod('ONLINE_ACCOUNT') ?? {}, 'amount');
   const tipsCollected = payments.reduce((s, p) => s.plus(sumOf(p, 'tipAmountAllocated')), toDec(0));
+
+  const cashCollected = max0(grossCashCollected.minus(cashRefundsPaid));
+  const onlineCollected = max0(grossOnlineCollected.minus(onlineRefundsPaid));
   const actualCollections = cashCollected.plus(onlineCollected);
   const totalExpensesPaid = sumOf(expenses, 'amount').minus(sumOf(reversals, 'amount'));
   const custody = (await drawerDTOs(prisma, drawers)).reduce((s, d) => s.plus(d.expectedInDrawer), toDec(0));
@@ -57,12 +70,17 @@ export const computeBranchMetrics = async (branchIds, date, { id, name, code }) 
     branchId: id, branchName: name, branchCode: code,
     grossSales: n(sumOf(sales, 'subtotal')),
     totalDiscounts: n(sumOf(sales, 'discount')),
-    netSales: n(sumOf(sales, 'netSales').minus(sumOf(refunds, 'netReversed'))),
-    taxBilled: n(sumOf(sales, 'tax').minus(sumOf(refunds, 'taxReversed'))),
+    netSales: n(max0(sumOf(sales, 'netSales').minus(netReversed))),
+    taxBilled: n(max0(sumOf(sales, 'tax').minus(taxReversed))),
     tipsCollected: n(tipsCollected),
     actualCollections: n(actualCollections),
     cashCollected: n(cashCollected),
     onlineCollected: n(onlineCollected),
+    grossCashCollected: n(grossCashCollected),
+    grossOnlineCollected: n(grossOnlineCollected),
+    refundsPaid: n(totalRefundsPaid),
+    cashRefundsPaid: n(cashRefundsPaid),
+    onlineRefundsPaid: n(onlineRefundsPaid),
     outstandingReceivables: n(sumOf(dues, 'amountDue')),
     cashInCustody: n(custody),
     onlineBalancesTotal: n(onlineBalancesTotal),
@@ -95,7 +113,7 @@ const computeRevenueTrend = async (scope) => {
 
   const results = await Promise.all(
     months.map(async (m) => {
-      const [invAgg, expAgg, payAgg] = await Promise.all([
+      const [invAgg, expAgg, payAgg, refAgg] = await Promise.all([
         prisma.invoice.aggregate({
           where: { ...scope, lifecycle: { not: 'VOIDED' }, date: { gte: m.start, lte: m.end } },
           _sum: { netSales: true },
@@ -108,12 +126,16 @@ const computeRevenueTrend = async (scope) => {
           where: { ...scope, date: { gte: m.start, lte: m.end } },
           _sum: { amount: true },
         }),
+        prisma.invoiceRefund.aggregate({
+          where: { refundDate: { gte: m.start, lte: m.end }, invoice: scope },
+          _sum: { netReversed: true, cashOut: true },
+        }),
       ]);
       return {
         label: m.label,
-        revenue: n(invAgg._sum?.netSales ?? 0),
+        revenue: n(max0(toDec(invAgg._sum?.netSales ?? 0).minus(toDec(refAgg._sum?.netReversed ?? 0)))),
         expenses: n(expAgg._sum?.amount ?? 0),
-        collections: n(payAgg._sum?.amount ?? 0),
+        collections: n(max0(toDec(payAgg._sum?.amount ?? 0).minus(toDec(refAgg._sum?.cashOut ?? 0)))),
       };
     })
   );
@@ -264,9 +286,10 @@ export const accountantDashboard = async (actor, { branchId } = {}) => {
   const scope = { branchId: branch.id };
   const me = actor.id;
 
-  const [drawer, payments, expensesPaid, settlements, unpaid, receiptInvoices, disbursements] = await Promise.all([
+  const [drawer, payments, myRefunds, expensesPaid, settlements, unpaid, receiptInvoices, disbursements] = await Promise.all([
     prisma.cashDrawer.findFirst({ where: { ...scope, kind: 'DRAWER', custodianUserId: me, status: { in: ['OPEN', 'SETTLEMENT_PENDING'] } }, orderBy: { createdAt: 'desc' } }),
     prisma.invoicePayment.groupBy({ by: ['method'], where: { ...scope, date: dateOnly(date), processedByUserId: me }, _sum: { amount: true } }),
+    prisma.invoiceRefund.findMany({ where: { ...scope, refundDate: dateOnly(date), byUserId: me }, select: { cashOut: true, method: true } }),
     prisma.expense.aggregate({ where: { ...scope, status: 'POSTED', isReversalRecord: false, paidByUserId: me }, _sum: { amount: true } }),
     prisma.settlement.findMany({ where: { ...scope, submittedByUserId: me }, orderBy: { createdAt: 'desc' } }),
     prisma.invoice.aggregate({ where: { ...scope, lifecycle: { not: 'VOIDED' }, status: { in: ['UNPAID', 'PARTIAL'] } }, _sum: { amountDue: true }, _count: true }),
@@ -276,15 +299,18 @@ export const accountantDashboard = async (actor, { branchId } = {}) => {
   const d = drawer ? (await drawerDTOs(prisma, [drawer]))[0] : null;
   const pending = settlements.find((s) => s.status === 'SUBMITTED');
   const lastApproved = settlements.find((s) => s.status === 'APPROVED');
-  const collected = (m) => n(sumOf(payments.find((p) => p.method === m) ?? {}, 'amount'));
+  const myCashRefunds = myRefunds.filter((r) => r.method === 'CASH').reduce((s, r) => s.plus(toDec(r.cashOut || 0)), toDec(0));
+  const myOnlineRefunds = myRefunds.filter((r) => r.method === 'ONLINE_ACCOUNT').reduce((s, r) => s.plus(toDec(r.cashOut || 0)), toDec(0));
+  const todayCashCollected = n(max0(sumOf(payments.find((p) => p.method === 'CASH') ?? {}, 'amount').minus(myCashRefunds)));
+  const todayOnlineCollected = n(max0(sumOf(payments.find((p) => p.method === 'ONLINE_ACCOUNT') ?? {}, 'amount').minus(myOnlineRefunds)));
 
   return {
     branch: (await branchDTOs([branch]))[0],
     cashCustodyBalance: d?.expectedInDrawer ?? 0,
     expectedCashInCustody: d?.expectedInDrawer ?? 0,
     lastCountedCash: drawer?.lastCountedCash != null ? n(drawer.lastCountedCash) : lastApproved ? n(lastApproved.countedCash) : 0,
-    todayCashCollected: collected('CASH'),
-    todayOnlineCollected: collected('ONLINE_ACCOUNT'),
+    todayCashCollected,
+    todayOnlineCollected,
     expensesPaidByAccountant: n(sumOf(expensesPaid, 'amount')),
     pendingSettlementAmount: pending ? n(pending.handoverAmount) : 0,
     settlementStatus: pending ? 'PENDING_VERIFICATION' : lastApproved ? 'APPROVED_TRANSFERRED' : 'NO_PENDING',

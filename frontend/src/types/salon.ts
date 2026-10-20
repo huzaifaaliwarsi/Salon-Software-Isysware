@@ -1304,6 +1304,7 @@ export interface BalanceSheetSummary {
   cashTipsTotal: number;
   floatReceivedTotal: number;
   cashExpensesPaidTotal: number;
+  cashRefundsPaidTotal?: number;
   cashReversalsRefundTotal: number;
   approvedHandoversTotal: number;
   expectedCashInCustody: number;
@@ -1990,6 +1991,10 @@ export interface SalesInvoiceReportRow {
   total: number;
   paid: number;
   refunded: number;
+  refundedAmount?: number;
+  refundedCashOut?: number;
+  cashPaid?: number;
+  onlinePaid?: number;
   outstanding: number;
   notes?: string;
   refundCount: number;
@@ -2103,6 +2108,25 @@ export interface DetailedIncomeRow {
   createdByName: string;
   payments: DetailedIncomePayment[];
   components?: DetailedIncomeComponent[];
+  refunds?: Array<{
+    id: string;
+    refundNumber: string;
+    type: string;
+    refundDate: string;
+    method?: string;
+    reason?: string;
+    byName?: string;
+    netReversed: number;
+    taxReversed: number;
+    tipReversed: number;
+    cashOut: number;
+    receivableCancelled: number;
+    lineRefund?: {
+      quantity: number;
+      net: number;
+      tax: number;
+    } | null;
+  }>;
 }
 
 export interface DetailedIncomeKPIs {

@@ -199,10 +199,11 @@ export const MyBalanceSheetPage: React.FC = () => {
   const duesCollected = summary?.previousDuesCollectedTotal ?? 0;
   const tipsCollected = summary?.cashTipsTotal ?? 0;
   const totalCashCollections = cashSales + duesCollected + tipsCollected || totalCollections;
-  const cashExpenses = summary?.cashExpensesPaidTotal ?? totalExpenses;
-  const cashRefunds = summary?.cashReversalsRefundTotal ?? 0;
+  const cashExpenses = summary?.cashExpensesPaidTotal ?? expensesList.filter((t) => t.type !== 'INVOICE_REFUND' && t.type !== 'HANDOVER_SETTLEMENT').reduce((acc, t) => acc + (t.cashOut || 0), 0);
+  const cashRefunds = summary?.cashRefundsPaidTotal ?? expensesList.filter((t) => t.type === 'INVOICE_REFUND').reduce((acc, t) => acc + (t.cashOut || 0), 0);
+  const handovers = summary?.approvedHandoversTotal ?? expensesList.filter((t) => t.type === 'HANDOVER_SETTLEMENT').reduce((acc, t) => acc + (t.cashOut || 0), 0);
   const nonCash = summary?.onlineCollectionsTotal ?? 0;
-  const expectedCash = summary?.expectedCashInCustody ?? Math.max(0, openingCash + totalCashCollections - cashExpenses - cashRefunds);
+  const expectedCash = summary?.expectedCashInCustody ?? Math.max(0, openingCash + totalCashCollections - cashExpenses - cashRefunds - handovers);
   const remainingUnsettled = Math.max(0, expectedCash);
   const isSettled = remainingUnsettled === 0;
 

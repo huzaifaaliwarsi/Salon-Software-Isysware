@@ -30,6 +30,12 @@ export const toNum = (v) => toDec(v).toNumber();
 /** Convert Decimal to a string with exactly 2 decimal places */
 export const toStr = (v) => toDec(v).toFixed(2);
 
+/** Clamp Decimal to zero minimum */
+export const max0 = (v) => {
+  const d = toDec(v);
+  return d.isNegative() ? toDec(0) : d;
+};
+
 /**
  * Split `total` across `weights` proportionally so that Σ parts === total exactly.
  * The rounding remainder goes to the part with the largest weight (or last on tie).

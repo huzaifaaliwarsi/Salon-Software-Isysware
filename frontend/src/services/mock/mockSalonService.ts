@@ -213,8 +213,22 @@ class MockSalonService implements SalonServiceContract {
 
     const grossSales = invoicesForDate.reduce((sum, inv) => sum + inv.subtotal, 0);
     const totalDiscounts = invoicesForDate.reduce((sum, inv) => sum + inv.discount, 0);
-    const netSales = invoicesForDate.reduce((sum, inv) => sum + inv.netSales, 0);
-    const taxBilled = invoicesForDate.reduce((sum, inv) => sum + inv.tax, 0);
+
+    const branchRefunds = branchInvoices.flatMap((inv) => inv.refunds || []);
+    const refundsForDate = branchRefunds.filter(
+      (r: any) => r.refundDate === targetDate || (r.createdAt && r.createdAt.slice(0, 10) === targetDate)
+    );
+    const refundedNetForDate = refundsForDate.reduce((sum: number, r: any) => sum + (r.netReversed || 0), 0);
+    const refundedTaxForDate = refundsForDate.reduce((sum: number, r: any) => sum + (r.taxReversed || 0), 0);
+    const cashRefundsPaid = refundsForDate
+      .filter((r: any) => r.method === 'CASH')
+      .reduce((sum: number, r: any) => sum + (r.cashOut || 0), 0);
+    const onlineRefundsPaid = refundsForDate
+      .filter((r: any) => r.method === 'ONLINE_ACCOUNT')
+      .reduce((sum: number, r: any) => sum + (r.cashOut || 0), 0);
+
+    const netSales = Math.max(0, invoicesForDate.reduce((sum, inv) => sum + inv.netSales, 0) - refundedNetForDate);
+    const taxBilled = Math.max(0, invoicesForDate.reduce((sum, inv) => sum + inv.tax, 0) - refundedTaxForDate);
 
     // Current outstanding receivables (cumulative across all unpaid/partial invoices)
     const outstandingReceivables = branchInvoices.reduce((sum, inv) => sum + inv.amountDue, 0);
@@ -226,12 +240,15 @@ class MockSalonService implements SalonServiceContract {
     // Tips collected calculated from actual payment tip allocations on targetDate, not invoice tip fields
     const tipsCollected = paymentsForDate.reduce((sum, p) => sum + (p.tipAmountAllocated || 0), 0);
 
-    const cashCollected = paymentsForDate
+    const grossCashCollected = paymentsForDate
       .filter((p) => p.method === 'CASH')
       .reduce((sum, p) => sum + p.amount, 0);
-    const onlineCollected = paymentsForDate
+    const grossOnlineCollected = paymentsForDate
       .filter((p) => p.method === 'ONLINE_ACCOUNT')
       .reduce((sum, p) => sum + p.amount, 0);
+
+    const cashCollected = Math.max(0, grossCashCollected - cashRefundsPaid);
+    const onlineCollected = Math.max(0, grossOnlineCollected - onlineRefundsPaid);
     const actualCollections = cashCollected + onlineCollected;
 
     // 3. Cash Drawers & Physical Cash in Custody (current balance)
@@ -5164,6 +5181,7 @@ class MockSalonService implements SalonServiceContract {
     let cashTipsTotal = 0;
     let floatReceivedTotal = 0;
     let cashExpensesPaidTotal = 0;
+    let cashRefundsPaidTotal = 0;
     let cashReversalsRefundTotal = 0;
     let approvedHandoversTotal = 0;
 
@@ -5173,6 +5191,7 @@ class MockSalonService implements SalonServiceContract {
       if (tx.type === 'TIP_RECEIVED') cashTipsTotal = roundCurrency(cashTipsTotal + tx.cashIn);
       if (tx.type === 'FLOAT_RECEIVED') floatReceivedTotal = roundCurrency(floatReceivedTotal + tx.cashIn);
       if (tx.type === 'EXPENSE_PAID') cashExpensesPaidTotal = roundCurrency(cashExpensesPaidTotal + tx.cashOut);
+      if (tx.type === 'INVOICE_REFUND') cashRefundsPaidTotal = roundCurrency(cashRefundsPaidTotal + tx.cashOut);
       if (tx.type === 'EXPENSE_REVERSAL_REFUND') cashReversalsRefundTotal = roundCurrency(cashReversalsRefundTotal + tx.cashIn);
       if (tx.type === 'HANDOVER_SETTLEMENT') approvedHandoversTotal = roundCurrency(approvedHandoversTotal + tx.cashOut);
     }
@@ -5190,6 +5209,7 @@ class MockSalonService implements SalonServiceContract {
       cashTipsTotal,
       floatReceivedTotal,
       cashExpensesPaidTotal,
+      cashRefundsPaidTotal,
       cashReversalsRefundTotal,
       approvedHandoversTotal,
       expectedCashInCustody,
