@@ -78,8 +78,12 @@ export const DebitCreditStatementPage: React.FC<{ initialTab?: 'PAYMENT_ACCOUNTS
   // Cash Drawer Sub-view: 'TRANSACTIONS' (Debit/Credit Ledger) | 'SHIFTS' (Shift Reconciliation)
   const [cashSubView, setCashSubView] = useState<'TRANSACTIONS' | 'SHIFTS'>('TRANSACTIONS');
 
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
+
   // Shared Filters
-  const [selectedBranch, setSelectedBranch] = useState<string>(activeBranchId || user.branchId || 'ALL');
+  const [selectedBranch, setSelectedBranch] = useState<string>(
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
+  );
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -408,6 +412,7 @@ export const DebitCreditStatementPage: React.FC<{ initialTab?: 'PAYMENT_ACCOUNTS
               <label className={labelClass}>Campus / Branch</label>
               <select
                 value={selectedBranch}
+                disabled={!isSuperAdmin}
                 onChange={(e) => setSelectedBranch(e.target.value)}
                 className={selectClass}
               >

@@ -23,7 +23,9 @@ import {
   Loader2,
   Eye,
   Receipt,
+  RotateCcw,
 } from 'lucide-react';
+import { RefundVoidModal } from './components/RefundVoidModal';
 
 const selectClass =
   'w-full text-xs border border-slate-300 rounded-md px-3 py-2 bg-white text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-[#0047AB] focus:border-[#0047AB] transition-colors';
@@ -77,10 +79,13 @@ export const SalesInvoicesPage: React.FC = () => {
     return <AccessDeniedView attemptedPath="/reports/sales-invoices" />;
   }
 
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
   const isAccountant = user.role === 'ACCOUNTANT';
 
   // Filter Form State
-  const [selectedBranch, setSelectedBranch] = useState<string>(activeBranchId || user.branchId || 'ALL');
+  const [selectedBranch, setSelectedBranch] = useState<string>(
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
+  );
   const [selectedCashier, setSelectedCashier] = useState<string>('ALL');
   const [cashiersList, setCashiersList] = useState<User[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<string>('ALL');
@@ -100,6 +105,11 @@ export const SalesInvoicesPage: React.FC = () => {
   const [receiptInvoice, setReceiptInvoice] = useState<Invoice | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState<boolean>(false);
   const [isLoadingReceipt, setIsLoadingReceipt] = useState<boolean>(false);
+
+  // Refund / Void Modal State
+  const [refundTargetInvoice, setRefundTargetInvoice] = useState<Invoice | null>(null);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState<boolean>(false);
+  const [isLoadingRefundTarget, setIsLoadingRefundTarget] = useState<boolean>(false);
 
   // Load cashiers / accountants list for filter dropdown (for Admin / Super Admin)
   useEffect(() => {
@@ -174,6 +184,22 @@ export const SalesInvoicesPage: React.FC = () => {
       console.error('Failed to load invoice receipt details:', err);
     } finally {
       setIsLoadingReceipt(false);
+    }
+  };
+
+  // Open Refund / Void Modal
+  const handleOpenRefund = async (invoiceId: string) => {
+    setIsLoadingRefundTarget(true);
+    try {
+      const fullInvoice = await salonService.getInvoice(invoiceId);
+      if (fullInvoice) {
+        setRefundTargetInvoice(fullInvoice);
+        setIsRefundModalOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to load invoice details for refund:', err);
+    } finally {
+      setIsLoadingRefundTarget(false);
     }
   };
 
@@ -372,10 +398,11 @@ export const SalesInvoicesPage: React.FC = () => {
             <label className={labelClass}>Campus</label>
             <select
               value={selectedBranch}
+              disabled={!isSuperAdmin}
               onChange={(e) => setSelectedBranch(e.target.value)}
               className={selectClass}
             >
-              <option value="ALL">All Campuses</option>
+              {isSuperAdmin && <option value="ALL">All Campuses</option>}
               {allBranches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -594,8 +621,10 @@ export const SalesInvoicesPage: React.FC = () => {
                         </td>
 
                         {/* 2. Invoice # */}
-                        <td className="py-3.5 px-4 font-semibold text-[#0047AB] whitespace-nowrap text-[13px]">
-                          {row.invoiceNumber}
+                        <td className="py-3.5 px-4 font-semibold whitespace-nowrap text-[13px]">
+                          <span className={row.lifecycle === 'VOIDED' ? 'line-through text-slate-400' : 'text-[#0047AB]'}>
+                            {row.invoiceNumber}
+                          </span>
                         </td>
 
                         {/* 3. Date */}
@@ -647,9 +676,23 @@ export const SalesInvoicesPage: React.FC = () => {
 
                         {/* 8. Lifecycle */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                            {row.lifecycle || 'ACTIVE'}
-                          </span>
+                          {row.lifecycle === 'VOIDED' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                              VOIDED
+                            </span>
+                          ) : row.lifecycle === 'REFUNDED' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700 border border-purple-200">
+                              REFUNDED
+                            </span>
+                          ) : row.lifecycle === 'PARTIALLY_REFUNDED' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                              PARTIAL REFUND
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ACTIVE
+                            </span>
+                          )}
                         </td>
 
                         {/* 9. Gross */}
@@ -698,15 +741,28 @@ export const SalesInvoicesPage: React.FC = () => {
 
                         {/* 17. Action */}
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenReceipt(row.id)}
-                            disabled={isLoadingReceipt}
-                            className="p-1 rounded text-slate-500 hover:text-[#0047AB] hover:bg-blue-50 transition-colors cursor-pointer"
-                            title="View receipt"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReceipt(row.id)}
+                              disabled={isLoadingReceipt}
+                              className="p-1 rounded text-slate-500 hover:text-[#0047AB] hover:bg-blue-50 transition-colors cursor-pointer"
+                              title="View receipt"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {['SUPER_ADMIN', 'ADMIN'].includes(user.role) && row.lifecycle !== 'VOIDED' && row.lifecycle !== 'REFUNDED' && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRefund(row.id)}
+                                disabled={isLoadingRefundTarget}
+                                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Void or Refund invoice"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -776,11 +832,24 @@ export const SalesInvoicesPage: React.FC = () => {
       </div>
 
       {/* PRINTABLE RECEIPT MODAL */}
-      <ReceiptModal
-        isOpen={isReceiptOpen}
-        onClose={() => setIsReceiptOpen(false)}
-        invoice={receiptInvoice}
-        branch={allBranches.find((b) => b.id === receiptInvoice?.branchId) || null}
+      {isReceiptOpen && receiptInvoice && (
+        <ReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => setIsReceiptOpen(false)}
+          invoice={receiptInvoice}
+          branch={allBranches.find((b) => b.id === receiptInvoice?.branchId) || null}
+          onRefund={(inv) => handleOpenRefund(inv.id)}
+        />
+      )}
+
+      {/* REFUND / VOID MODAL */}
+      <RefundVoidModal
+        isOpen={isRefundModalOpen}
+        onClose={() => setIsRefundModalOpen(false)}
+        invoice={refundTargetInvoice}
+        onSuccess={() => {
+          handleApplyFilters();
+        }}
       />
     </div>
   );

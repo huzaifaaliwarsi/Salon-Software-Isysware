@@ -64,7 +64,7 @@ export const TipsStatementPage: React.FC = () => {
   // Filters State
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(
-    activeBranchId || user.branchId || 'ALL'
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
   );
   const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
@@ -348,6 +348,7 @@ export const TipsStatementPage: React.FC = () => {
               <select
                 className={selectClass}
                 value={selectedBranchId}
+                disabled={!isSuperAdmin}
                 onChange={(e) => {
                   setSelectedBranchId(e.target.value);
                   setSelectedStaffId('ALL');

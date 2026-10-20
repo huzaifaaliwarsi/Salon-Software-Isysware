@@ -88,7 +88,7 @@ export const IncomeExpenseReportPage: React.FC = () => {
   const defaultBranch = isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '');
 
   // Filter Form State
-  const [selectedBranch, setSelectedBranch] = useState<string>(activeBranchId || user.branchId || 'ALL');
+  const [selectedBranch, setSelectedBranch] = useState<string>(defaultBranch);
   const [selectedUserType, setSelectedUserType] = useState<string>('ALL');
   const [selectedUser, setSelectedUser] = useState<string>('ALL');
   const [fromDate, setFromDate] = useState<string>('');
@@ -429,13 +429,14 @@ export const IncomeExpenseReportPage: React.FC = () => {
             <label className={labelClass}>Branch</label>
             <select
               value={selectedBranch}
+              disabled={!isSuperAdmin}
               onChange={(e) => {
                 setSelectedBranch(e.target.value);
                 setSelectedUser('ALL');
               }}
               className={selectClass}
             >
-              <option value="ALL">All Branches</option>
+              {isSuperAdmin && <option value="ALL">All Branches</option>}
               {allBranches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}

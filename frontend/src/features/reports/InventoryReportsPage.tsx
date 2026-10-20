@@ -71,7 +71,7 @@ export const InventoryReportsPage: React.FC = () => {
 
   // Filter Form State
   const [selectedBranch, setSelectedBranch] = useState<string>(
-    activeBranchId || user.branchId || 'ALL'
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
   );
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedItemType, setSelectedItemType] = useState<string>('ALL');
@@ -222,6 +222,7 @@ export const InventoryReportsPage: React.FC = () => {
               <select
                 className={selectClass}
                 value={selectedBranch}
+                disabled={!isSuperAdmin}
                 onChange={(e) => setSelectedBranch(e.target.value)}
               >
                 {isSuperAdmin && <option value="ALL">All Campuses</option>}

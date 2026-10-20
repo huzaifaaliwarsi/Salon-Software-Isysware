@@ -18,6 +18,7 @@ categoryRoutes.post('/', authorize(...ADMINS), validate(v.createCategorySchema),
 export const serviceRoutes = Router();
 serviceRoutes.use(authenticate);
 serviceRoutes.get('/',            validate(v.branchQuery, 'query'), c.listServices);
+serviceRoutes.post('/bulk-import', authorize(...ADMINS), validate(v.bulkImportServicesSchema), c.bulkImportServices);
 serviceRoutes.get('/:id',         c.getService);
 serviceRoutes.post('/',           authorize(...ADMINS), validate(v.createServiceSchema), c.createService);
 serviceRoutes.put('/:id',         authorize(...ADMINS), validate(v.updateServiceSchema), c.updateService);
@@ -26,6 +27,7 @@ serviceRoutes.post('/:id/toggle', authorize(...ADMINS), c.toggleService);
 export const packageRoutes = Router();
 packageRoutes.use(authenticate);
 packageRoutes.get('/',            validate(v.branchQuery, 'query'), c.listPackages);
+packageRoutes.post('/bulk-import', authorize(...ADMINS), validate(v.bulkImportPackagesSchema), c.bulkImportPackages);
 packageRoutes.get('/:id',         c.getPackage);
 packageRoutes.post('/',           authorize(...ADMINS), validate(v.createPackageSchema), c.createPackage);
 packageRoutes.put('/:id',         authorize(...ADMINS), validate(v.updatePackageSchema), c.updatePackage);

@@ -2513,8 +2513,8 @@ export const POSBillingPage: React.FC = () => {
 
                     <div className="flex items-center justify-between text-slate-500">
                       <span className="text-[11px] font-medium">Discount:</span>
-                      <span className={`font-mono text-[11px] ${calculations.totalDiscount > 0 ? 'text-emerald-600 font-bold' : 'text-slate-800'}`}>
-                        - {formatCurrency(calculations.totalDiscount)}
+                      <span className={`font-mono text-[11px] ${calculations.calculatedDiscount > 0 ? 'text-emerald-600 font-bold' : 'text-slate-800'}`}>
+                        - {formatCurrency(calculations.calculatedDiscount)}
                       </span>
                     </div>
 
@@ -3159,16 +3159,21 @@ export const POSBillingPage: React.FC = () => {
       </Dialog>
 
       {/* 6. Printable Receipt Modal */}
-      <ReceiptModal
-        isOpen={isReceiptOpen}
-        onClose={() => setIsReceiptOpen(false)}
-        invoice={postedInvoice}
-        branch={currentBranch}
-        onNewSale={() => {
-          setIsReceiptOpen(false);
-          setPostedInvoice(null);
-        }}
-      />
+      {isReceiptOpen && postedInvoice && (
+        <ReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => {
+            setIsReceiptOpen(false);
+            setPostedInvoice(null);
+          }}
+          invoice={postedInvoice}
+          branch={currentBranch}
+          onNewSale={() => {
+            setIsReceiptOpen(false);
+            setPostedInvoice(null);
+          }}
+        />
+      )}
 
       {/* 7. Appointment Queue Sheet */}
       <AppointmentQueueSheet

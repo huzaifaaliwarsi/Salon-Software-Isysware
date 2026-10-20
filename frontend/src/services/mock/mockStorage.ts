@@ -38,6 +38,7 @@ import {
   SupplierReturn,
   StockMovement,
   StockSettlement,
+  Device,
 } from '@/types/salon';
 import { User } from '@/types/auth';
 
@@ -111,6 +112,7 @@ export interface StorageSchema {
   supplierPaymentSequenceCounters?: Record<string, number>;
   supplierReturnSequenceCounters?: Record<string, number>;
   settlementRecordSequenceCounters?: Record<string, number>;
+  devices?: Device[];
 }
 
 export type StoreListener = (store: StorageSchema) => void;

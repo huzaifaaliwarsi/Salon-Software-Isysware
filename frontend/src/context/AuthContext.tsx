@@ -27,11 +27,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [demoDate, setDemoDateState] = useState<string>(() => (USE_MOCK ? mockStorage.getSystemDate() : new Date().toISOString().slice(0, 10)));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Load branches
+  // Load branches (Super Admin receives all; branch managers/staff only their assigned branch)
   const refreshBranches = useCallback(async () => {
     try {
       const branches = await salonService.getBranches();
-      setAllBranches(branches);
+      const current = authService.getCurrentSession();
+      if (current && current.user.role !== 'SUPER_ADMIN') {
+        const myBranch = branches.filter((b) => b.id === current.user.branchId);
+        setAllBranches(myBranch.length > 0 ? myBranch : branches);
+      } else {
+        setAllBranches(branches);
+      }
     } catch (err) {
       console.error('Failed to load branches:', err);
     }
@@ -65,8 +71,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!USE_MOCK) return undefined;
     // Offline demo only: follow the in-browser mock store (cross-tab sync).
     const unsubscribe = mockStorage.subscribe((store) => {
-      setAllBranches([...store.branches]);
       const current = authService.getCurrentSession();
+      if (current && current.user.role !== 'SUPER_ADMIN') {
+        setAllBranches(store.branches.filter((b) => b.id === current.user.branchId));
+      } else {
+        setAllBranches([...store.branches]);
+      }
       setSession(current ? { ...current } : null);
       setDemoDateState(store.systemDate || DEFAULT_DEMO_DATE);
     });
@@ -119,7 +129,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const user = session ? session.user : null;
-  const activeBranchId = session ? session.activeBranchId : 'ALL';
+  const activeBranchId = (session && session.user.role === 'SUPER_ADMIN')
+    ? (session.activeBranchId || 'ALL')
+    : (session?.user?.branchId || '');
   const currentBranch =
     activeBranchId === 'ALL'
       ? null

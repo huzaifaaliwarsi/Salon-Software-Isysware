@@ -503,80 +503,162 @@ export const BranchOperationalSections: React.FC<BranchOperationalSectionsProps>
               </div>
             </div>
 
-            {/* Curved Area SVG Graph */}
-            <div className="relative pt-2">
-              {/* Highlight Peak Badge */}
-              <div className="absolute right-6 top-0 bg-[#2254E1] text-white px-2 py-0.5 rounded-lg shadow-sm text-[10px] font-bold flex items-center gap-1">
-                <span>{formatCurrency(chartPoints.maxVal)}</span>
-                <span className="text-[9px] font-normal opacity-80">
-                  {chartPoints.maxVal > 0 ? 'Peak' : 'No Sales'}
-                </span>
-              </div>
+            {/* Curved Area SVG Graph Wrapper */}
+            <div className="pt-2">
+              <div
+                className="relative w-full h-28 cursor-crosshair select-none"
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const ratio = Math.max(0, Math.min(1, x / rect.width));
+                  const svgX = ratio * chartPoints.width;
 
-              <svg
-                viewBox={`0 0 ${chartPoints.width} ${chartPoints.height}`}
-                className="w-full h-28 overflow-visible"
+                  let closestIdx = 0;
+                  let minDiff = Infinity;
+                  chartPoints.points.forEach((pt, i) => {
+                    const diff = Math.abs(pt.x - svgX);
+                    if (diff < minDiff) {
+                      minDiff = diff;
+                      closestIdx = i;
+                    }
+                  });
+                  setHoveredPointIdx(closestIdx);
+                }}
+                onMouseLeave={() => setHoveredPointIdx(null)}
               >
-                <defs>
-                  <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2254E1" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#2254E1" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Horizontal Guideline */}
-                <line x1="20" y1="20" x2="420" y2="20" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="20" y1="55" x2="420" y2="55" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="20" y1="90" x2="420" y2="90" stroke="#F1F5F9" strokeWidth="1" />
-
-                {/* Area under curve */}
-                {chartPoints.areaPath && (
-                  <path d={chartPoints.areaPath} fill="url(#curveGradient)" />
-                )}
-
-                {/* Curved line stroke */}
-                {chartPoints.curvePath && (
-                  <path
-                    d={chartPoints.curvePath}
-                    fill="none"
-                    stroke="#2254E1"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                )}
-
-                {/* Data points */}
-                {chartPoints.points.map((pt, idx) => (
-                  <g key={idx}>
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r="4"
-                      fill="#FFFFFF"
-                      stroke="#2254E1"
-                      strokeWidth="2"
-                      className="cursor-pointer transition-transform hover:scale-150"
-                      onMouseEnter={() => setHoveredPointIdx(idx)}
-                      onMouseLeave={() => setHoveredPointIdx(null)}
-                    />
-                    {hoveredPointIdx === idx && (
-                      <text
-                        x={pt.x}
-                        y={pt.y - 8}
-                        textAnchor="middle"
-                        className="text-[9px] fill-[#2254E1] font-bold font-mono"
-                      >
-                        {formatCurrency(pt.value)}
-                      </text>
+                {/* Floating Sales Tooltip Card on Hover */}
+                {hoveredPointIdx !== null && chartPoints.points[hoveredPointIdx] && (
+                  <div
+                    className="absolute z-30 pointer-events-none transition-all duration-75 ease-out"
+                    style={{
+                      left: `${(chartPoints.points[hoveredPointIdx].x / chartPoints.width) * 100}%`,
+                      top: `${chartPoints.points[hoveredPointIdx].y < 45 ? 65 : (chartPoints.points[hoveredPointIdx].y / chartPoints.height) * 100}%`,
+                      transform: chartPoints.points[hoveredPointIdx].y < 45 ? 'translate(-50%, 0%)' : 'translate(-50%, -120%)',
+                    }}
+                  >
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white rounded-xl py-1.5 px-3 shadow-xl border border-slate-700/80 text-left whitespace-nowrap min-w-[130px]">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-1 mb-1">
+                        <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-wider">
+                          {chartPoints.points[hoveredPointIdx].label}
+                        </span>
+                        <span className="text-[9px] font-medium text-blue-400 capitalize">
+                          {statsTab.toLowerCase()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-white font-mono">
+                          {formatCurrency(chartPoints.points[hoveredPointIdx].value)}
+                        </span>
+                        {chartPoints.maxVal > 0 && chartPoints.points[hoveredPointIdx].value === chartPoints.maxVal && (
+                          <span className="text-[8px] bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 px-1 py-0.2 rounded font-bold uppercase">
+                            Peak
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[9px] text-slate-400 mt-0.5">
+                        {chartPoints.points[hoveredPointIdx].value > 0 ? 'Confirmed Sales' : 'No Sales Recorded'}
+                      </div>
+                    </div>
+                    {/* Caret arrow pointing to dot */}
+                    {chartPoints.points[hoveredPointIdx].y >= 45 && (
+                      <div className="w-2 h-2 bg-slate-900 rotate-45 mx-auto -mt-1 border-r border-b border-slate-700/80" />
                     )}
-                  </g>
-                ))}
-              </svg>
+                  </div>
+                )}
+
+                {/* Peak summary indicator when no point is actively hovered */}
+                {hoveredPointIdx === null && chartPoints.maxVal > 0 && (
+                  <div className="absolute right-2 top-0 bg-[#2254E1]/10 text-[#2254E1] border border-[#2254E1]/20 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1 pointer-events-none transition-opacity">
+                    <span className="font-mono">{formatCurrency(chartPoints.maxVal)}</span>
+                    <span className="text-[9px] font-semibold opacity-75">Peak</span>
+                  </div>
+                )}
+
+                <svg
+                  viewBox={`0 0 ${chartPoints.width} ${chartPoints.height}`}
+                  className="w-full h-full overflow-visible pointer-events-none"
+                >
+                  <defs>
+                    <linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2254E1" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#2254E1" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Horizontal Guidelines */}
+                  <line x1="20" y1="20" x2="420" y2="20" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="20" y1="55" x2="420" y2="55" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="20" y1="90" x2="420" y2="90" stroke="#F1F5F9" strokeWidth="1" />
+
+                  {/* Area under curve */}
+                  {chartPoints.areaPath && (
+                    <path d={chartPoints.areaPath} fill="url(#curveGradient)" />
+                  )}
+
+                  {/* Curved line stroke */}
+                  {chartPoints.curvePath && (
+                    <path
+                      d={chartPoints.curvePath}
+                      fill="none"
+                      stroke="#2254E1"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  )}
+
+                  {/* Vertical Guideline & Halo on Hovered Point */}
+                  {hoveredPointIdx !== null && chartPoints.points[hoveredPointIdx] && (
+                    <g className="pointer-events-none">
+                      <line
+                        x1={chartPoints.points[hoveredPointIdx].x}
+                        y1={12}
+                        x2={chartPoints.points[hoveredPointIdx].x}
+                        y2={chartPoints.height - 15}
+                        stroke="#2254E1"
+                        strokeWidth="1.5"
+                        strokeDasharray="3 3"
+                        opacity="0.5"
+                      />
+                      <circle
+                        cx={chartPoints.points[hoveredPointIdx].x}
+                        cy={chartPoints.points[hoveredPointIdx].y}
+                        r="9"
+                        fill="#2254E1"
+                        opacity="0.2"
+                      />
+                    </g>
+                  )}
+
+                  {/* Data Points */}
+                  {chartPoints.points.map((pt, idx) => {
+                    const isHovered = hoveredPointIdx === idx;
+                    return (
+                      <circle
+                        key={idx}
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={isHovered ? 5.5 : 4}
+                        fill={isHovered ? '#2254E1' : '#FFFFFF'}
+                        stroke={isHovered ? '#FFFFFF' : '#2254E1'}
+                        strokeWidth={isHovered ? 2.5 : 2}
+                        className="transition-all duration-100"
+                      />
+                    );
+                  })}
+                </svg>
+              </div>
 
               {/* X-axis Month Labels */}
               <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium px-4 pt-1">
                 {trendData.map((d, i) => (
-                  <span key={i}>{d.label}</span>
+                  <span
+                    key={i}
+                    className={`transition-colors ${
+                      hoveredPointIdx === i ? 'text-[#2254E1] font-bold' : ''
+                    }`}
+                  >
+                    {d.label}
+                  </span>
                 ))}
               </div>
             </div>

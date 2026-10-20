@@ -60,7 +60,7 @@ export const AppointmentReportPage: React.FC = () => {
   // Filter Form State
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(
-    activeBranchId || user.branchId || 'ALL'
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
   );
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string>('ALL');
@@ -395,6 +395,7 @@ export const AppointmentReportPage: React.FC = () => {
               <select
                 className={selectClass}
                 value={selectedBranchId}
+                disabled={!isSuperAdmin}
                 onChange={(e) => {
                   setSelectedBranchId(e.target.value);
                   setSelectedStaffId('ALL');

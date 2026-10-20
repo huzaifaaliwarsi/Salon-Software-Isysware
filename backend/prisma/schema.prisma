@@ -308,6 +308,30 @@ enum LineType {
   PRODUCT
 }
 
+enum DeviceType {
+  BIOMETRIC_ATTENDANCE
+  POS_PRINTER
+  BARCODE_SCANNER
+  PAYMENT_TERMINAL
+  CASH_DRAWER
+}
+
+enum DeviceConnectionType {
+  ETHERNET_LAN
+  WIFI
+  USB
+  SERIAL_COM
+  BLUETOOTH
+  CLOUD_API
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  SYNCING
+  ERROR
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // STEP 0 — Base/Shared Models
 // ═══════════════════════════════════════════════════════════════════
@@ -449,6 +473,7 @@ model Branch {
   taxRules     TaxRule[]
   paymentAccts PaymentAccount[]
   staff        Staff[]
+  devices      Device[]
 
   @@map("Branch")
 }
@@ -2058,4 +2083,57 @@ model TipPayout {
   @@index([staffId])
   @@index([branchId, payoutDate])
   @@map("TipPayout")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STEP 23 — Device Integration (Hardware & Terminals)
+// ═══════════════════════════════════════════════════════════════════
+
+model Device {
+  id               String               @id @default(uuid())
+  branchId         String
+  name             String
+  deviceType       DeviceType
+  brand            String
+  model            String
+  serialNumber     String?
+  connectionType   DeviceConnectionType @default(ETHERNET_LAN)
+  ipAddress        String?
+  port             Int?
+  macAddress       String?
+  baudRate         Int?
+  communicationKey String?
+  status           DeviceStatus         @default(OFFLINE)
+  isActive         Boolean              @default(true)
+  lastPingAt       DateTime?
+  lastSyncAt       DateTime?
+  lastSyncStatus   String?
+  config           Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  branch Branch      @relation(fields: [branchId], references: [id])
+  logs   DeviceLog[]
+
+  @@index([branchId])
+  @@index([deviceType])
+  @@index([status])
+  @@map("Device")
+}
+
+model DeviceLog {
+  id        String   @id @default(uuid())
+  deviceId  String
+  branchId  String
+  eventType String   // HEARTBEAT | PUNCH_SYNC | PRINT_JOB | TEST_PING | ERROR | CONFIG_UPDATE
+  status    String   // SUCCESS | FAILED | WARNING
+  message   String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([branchId, createdAt])
+  @@map("DeviceLog")
 }

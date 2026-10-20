@@ -33,14 +33,24 @@ const assertCodeFree = async (tx, code, exceptId) => {
 
 const generateNextBranchCode = async (tx) => nextSequence(tx, '', 'BR');
 
-// Branch metadata (names, codes, tax config) is needed by every portal for headers,
-// receipts and selectors, so all authenticated users can list branches (same as the mock).
-export const listBranches = async () => {
+// Branch metadata (names, codes, tax config): Super Admins can list all branches;
+// branch managers and staff are scoped strictly to their own assigned branch.
+export const listBranches = async (actor) => {
+  if (actor && actor.role !== 'SUPER_ADMIN') {
+    const branches = await prisma.branch.findMany({
+      where: { id: actor.branchId },
+      orderBy: [{ createdAt: 'asc' }, { code: 'asc' }],
+    });
+    return toDTOs(branches);
+  }
   const branches = await prisma.branch.findMany({ orderBy: [{ createdAt: 'asc' }, { code: 'asc' }] });
   return toDTOs(branches);
 };
 
-export const getBranch = async (id) => {
+export const getBranch = async (id, actor) => {
+  if (actor && actor.role !== 'SUPER_ADMIN' && actor.branchId !== id) {
+    throw forbidden('FORBIDDEN', 'Access Denied: You do not have permission to view other branches.');
+  }
   const branch = await prisma.branch.findUnique({ where: { id } });
   if (!branch) return null;
   return (await toDTOs([branch]))[0];

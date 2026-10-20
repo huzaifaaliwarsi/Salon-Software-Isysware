@@ -158,4 +158,37 @@ describe('Step 6 · Services & Packages', () => {
     await as('admin').post('/services/srv-lhe-07/toggle');
     expect((await as('admin').post('/packages/pkg-lhe-02/toggle')).body.data.isActive).toBe(true);
   });
+
+  it('supports bulk import of services via /services/bulk-import', async () => {
+    const res = await as('admin').post('/services/bulk-import', {
+      rows: [
+        { code: 'SRV-BLK-001', name: 'Bulk Pedicure', category: 'Nails', durationMinutes: 40, price: 2500 },
+        { code: 'SRV-BLK-002', name: 'Bulk Manicure', category: 'Nails', durationMinutes: 30, price: 2000 },
+        { code: 'SRV-BLK-001', name: 'Duplicate Pedicure', category: 'Nails', durationMinutes: 40, price: 2500 },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.acceptedRows).toBe(2);
+    expect(res.body.data.duplicateRows).toBe(1);
+    expect(res.body.data.totalRows).toBe(3);
+  });
+
+  it('supports bulk import of packages via /packages/bulk-import', async () => {
+    const res = await as('admin').post('/packages/bulk-import', {
+      rows: [
+        {
+          code: 'PKG-BLK-001',
+          name: 'Bulk Nail Combo',
+          price: 4000,
+          components: [
+            { serviceCode: 'SRV-BLK-001', allocationPercentage: 50 },
+            { serviceCode: 'SRV-BLK-002', allocationPercentage: 50 },
+          ],
+        },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.acceptedRows).toBe(1);
+    expect(res.body.data.totalRows).toBe(1);
+  });
 });

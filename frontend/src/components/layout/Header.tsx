@@ -56,7 +56,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   const fetchNotifications = useCallback(() => {
     if (!user || user.role === 'STAFF') return;
-    const branchToFetch = activeBranchId === 'ALL' ? (allBranches[0]?.id || '') : (user.branchId || activeBranchId || '');
+    const branchToFetch = (user.role === 'SUPER_ADMIN' && activeBranchId === 'ALL')
+      ? (allBranches[0]?.id || '')
+      : (user.branchId || activeBranchId || '');
     if (!branchToFetch) return;
 
     salonService.getAdminDashboardData(branchToFetch)
@@ -284,10 +286,10 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
               <span className="hidden sm:inline font-semibold">
-                {allBranches.find((b) => b.id === user?.branchId)?.name || user?.branchName || 'Gulberg Flagship Lounge'}
+                {allBranches.find((b) => b.id === user?.branchId)?.name || user?.branchName || 'Assigned Branch'}
               </span>
               <span className="sm:hidden font-semibold">
-                {allBranches.find((b) => b.id === user?.branchId)?.code || 'LHE-01'}
+                {allBranches.find((b) => b.id === user?.branchId)?.code || 'Branch'}
               </span>
               <Lock className="w-3 h-3 text-slate-400 ml-0.5" />
             </div>

@@ -69,3 +69,41 @@ export const createCategorySchema = z.object({
   branchId: z.string().optional(),
   name:     z.string().trim().min(1, 'Category name cannot be empty.'),
 });
+
+export const bulkImportServicesSchema = z.object({
+  branchId: z.string().optional(),
+  rows: z.array(z.object({
+    name: z.string().trim().min(1, 'Service name is required.'),
+    category: z.string().trim().optional(),
+    price: z.union([z.number(), z.string()]).transform((v) => Number(v)),
+    durationMinutes: z.union([z.number(), z.string()]).optional().transform((v) => (v !== undefined && v !== '' ? Number(v) : undefined)),
+    code: z.string().trim().optional(),
+    description: z.string().trim().optional(),
+    taxTreatment: taxTreatment.optional(),
+    specificTaxRuleId: z.string().nullable().optional(),
+    isActive: z.boolean().optional(),
+  }).passthrough()).min(1, 'At least one service row is required.').max(5000),
+});
+
+const bulkPackageComponent = z.object({
+  serviceId: z.string().optional(),
+  serviceCode: z.string().optional(),
+  serviceName: z.string().optional(),
+  quantity: z.union([z.number(), z.string()]).optional().transform((v) => (v !== undefined && v !== '' ? Number(v) : 1)),
+  allocationPercentage: z.union([z.number(), z.string()]).optional().transform((v) => (v !== undefined && v !== '' ? Number(v) : undefined)),
+}).passthrough();
+
+export const bulkImportPackagesSchema = z.object({
+  branchId: z.string().optional(),
+  rows: z.array(z.object({
+    name: z.string().trim().min(1, 'Package name is required.'),
+    price: z.union([z.number(), z.string()]).transform((v) => Number(v)),
+    code: z.string().trim().optional(),
+    description: z.string().trim().optional(),
+    taxTreatment: taxTreatment.optional(),
+    specificTaxRuleId: z.string().nullable().optional(),
+    isActive: z.boolean().optional(),
+    components: z.array(bulkPackageComponent).min(1, 'Package must contain at least one component service.'),
+  }).passthrough()).min(1, 'At least one package row is required.').max(5000),
+});
+

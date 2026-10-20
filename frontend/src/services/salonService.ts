@@ -1,5 +1,11 @@
 import {
   Branch,
+  Device,
+  DeviceLog,
+  CreateDeviceInput,
+  UpdateDeviceInput,
+  TestConnectionResult,
+  SyncDeviceResult,
   OnlineAccount,
   StaffMember,
   Appointment,
@@ -13,10 +19,14 @@ import {
   PackageItem,
   ServiceCategory,
   TaxRule,
+  CatalogueImportResult,
   PaymentAccount,
   InvoiceStatus,
   CreatePOSInvoiceInput,
   CollectOutstandingPaymentInput,
+  RefundInvoiceInput,
+  RefundInvoiceResult,
+  InvoiceRefundDTO,
   Client,
   ExpenseCategoryItem,
   CashTransferRecord,
@@ -342,12 +352,14 @@ export interface SalonServiceContract {
   createService(service: Omit<ServiceItem, 'id'>, actor?: User): Promise<ServiceItem>;
   updateService(id: string, service: Partial<ServiceItem>, actor?: User): Promise<ServiceItem>;
   toggleServiceStatus(id: string, actor?: User): Promise<ServiceItem>;
+  bulkImportServices(branchId: string, rows: any[], actor?: User): Promise<CatalogueImportResult>;
 
   getPackages(branchId: string | 'ALL'): Promise<PackageItem[]>;
   getPackage(id: string): Promise<PackageItem | null>;
   createPackage(pkg: Omit<PackageItem, 'id'>, actor?: User): Promise<PackageItem>;
   updatePackage(id: string, pkg: Partial<PackageItem>, actor?: User): Promise<PackageItem>;
   togglePackageStatus(id: string, actor?: User): Promise<PackageItem>;
+  bulkImportPackages(branchId: string, rows: any[], actor?: User): Promise<CatalogueImportResult>;
 
   getServiceCategories(branchId: string): Promise<ServiceCategory[]>;
   createServiceCategory(branchId: string, name: string, actor?: User): Promise<ServiceCategory>;
@@ -372,6 +384,8 @@ export interface SalonServiceContract {
   getInvoice(id: string): Promise<Invoice | null>;
   postPOSInvoice(input: CreatePOSInvoiceInput, actor?: User): Promise<Invoice>;
   collectInvoicePayment(input: CollectOutstandingPaymentInput, actor?: User): Promise<Invoice>;
+  refundInvoice(invoiceId: string, input: RefundInvoiceInput, actor?: User): Promise<RefundInvoiceResult>;
+  getInvoiceRefunds(invoiceId: string): Promise<InvoiceRefundDTO[]>;
 
   getClients(branchId: string | 'ALL', actor?: User): Promise<Client[]>;
   getClient(id: string, actor?: User): Promise<Client | null>;
@@ -800,6 +814,17 @@ export interface SalonServiceContract {
     wipeStaff?: boolean;
     wipeSuppliers?: boolean;
   }): Promise<{ success: boolean; message: string; branchId: string; resetAt: string }>;
+
+  // --- STEP 23: HARDWARE & DEVICE INTEGRATION ---
+  getDevices(branchId?: string | 'ALL', actor?: User, query?: { deviceType?: string; status?: string; search?: string }): Promise<Device[]>;
+  getDevice(id: string, actor?: User): Promise<Device | null>;
+  createDevice(input: CreateDeviceInput, actor?: User): Promise<Device>;
+  updateDevice(id: string, input: UpdateDeviceInput, actor?: User): Promise<Device>;
+  toggleDeviceStatus(id: string, actor?: User): Promise<Device>;
+  deleteDevice(id: string, actor?: User): Promise<{ success: boolean; message: string }>;
+  testDeviceConnection(id: string, options?: { ipAddress?: string; port?: number; timeoutMs?: number }, actor?: User): Promise<TestConnectionResult>;
+  syncDevice(id: string, options?: { startDate?: string; endDate?: string }, actor?: User): Promise<SyncDeviceResult>;
+  getDeviceLogs(id: string, actor?: User, limit?: number): Promise<DeviceLog[]>;
 }
 
 export interface LedgerMovement {

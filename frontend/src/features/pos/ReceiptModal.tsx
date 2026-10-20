@@ -1,17 +1,41 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Invoice, Branch } from '@/types/salon';
 import { formatCurrency } from '@/lib/formatters';
+import { toast } from '@/context/ToastContext';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Printer, PlusCircle, CheckCircle2, AlertCircle, Building2, Phone, Calendar, User, Scissors } from 'lucide-react';
+import {
+  Printer,
+  PlusCircle,
+  CheckCircle2,
+  Copy,
+  Check,
+  RotateCcw,
+  Send,
+  Phone,
+  X,
+} from 'lucide-react';
+
+const WhatsAppIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.888 9.885m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 00-3.48-8.413Z" />
+  </svg>
+);
+
+const getCleanWhatsAppPhone = (rawPhone: string) => {
+  const digits = (rawPhone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('92')) return digits;
+  if (digits.startsWith('0')) return `92${digits.slice(1)}`;
+  if (digits.length === 10 && digits.startsWith('3')) return `92${digits}`;
+  return digits;
+};
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -19,6 +43,7 @@ interface ReceiptModalProps {
   invoice: Invoice | null;
   branch: Branch | null;
   onNewSale?: () => void;
+  onRefund?: (invoice: Invoice) => void;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -27,275 +52,469 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   invoice,
   branch,
   onNewSale,
+  onRefund,
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [isPromptingPhone, setIsPromptingPhone] = useState(false);
+  const [inputPhone, setInputPhone] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  if (!invoice) return null;
+  useEffect(() => {
+    if (invoice?.clientPhone && invoice.clientPhone !== 'N/A') {
+      setInputPhone(invoice.clientPhone);
+    } else {
+      setInputPhone('');
+    }
+    setIsPromptingPhone(false);
+    setCopied(false);
+  }, [invoice, isOpen]);
+
+  const fullWhatsAppMessage = useMemo(() => {
+    if (!invoice) return '';
+    const branchTitle = (branch?.name || 'SALON & SPA').toUpperCase();
+    const branchAddress = branch?.address ? `Branch: ${branch.address}${branch?.city ? `, ${branch.city}` : ''}` : '';
+    const branchPhone = branch?.phone ? `Contact: ${branch.phone}` : '';
+
+    const lines = invoice.lineItems || invoice.lines || [];
+    const items = lines
+      .map((li) => {
+        const qty = li.quantity > 1 ? `${li.quantity}x ` : '';
+        const stylist = li.staffName ? `\n  Stylist: ${li.staffName}` : '';
+        return `• ${qty}${li.name}${stylist}\n  Amount: ${formatCurrency(li.unitPrice * li.quantity)}`;
+      })
+      .join('\n');
+
+    let discounts = '';
+    if (invoice.discount > 0) {
+      discounts = `\nDiscount: -${formatCurrency(invoice.discount)}`;
+    }
+
+    let netSales = '';
+    if (invoice.discount > 0) {
+      netSales = `\nNet Amount: ${formatCurrency(invoice.netSales)}`;
+    }
+
+    let tax = '';
+    if (invoice.tax > 0) {
+      const taxRate = branch?.taxEnabled ? ` (${((branch.taxRate || 0) * 100).toFixed(0)}%)` : '';
+      tax = `\nSales Tax${taxRate}: ${formatCurrency(invoice.tax)}`;
+    }
+
+    let tip = '';
+    if (invoice.tip > 0) {
+      tip = `\nStaff Gratuity: ${formatCurrency(invoice.tip)}`;
+    }
+
+    const payments = invoice.payments || [];
+    const paymentMethods = payments.length > 0
+      ? payments.map((p) => p.method === 'CASH' ? 'Cash' : (p.paymentAccountName || 'Online Transfer')).join(', ')
+      : 'Pending';
+
+    let balanceLine = '';
+    if (invoice.amountDue > 0) {
+      balanceLine = `\nBalance Due: ${formatCurrency(invoice.amountDue)}\nStatus: PARTIALLY PAID / OUTSTANDING`;
+    } else {
+      balanceLine = `\nBalance Due: ${formatCurrency(0)}\nStatus: FULLY PAID`;
+    }
+
+    const headerLines = [
+      `*${branchTitle}*`,
+      branchAddress,
+      branchPhone,
+    ].filter(Boolean).join('\n');
+
+    return `${headerLines}
+================================
+*SALES INVOICE*
+Invoice No: ${invoice.invoiceNumber}
+Date: ${invoice.date}${invoice.time ? ` • ${invoice.time}` : ''}
+Customer: ${invoice.clientName || 'Walk-in Customer'}
+${invoice.processedByName ? `Cashier: ${invoice.processedByName}\n` : ''}================================
+*SERVICES & ITEMS:*
+${items}
+--------------------------------
+Gross Subtotal: ${formatCurrency(invoice.subtotal)}${discounts}${netSales}${tax}${tip}
+*Total Amount: ${formatCurrency(invoice.total)}*
+--------------------------------
+Payment Method: ${paymentMethods}
+Amount Paid: ${formatCurrency(invoice.amountPaid)}${balanceLine}
+================================
+Thank you for your visit.
+We look forward to serving you again.`;
+  }, [invoice, branch]);
+
+  const triggerDirectWhatsApp = (targetPhone: string) => {
+    const cleanPhone = getCleanWhatsAppPhone(targetPhone);
+    if (!cleanPhone) {
+      setIsPromptingPhone(true);
+      toast.error('Please enter customer WhatsApp number.');
+      return;
+    }
+    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(fullWhatsAppMessage)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    toast.success(`Opening WhatsApp for ${cleanPhone}...`);
+    setIsPromptingPhone(false);
+  };
+
+  const handleWhatsAppClick = () => {
+    if (!invoice) return;
+    const phone = inputPhone || invoice.clientPhone || '';
+    if (phone && phone !== 'N/A') {
+      triggerDirectWhatsApp(phone);
+    } else {
+      setIsPromptingPhone(true);
+    }
+  };
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(fullWhatsAppMessage);
+    setCopied(true);
+    toast.success('Invoice text copied to clipboard!');
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   const handlePrint = () => {
     window.print();
   };
 
+  if (!isOpen || !invoice) return null;
+
   const isPaid = invoice.status === 'PAID';
   const isPartial = invoice.status === 'PARTIAL';
+  const lines = invoice.lineItems || invoice.lines || [];
+  const payments = invoice.payments || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto font-sans p-6 print:p-0 print:border-none print:shadow-none">
-        <DialogHeader className="print:hidden">
-          <DialogTitle className="flex items-center justify-between text-base font-bold text-slate-900">
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              Transaction Finalized
-            </span>
+      <DialogContent className="sm:max-w-[480px] w-full max-h-[92vh] flex flex-col p-0 overflow-hidden font-sans border border-slate-200/90 shadow-2xl rounded-2xl bg-white print:p-0 print:border-none print:shadow-none">
+        {/* Header */}
+        <DialogHeader className="px-5 py-3.5 border-b border-slate-100 flex flex-row items-center justify-between shrink-0 bg-white print:hidden">
+          <DialogTitle className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Transaction Receipt</span>
+          </DialogTitle>
+          <div className="flex items-center gap-2 pr-6">
             <Badge
               variant={isPaid ? 'success' : isPartial ? 'warning' : 'neutral'}
-              className="text-xs"
+              className="text-[11px] font-semibold"
             >
               {invoice.status}
             </Badge>
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
-        {/* Printable Receipt Paper */}
-        <div
-          ref={receiptRef}
-          className="receipt-print-area bg-white border border-slate-200 rounded-lg p-5 text-xs text-slate-800 space-y-3.5 shadow-xs print:border-none print:shadow-none print:p-0"
-        >
-          {/* Header Brand */}
-          <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300">
-            <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2254E1] text-white font-bold text-xs mb-1">
-              iS
-            </div>
-            <h2 className="font-bold text-sm tracking-tight text-slate-900">
-              {branch?.name || 'iSysware Salon'}
-            </h2>
-            <p className="text-[11px] text-slate-500">{branch?.address}, {branch?.city}</p>
-            <p className="text-[11px] text-slate-500">Tel: {branch?.phone || '+92 42 3578-9101'}</p>
-            {branch?.email && <p className="text-[10px] text-slate-400">{branch.email}</p>}
-            {branch?.taxRegistrationNumber && (
-              <div className="pt-1 text-[10px] text-slate-500 font-mono">
-                <span className="text-slate-400 font-sans">
-                  {branch.taxAuthority ? `${branch.taxAuthority}: ` : 'Tax Reg: '}
+        {/* Scrollable Receipt Area */}
+        <div className="px-5 py-4 overflow-y-auto flex-1 space-y-3">
+          {/* Minimal Quick Phone Prompt when customer has no phone number on file */}
+          {isPromptingPhone && (
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-3 space-y-2 animate-in fade-in duration-150 print:hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-emerald-900 flex items-center gap-1.5">
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-[#25D366]" />
+                  Enter Customer WhatsApp Number
                 </span>
-                {branch.taxRegistrationNumber}
+                <button
+                  type="button"
+                  onClick={() => setIsPromptingPhone(false)}
+                  className="text-slate-400 hover:text-slate-600 text-xs p-0.5"
+                  title="Close"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    autoFocus
+                    value={inputPhone}
+                    onChange={(e) => setInputPhone(e.target.value)}
+                    placeholder="0300 1234567"
+                    className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono text-slate-900"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        triggerDirectWhatsApp(inputPhone);
+                      }
+                    }}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => triggerDirectWhatsApp(inputPhone)}
+                  className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs gap-1.5 h-8 font-medium px-3 shrink-0"
+                >
+                  <Send className="w-3 h-3" />
+                  Open Chat
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Printable Receipt Card */}
+          <div
+            ref={receiptRef}
+            className="receipt-print-area bg-white border border-slate-200/90 rounded-xl p-4 sm:p-5 text-xs text-slate-800 space-y-3 shadow-xs print:border-none print:shadow-none print:p-0"
+          >
+            {invoice.lifecycle === 'VOIDED' && (
+              <div className="bg-rose-50 border border-rose-300 text-rose-800 p-2 rounded-lg text-center font-bold text-xs tracking-wide">
+                ⚠️ THIS INVOICE IS VOIDED
               </div>
             )}
-          </div>
+            {invoice.lifecycle === 'REFUNDED' && (
+              <div className="bg-purple-50 border border-purple-300 text-purple-800 p-2 rounded-lg text-center font-bold text-xs tracking-wide">
+                ℹ️ FULLY REFUNDED
+              </div>
+            )}
+            {invoice.lifecycle === 'PARTIALLY_REFUNDED' && (
+              <div className="bg-amber-50 border border-amber-300 text-amber-800 p-2 rounded-lg text-center font-bold text-xs tracking-wide">
+                ℹ️ PARTIALLY REFUNDED
+              </div>
+            )}
 
-          {/* Invoice Meta */}
-          <div className="grid grid-cols-2 gap-2 text-[11px] py-1 border-b border-slate-100">
-            <div>
-              <span className="text-slate-400 block text-[10px]">Invoice No.</span>
-              <span className="font-mono font-bold text-slate-900">{invoice.invoiceNumber}</span>
-            </div>
-            <div className="text-right">
-              <span className="text-slate-400 block text-[10px]">Date & Time</span>
-              <span className="font-medium text-slate-800">{invoice.date} • {invoice.time}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[10px]">Cashier / Terminal</span>
-              <span className="font-medium text-slate-800">{invoice.processedByName}</span>
-            </div>
-            <div className="text-right">
-              <span className="text-slate-400 block text-[10px]">Customer</span>
-              <span className="font-bold text-slate-900">{invoice.clientName}</span>
-              {invoice.clientPhone && invoice.clientPhone !== 'N/A' && (
-                <span className="text-[10px] text-slate-500 block">{invoice.clientPhone}</span>
-              )}
-              {invoice.customerSource && invoice.customerSource !== 'WALK_IN' && (
-                <span className="text-[9px] text-blue-600 block font-medium">
-                  Src: {invoice.customerSource}{invoice.customerSourceDetails ? ` (${invoice.customerSourceDetails})` : ''}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Line Items Table */}
-          <div className="space-y-2 py-1">
-            <div className="flex justify-between font-semibold text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
-              <span>Item / Service</span>
-              <span>Amount (PKR)</span>
-            </div>
-
-            {invoice.lineItems.map((li, idx) => (
-              <div key={li.id || idx} className="space-y-1 pb-1.5 border-b border-slate-50 text-[11px]">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="font-semibold text-slate-900">
-                      {li.quantity > 1 ? `${li.quantity}x ` : ''}{li.name}
-                    </span>
-                    <span className="text-[10px] text-slate-500 block flex items-center gap-1">
-                      <span>Stylist: {li.staffName}</span>
-                      {li.type === 'PACKAGE' && (
-                        <span className="px-1 py-0.2 bg-blue-50 text-[#2254E1] rounded text-[9px] font-medium">Package</span>
-                      )}
-                    </span>
-                  </div>
-                  <span className="font-mono font-semibold text-slate-900">
-                    {formatCurrency(li.unitPrice * li.quantity)}
+            {/* Header Brand */}
+            <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300">
+              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2254E1] text-white font-bold text-xs mb-1">
+                iS
+              </div>
+              <h2 className="font-bold text-sm tracking-tight text-slate-900">
+                {branch?.name || 'iSysware Salon'}
+              </h2>
+              <p className="text-[11px] text-slate-500">{branch?.address}, {branch?.city}</p>
+              <p className="text-[11px] text-slate-500">Tel: {branch?.phone || '+92 42 3578-9101'}</p>
+              {branch?.taxRegistrationNumber && (
+                <div className="pt-0.5 text-[10px] text-slate-500 font-mono">
+                  <span className="text-slate-400 font-sans">
+                    {branch.taxAuthority ? `${branch.taxAuthority}: ` : 'Tax Reg: '}
                   </span>
+                  {branch.taxRegistrationNumber}
                 </div>
+              )}
+            </div>
 
-                {/* Package component multi-staff breakdown */}
-                {li.type === 'PACKAGE' && (
-                  <div className="pl-2 border-l-2 border-blue-200 space-y-0.5 mt-1 text-[10px] text-slate-600">
-                    {li.assignedStaff && li.assignedStaff.length > 1 && (
-                      <div className="text-blue-600 font-medium pb-0.5">
-                        Stylists (Equal Split): {li.assignedStaff.map((s) => s.staffName).join(', ')}
-                      </div>
-                    )}
-                    {li.packageComponents && li.packageComponents.map((comp) => (
-                      <div key={comp.serviceId} className="flex justify-between">
-                        <span>• {comp.serviceName}</span>
-                        {comp.allocatedAmount > 0 && (
-                          <span className="font-mono text-slate-500">{formatCurrency(comp.allocatedAmount)}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+            {/* Invoice Meta */}
+            <div className="grid grid-cols-2 gap-2 text-[11px] py-1 border-b border-slate-100">
+              <div>
+                <span className="text-slate-400 block text-[10px]">Invoice No.</span>
+                <span className="font-mono font-bold text-slate-900">{invoice.invoiceNumber}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-400 block text-[10px]">Date & Time</span>
+                <span className="font-medium text-slate-800">{invoice.date} • {invoice.time}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Cashier / Terminal</span>
+                <span className="font-medium text-slate-800">{invoice.processedByName}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-400 block text-[10px]">Customer</span>
+                <span className="font-bold text-slate-900">{invoice.clientName}</span>
+                {invoice.clientPhone && invoice.clientPhone !== 'N/A' && (
+                  <span className="text-[10px] text-slate-500 block font-mono">{invoice.clientPhone}</span>
                 )}
               </div>
-            ))}
-          </div>
-
-          {/* Financial Breakdown */}
-          <div className="space-y-1.5 pt-1 text-[11px] border-t border-slate-200">
-            <div className="flex justify-between text-slate-600">
-              <span>Gross Sales (Subtotal)</span>
-              <span className="font-mono">{formatCurrency(invoice.subtotal)}</span>
             </div>
 
-            {invoice.discount > 0 && (
-              <div className="flex justify-between text-emerald-600 font-medium">
-                <span>Promotional Discount</span>
-                <span className="font-mono">- {formatCurrency(invoice.discount)}</span>
+            {/* Line Items Table */}
+            <div className="space-y-1.5 py-1">
+              <div className="flex justify-between font-semibold text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
+                <span>Item / Service</span>
+                <span className="text-right">Amount</span>
               </div>
-            )}
 
-            <div className="flex justify-between text-slate-700 font-medium pt-0.5">
-              <span>Net Sales (Attributable)</span>
-              <span className="font-mono">{formatCurrency(invoice.netSales)}</span>
-            </div>
-
-            <div className="flex justify-between text-slate-600">
-              <span>Sales Tax ({branch?.taxEnabled ? `${((branch.taxRate || 0) * 100).toFixed(1)}%` : 'Exempt/0%'})</span>
-              <span className="font-mono">{formatCurrency(invoice.tax)}</span>
-            </div>
-
-            <div className="flex justify-between text-slate-900 font-bold pt-1 border-t border-slate-200 text-xs">
-              <span>Bill Total</span>
-              <span className="font-mono text-[#2254E1]">{formatCurrency(invoice.netSales + invoice.tax)}</span>
-            </div>
-
-            {invoice.tip > 0 && (
-              <div className="flex justify-between text-amber-700 bg-amber-50/70 px-1.5 py-0.5 rounded text-[10px]">
-                <span>Staff Gratuity / Tip (100% Direct)</span>
-                <span className="font-mono font-semibold">+ {formatCurrency(invoice.tip)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-slate-900 font-bold pt-1 border-t border-dashed border-slate-300 text-xs">
-              <span>Total Invoice Amount</span>
-              <span className="font-mono">{formatCurrency(invoice.total)}</span>
-            </div>
-          </div>
-
-          {/* Payment Receipts Breakdown */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-200 text-[11px]">
-            <span className="font-semibold text-slate-800 text-[10px] uppercase tracking-wider block">
-              Payment Settlement
-            </span>
-
-            {invoice.payments.length === 0 ? (
-              <p className="text-rose-600 font-medium text-[11px]">No payment collected. Full bill balance outstanding.</p>
-            ) : (
-              invoice.payments.map((p, idx) => (
-                <div key={p.id || idx} className="p-2 bg-slate-50 border border-slate-200/80 rounded space-y-1">
-                  <div className="flex justify-between items-center text-slate-800 font-semibold">
-                    <span>
-                      {p.notes?.includes('Outstanding collection') ? '⚡ Dues Collection Receipt' : p.method === 'CASH' ? 'Cash Payment' : p.paymentAccountName || 'Online Account'}
+              {lines.map((li, idx) => (
+                <div key={li.id || idx} className="space-y-0.5 pb-1.5 border-b border-slate-50 text-[11px]">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-slate-900 block truncate">
+                        {li.quantity > 1 ? `${li.quantity}x ` : ''}{li.name}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">
+                        Stylist: {li.staffName}
+                      </span>
+                    </div>
+                    <span className="font-mono font-semibold text-slate-900 shrink-0 text-right">
+                      {formatCurrency(li.unitPrice * li.quantity)}
                     </span>
-                    <span className="font-mono font-bold text-slate-900">{formatCurrency(p.amount)}</span>
                   </div>
 
-                  <div className="text-[10px] text-slate-500 space-y-0.5">
-                    {p.receiptNumber && <div className="font-semibold text-slate-700">Receipt: {p.receiptNumber}</div>}
-                    {p.previousBalance !== undefined && (
-                      <div className="flex justify-between text-amber-800 font-medium bg-amber-50/80 px-1.5 py-0.5 rounded">
-                        <span>Original Invoice: <strong className="font-mono">{invoice.invoiceNumber}</strong></span>
-                        <span>Prev Balance: <strong className="font-mono">{formatCurrency(p.previousBalance)}</strong></span>
-                      </div>
-                    )}
+                  {li.type === 'PACKAGE' && li.packageComponents && (
+                    <div className="pl-2 border-l-2 border-blue-200 space-y-0.5 mt-0.5 text-[10px] text-slate-600">
+                      {li.packageComponents.map((comp) => (
+                        <div key={comp.serviceId} className="flex justify-between items-center gap-2">
+                          <span className="truncate">• {comp.serviceName}</span>
+                          {comp.allocatedAmount > 0 && (
+                            <span className="font-mono text-slate-500 shrink-0">{formatCurrency(comp.allocatedAmount)}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
 
-                    <div className="flex justify-between">
-                      <span>Collector: <strong className="text-slate-700">{p.processedByName}</strong></span>
-                      <span>
-                        Method: <strong className="text-slate-700">{p.method === 'CASH' ? 'Cash' : p.paymentAccountName || 'Online'}</strong>
+            {/* Financial Breakdown */}
+            <div className="space-y-1 pt-1 text-[11px] border-t border-slate-200">
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Gross Subtotal</span>
+                <span className="font-mono">{formatCurrency(invoice.subtotal)}</span>
+              </div>
+
+              {invoice.discount > 0 && (
+                <div className="flex justify-between items-center text-emerald-600 font-medium">
+                  <span>Promotional Discount</span>
+                  <span className="font-mono">- {formatCurrency(invoice.discount)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-slate-700 font-medium pt-0.5">
+                <span>Net Sales</span>
+                <span className="font-mono">{formatCurrency(invoice.netSales)}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Sales Tax ({branch?.taxEnabled ? `${((branch.taxRate || 0) * 100).toFixed(1)}%` : '0%'})</span>
+                <span className="font-mono">{formatCurrency(invoice.tax)}</span>
+              </div>
+
+              {invoice.tip > 0 && (
+                <div className="flex justify-between items-center text-amber-700 bg-amber-50/70 px-1.5 py-0.5 rounded text-[10px]">
+                  <span>Staff Gratuity / Tip</span>
+                  <span className="font-mono font-semibold">+ {formatCurrency(invoice.tip)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-slate-900 font-bold pt-1 border-t border-dashed border-slate-300 text-xs">
+                <span>Total Invoice Amount</span>
+                <span className="font-mono text-[#2254E1]">{formatCurrency(invoice.total)}</span>
+              </div>
+            </div>
+
+            {/* Payment Receipts Breakdown */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-200 text-[11px]">
+              <span className="font-semibold text-slate-800 text-[10px] uppercase tracking-wider block">
+                Payment Breakdown
+              </span>
+
+              {payments.length === 0 ? (
+                <p className="text-rose-600 font-medium text-[11px]">No payment collected. Full bill balance outstanding.</p>
+              ) : (
+                payments.map((p, idx) => (
+                  <div key={p.id || idx} className="p-2 bg-slate-50 border border-slate-200/80 rounded-lg space-y-0.5">
+                    <div className="flex justify-between items-center text-slate-800 font-semibold">
+                      <span className="truncate">
+                        {p.method === 'CASH' ? 'Cash Payment' : p.paymentAccountName || 'Online Account'}
                       </span>
+                      <span className="font-mono font-bold text-slate-900 shrink-0">{formatCurrency(p.amount)}</span>
+                    </div>
+
+                    <div className="text-[10px] text-slate-500 flex justify-between items-center pt-0.5">
+                      <span>{p.receiptNumber ? `RCP: ${p.receiptNumber}` : 'Collected'}</span>
+                      <span>By: <strong className="text-slate-700">{p.processedByName}</strong></span>
                     </div>
 
                     {p.cashTendered && p.cashTendered > 0 && (
-                      <div className="flex justify-between">
-                        <span>Tendered: <strong className="font-mono text-slate-700">{formatCurrency(p.cashTendered)}</strong></span>
+                      <div className="flex justify-between text-[10px] text-slate-500 pt-0.5">
+                        <span>Tendered: <strong className="font-mono">{formatCurrency(p.cashTendered)}</strong></span>
                         <span>Change: <strong className="font-mono text-emerald-700">{formatCurrency(p.changeReturned || 0)}</strong></span>
                       </div>
                     )}
-
-                    {p.remainingBalance !== undefined && (
-                      <div className="flex justify-between text-slate-800 font-bold border-t border-slate-200 pt-0.5 mt-0.5">
-                        <span>Remaining Outstanding:</span>
-                        <span className="font-mono text-rose-700">{formatCurrency(p.remainingBalance)}</span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
 
-            <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
-              <span className="text-slate-500">Total Confirmed Collections:</span>
-              <span className="font-mono font-bold text-emerald-700">{formatCurrency(invoice.amountPaid)}</span>
+              <div className="flex justify-between items-center pt-1 border-t border-slate-100 text-[11px]">
+                <span className="text-slate-500">Total Confirmed Collections:</span>
+                <span className="font-mono font-bold text-emerald-700">{formatCurrency(invoice.amountPaid)}</span>
+              </div>
+
+              <div className="flex justify-between items-center py-1.5 px-2.5 rounded-lg bg-slate-100 font-bold text-xs">
+                <span className={invoice.amountDue > 0 ? 'text-rose-700' : 'text-slate-800'}>
+                  {invoice.amountDue > 0 ? 'Balance Due:' : 'Balance Remaining:'}
+                </span>
+                <span className={`font-mono ${invoice.amountDue > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  {formatCurrency(invoice.amountDue)}
+                </span>
+              </div>
             </div>
 
-            <div className="flex justify-between items-center py-1 px-2 rounded bg-slate-100 font-bold">
-              <span className={invoice.amountDue > 0 ? 'text-rose-700' : 'text-slate-800'}>
-                {invoice.amountDue > 0 ? 'Current Balance Due (Receivable):' : 'Balance Remaining:'}
-              </span>
-              <span className={`font-mono text-xs ${invoice.amountDue > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                {formatCurrency(invoice.amountDue)}
-              </span>
+            {/* Footer Brand Note */}
+            <div className="text-center text-[10px] text-slate-400 pt-2 border-t border-dashed border-slate-200 space-y-0.5">
+              <p>Thank you for choosing {branch?.name || 'iSysware Salon'}!</p>
+              <p className="font-mono text-[9px] text-slate-400">Powered by iSysware SalonOS Enterprise</p>
             </div>
-          </div>
-
-          {/* Footer note */}
-          <div className="text-center text-[10px] text-slate-400 pt-3 border-t border-dashed border-slate-200 space-y-0.5">
-            <p>Thank you for choosing {branch?.name || 'iSysware Salon'}!</p>
-            <p className="font-mono text-[9px] text-slate-400">Powered by iSysware SalonOS Enterprise</p>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2 print:hidden">
-          <Button variant="outline" onClick={onClose} className="text-xs">
-            Close
-          </Button>
-          <Button variant="outline" onClick={handlePrint} className="text-xs gap-1.5">
-            <Printer className="w-3.5 h-3.5 text-slate-600" />
-            Print Receipt
-          </Button>
-          {onNewSale && (
-            <Button
-              onClick={() => {
-                onClose();
-                onNewSale();
-              }}
-              className="bg-[#2254E1] hover:bg-[#1B44B8] text-white text-xs gap-1.5"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              New Sale
+        {/* Footer Actions Toolbar */}
+        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2 shrink-0 print:hidden">
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={onClose} className="text-xs h-8 px-2.5">
+              Close
             </Button>
-          )}
-        </DialogFooter>
+            {onRefund && invoice.lifecycle !== 'VOIDED' && invoice.lifecycle !== 'REFUNDED' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onRefund(invoice);
+                }}
+                className="text-xs gap-1 h-8 px-2.5 text-rose-700 border-rose-300 hover:bg-rose-50 hover:text-rose-800"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                Refund / Void
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyMessage}
+              title="Copy receipt text to clipboard"
+              className="text-xs h-8 px-2.5 text-slate-600"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Direct WhatsApp Share Button */}
+            <Button
+              size="sm"
+              onClick={handleWhatsAppClick}
+              className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs gap-1.5 h-8 px-3 font-medium cursor-pointer shadow-xs"
+              title="Open customer WhatsApp chat directly"
+            >
+              <WhatsAppIcon className="w-3.5 h-3.5" />
+              WhatsApp
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="text-xs gap-1.5 h-8 px-3"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-600" />
+              Print
+            </Button>
+
+            {onNewSale && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onNewSale();
+                }}
+                className="bg-[#2254E1] hover:bg-[#1B44B8] text-white text-xs gap-1.5 h-8 px-3"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                New Sale
+              </Button>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

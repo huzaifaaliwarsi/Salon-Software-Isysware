@@ -75,10 +75,13 @@ export const DetailedIncomeReportPage: React.FC = () => {
     return <AccessDeniedView attemptedPath="/reports/detailed-income" />;
   }
 
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
   const isAccountant = user.role === 'ACCOUNTANT';
 
   // Filters State
-  const [selectedBranch, setSelectedBranch] = useState<string>(activeBranchId || user.branchId || 'ALL');
+  const [selectedBranch, setSelectedBranch] = useState<string>(
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
+  );
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
   const [sourceType, setSourceType] = useState<string>('ALL');
@@ -280,10 +283,11 @@ export const DetailedIncomeReportPage: React.FC = () => {
             <label className={labelClass}>Campus</label>
             <select
               value={selectedBranch}
+              disabled={!isSuperAdmin}
               onChange={(e) => setSelectedBranch(e.target.value)}
               className={selectClass}
             >
-              <option value="ALL">All Campuses</option>
+              {isSuperAdmin && <option value="ALL">All Campuses</option>}
               {allBranches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}

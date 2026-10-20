@@ -47,8 +47,12 @@ export const StaffSalaryReportPage: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
 
+  const isSuperAdmin = user.role === 'SUPER_ADMIN';
+
   // Filter Form State
-  const [selectedBranch, setSelectedBranch] = useState<string>(user.branchId || 'ALL');
+  const [selectedBranch, setSelectedBranch] = useState<string>(
+    isSuperAdmin ? (user.branchId || 'ALL') : (user.branchId || '')
+  );
   const [selectedStaff, setSelectedStaff] = useState<string>('ALL');
   const [paymentStatus, setPaymentStatus] = useState<string>('ALL');
   const [fromMonth, setFromMonth] = useState<string>(yearStart);
@@ -251,10 +255,11 @@ export const StaffSalaryReportPage: React.FC = () => {
             <label className={labelClass}>Campus</label>
             <select
               value={selectedBranch}
+              disabled={!isSuperAdmin}
               onChange={(e) => setSelectedBranch(e.target.value)}
               className={selectClass}
             >
-              <option value="ALL">All Campuses</option>
+              {isSuperAdmin && <option value="ALL">All Campuses</option>}
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}

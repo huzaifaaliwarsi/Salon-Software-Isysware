@@ -484,6 +484,13 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
             allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
           },
           {
+            id: 'device-settings-child',
+            label: 'Hardware & Device Integration',
+            href: '/admin/devices',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+            badge: 'Devices',
+          },
+          {
             id: 'branches-child',
             label: 'Multi-Branch Management',
             href: '/admin/branches',

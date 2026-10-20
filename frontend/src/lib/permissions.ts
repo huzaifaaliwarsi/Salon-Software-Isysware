@@ -51,6 +51,8 @@ export function canAccessRoute(user: User | null, routePath: string): boolean {
       ? '/accounts/expenses'
       : path === '/admin/tax-settings' || path === '/admin/payment-accounts'
       ? '/admin/branch-settings'
+      : path === '/admin/device-settings'
+      ? '/admin/devices'
       : path === '/operations/overtime'
       ? '/operations/manual-overtime'
       : path === '/accounts/tips' || path === '/accounts/tips-statement' || path === '/reports/tips-statement' || path === '/reports/tips'

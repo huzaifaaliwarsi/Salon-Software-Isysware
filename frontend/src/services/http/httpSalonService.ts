@@ -18,6 +18,7 @@ import {
   CommissionRun,
   CommissionStatementRecord,
   CSVAttendanceImportResult,
+  CatalogueImportResult,
   Expense,
   ExpenseCategoryItem,
   LeaveRecord,
@@ -53,6 +54,9 @@ import {
   Branch,
   Client,
   Invoice,
+  InvoiceRefundDTO,
+  RefundInvoiceInput,
+  RefundInvoiceResult,
   InventoryBatch,
   InventoryItem,
   Purchase,
@@ -68,6 +72,10 @@ import {
   ServiceItem,
   StaffMember,
   TaxRule,
+  Device,
+  DeviceLog,
+  TestConnectionResult,
+  SyncDeviceResult,
 } from '@/types/salon';
 import { User } from '@/types/auth';
 
@@ -145,12 +153,14 @@ const liveMethods: SalonServiceContract = {
   createService: (service) => api.post<ServiceItem>('/services', service),
   updateService: (id, service) => api.put<ServiceItem>(`/services/${id}`, service),
   toggleServiceStatus: (id) => api.post<ServiceItem>(`/services/${id}/toggle`),
+  bulkImportServices: (branchId, rows) => api.post<CatalogueImportResult>('/services/bulk-import', { branchId, rows }),
 
   getPackages: (branchId) => api.get<PackageItem[]>('/packages', branchQuery(branchId)),
   getPackage: (id) => getOrNull<PackageItem>(`/packages/${id}`),
   createPackage: (pkg) => api.post<PackageItem>('/packages', pkg),
   updatePackage: (id, pkg) => api.put<PackageItem>(`/packages/${id}`, pkg),
   togglePackageStatus: (id) => api.post<PackageItem>(`/packages/${id}/toggle`),
+  bulkImportPackages: (branchId, rows) => api.post<CatalogueImportResult>('/packages/bulk-import', { branchId, rows }),
 
   getServiceCategories: (branchId) => api.get<ServiceCategory[]>('/service-categories', branchQuery(branchId)),
   createServiceCategory: (branchId, name) => api.post<ServiceCategory>('/service-categories', { branchId, name }),
@@ -299,6 +309,14 @@ const liveMethods: SalonServiceContract = {
     }),
   getClientOutstandingInvoices: (branchId, clientIdOrPhone) =>
     api.get<Invoice[]>('/invoices/outstanding', { ...branchQuery(branchId), clientIdOrPhone }),
+  refundInvoice: (invoiceId, input) =>
+    api.post<RefundInvoiceResult>(`/invoices/${invoiceId}/refunds`, input, newIdempotencyKey()).then((res) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('refresh-notifications'));
+      }
+      return res;
+    }),
+  getInvoiceRefunds: (invoiceId) => api.get<InvoiceRefundDTO[]>(`/invoices/${invoiceId}/refunds`),
 
   // ── Step 12 · Expenses ─────────────────────────────────────────────────────
   getExpenses: (branchId: string | 'ALL', filter?: Record<string, any>) => api.get<Expense[]>('/expenses', { ...branchQuery(branchId), ...(filter || {}) }),
@@ -418,6 +436,18 @@ const liveMethods: SalonServiceContract = {
   // ── Testing & Maintenance Reset ───────────────────────────────────────────
   resetTestData: (params) =>
     api.post('/system/reset-test-data', params),
+
+  // ── Step 23 · Hardware & Device Integration ────────────────────────────────
+  getDevices: (branchId, _actor, query) =>
+    api.get<Device[]>('/devices', { ...branchQuery(branchId), ...(query || {}) }),
+  getDevice: (id) => getOrNull<Device>(`/devices/${id}`),
+  createDevice: (input) => api.post<Device>('/devices', input),
+  updateDevice: (id, input) => api.put<Device>(`/devices/${id}`, input),
+  toggleDeviceStatus: (id) => api.post<Device>(`/devices/${id}/toggle`),
+  deleteDevice: (id) => api.delete<{ success: boolean; message: string }>(`/devices/${id}`),
+  testDeviceConnection: (id, options) => api.post<TestConnectionResult>(`/devices/${id}/test-connection`, options || {}),
+  syncDevice: (id, options) => api.post<SyncDeviceResult>(`/devices/${id}/sync`, options || {}),
+  getDeviceLogs: (id, _actor, limit) => api.get<DeviceLog[]>(`/devices/${id}/logs`, limit ? { limit } : {}),
 };
 
 /** Names of the contract methods answered by the API (handy for debugging / status screens). */

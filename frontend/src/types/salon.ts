@@ -989,6 +989,57 @@ export interface Invoice {
   processedByName: string;
   idempotencyKey?: string;
   notes?: string;
+  lifecycle?: 'ACTIVE' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'VOIDED';
+  refunds?: InvoiceRefundDTO[];
+}
+
+export interface RefundLineInput {
+  lineId: string;
+  quantity: number;
+  restock?: 'RESALABLE' | 'DAMAGED' | 'NONE';
+}
+
+export interface RefundInvoiceInput {
+  type: 'REFUND' | 'VOID';
+  reason: string;
+  refundMethod?: 'CASH' | 'ONLINE_ACCOUNT';
+  paymentAccountId?: string;
+  lines?: RefundLineInput[];
+}
+
+export interface InvoiceRefundDTO {
+  id: string;
+  refundNumber: string;
+  type: 'REFUND' | 'VOID';
+  refundDate: string;
+  netReversed: number;
+  taxReversed: number;
+  tipReversed: number;
+  cashOut: number;
+  receivableCancelled: number;
+  method?: string;
+  reason: string;
+  byName: string;
+  createdAt: string;
+  lines: {
+    lineId: string;
+    quantity: number;
+    net: number;
+    tax: number;
+    restock: 'RESALABLE' | 'DAMAGED' | 'NONE';
+  }[];
+}
+
+export interface RefundInvoiceResult {
+  invoice: Invoice;
+  refund: {
+    refundNumber: string;
+    type: 'REFUND' | 'VOID';
+    netReversed: number;
+    taxReversed: number;
+    tipReversed: number;
+    cashOut: number;
+  };
 }
 
 export interface POSCartComponentAssignment {
@@ -1498,6 +1549,23 @@ export interface CSVAttendanceImportResult {
   duplicateRows: number;
   rejectedRows: number;
   details: CSVAttendanceImportRow[];
+}
+
+export interface CatalogueImportRowDetail {
+  rowNumber: number;
+  id?: string;
+  name?: string;
+  code?: string;
+  status: 'ACCEPTED' | 'DUPLICATE' | 'REJECTED' | 'INVALID';
+  reason?: string;
+}
+
+export interface CatalogueImportResult {
+  totalRows: number;
+  acceptedRows: number;
+  duplicateRows: number;
+  rejectedRows: number;
+  details: CatalogueImportRowDetail[];
 }
 
 export interface CreateOvertimeInput {
@@ -3243,3 +3311,4 @@ export interface AttendanceOvertimeReport {
   totals: AttendanceOvertimeReportTotals;
 }
 
+export * from './devices';

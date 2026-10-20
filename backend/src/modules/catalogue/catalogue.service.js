@@ -283,3 +283,219 @@ export const togglePackage = async (id, actor) => {
   if (!p) throw notFound('PACKAGE_NOT_FOUND', `Package '${id}' not found.`);
   return updatePackage(id, { isActive: !p.isActive }, actor);
 };
+
+export const bulkImportServices = async ({ branchId: requested, rows }, actor) => {
+  const branchId = resolveWriteBranch(actor, requested, 'Access Denied: Cannot import services for another branch.');
+  return prisma.$transaction(async (tx) => {
+    await assertActiveBranch(tx, branchId);
+    let accepted = 0;
+    let duplicates = 0;
+    let rejected = 0;
+    const details = [];
+
+    const existing = await tx.service.findMany({ where: { branchId } });
+    const seenCodes = new Set(existing.map((s) => s.code.toUpperCase()));
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 1;
+      try {
+        const name = (row.name || '').trim();
+        if (!name) {
+          rejected++;
+          details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: 'Service name is missing.' });
+          continue;
+        }
+
+        const numPrice = Number(row.price);
+        if (isNaN(numPrice) || numPrice < 0) {
+          rejected++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: 'Price must be a non-negative number.' });
+          continue;
+        }
+
+        let code = row.code && row.code.trim() ? row.code.trim().toUpperCase() : null;
+        if (code) {
+          if (seenCodes.has(code)) {
+            duplicates++;
+            details.push({ rowNumber: rowNum, name, code, status: 'DUPLICATE', reason: `Service code '${code}' already exists.` });
+            continue;
+          }
+        } else {
+          code = await generateNextServiceCode(tx);
+        }
+        seenCodes.add(code);
+
+        const duration = row.durationMinutes ? Math.round(Number(row.durationMinutes)) : 30;
+        const taxTreatment = row.taxTreatment || 'BRANCH_DEFAULT';
+        const specificTaxRuleId = await assertTaxRule(tx, branchId, taxTreatment, row.specificTaxRuleId);
+        const categoryId = await categoryIdFor(tx, branchId, row.category || 'General');
+
+        const s = await tx.service.create({
+          data: {
+            branchId,
+            categoryId,
+            code,
+            name,
+            description: row.description?.trim() || null,
+            durationMinutes: duration > 0 ? duration : 30,
+            price: round2(numPrice),
+            taxTreatment,
+            specificTaxRuleId,
+            isActive: row.isActive !== false,
+          },
+          include: serviceInclude,
+        });
+
+        accepted++;
+        details.push({ rowNumber: rowNum, id: s.id, name: s.name, code: s.code, status: 'ACCEPTED' });
+      } catch (err) {
+        rejected++;
+        details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: err.message });
+      }
+    }
+
+    await auditLog(tx, {
+      userId: actor.id,
+      userName: actor.name,
+      action: 'SERVICES_BULK_IMPORTED',
+      entity: 'Service',
+      entityId: 'bulk',
+      branchId,
+      after: { accepted, duplicates, rejected },
+    });
+
+    return { totalRows: rows.length, acceptedRows: accepted, duplicateRows: duplicates, rejectedRows: rejected, details };
+  });
+};
+
+export const bulkImportPackages = async ({ branchId: requested, rows }, actor) => {
+  const branchId = resolveWriteBranch(actor, requested, 'Access Denied: Cannot import packages for another branch.');
+  return prisma.$transaction(async (tx) => {
+    await assertActiveBranch(tx, branchId);
+    let accepted = 0;
+    let duplicates = 0;
+    let rejected = 0;
+    const details = [];
+
+    const branchServices = await tx.service.findMany({ where: { branchId } });
+    const serviceById = new Map(branchServices.map((s) => [s.id, s]));
+    const serviceByCode = new Map(branchServices.map((s) => [s.code.toUpperCase(), s]));
+    const serviceByName = new Map(branchServices.map((s) => [s.name.trim().toLowerCase(), s]));
+
+    const existingPkgs = await tx.package.findMany({ where: { branchId } });
+    const seenCodes = new Set(existingPkgs.map((p) => p.code.toUpperCase()));
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 1;
+      try {
+        const name = (row.name || '').trim();
+        if (!name) {
+          rejected++;
+          details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: 'Package name is missing.' });
+          continue;
+        }
+
+        const numPrice = Number(row.price);
+        if (isNaN(numPrice) || numPrice < 0) {
+          rejected++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: 'Price must be a non-negative number.' });
+          continue;
+        }
+
+        let code = row.code && row.code.trim() ? row.code.trim().toUpperCase() : null;
+        if (code) {
+          if (seenCodes.has(code)) {
+            duplicates++;
+            details.push({ rowNumber: rowNum, name, code, status: 'DUPLICATE', reason: `Package code '${code}' already exists.` });
+            continue;
+          }
+        } else {
+          code = await generateNextPackageCode(tx);
+        }
+        seenCodes.add(code);
+
+        if (!row.components || !Array.isArray(row.components) || row.components.length === 0) {
+          rejected++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: 'Package must have at least one component service.' });
+          continue;
+        }
+
+        const resolvedComponents = [];
+        let compError = null;
+
+        for (const c of row.components) {
+          let srv = null;
+          if (c.serviceId && serviceById.has(c.serviceId)) {
+            srv = serviceById.get(c.serviceId);
+          } else if (c.serviceCode && serviceByCode.has(c.serviceCode.trim().toUpperCase())) {
+            srv = serviceByCode.get(c.serviceCode.trim().toUpperCase());
+          } else if (c.serviceName && serviceByName.has(c.serviceName.trim().toLowerCase())) {
+            srv = serviceByName.get(c.serviceName.trim().toLowerCase());
+          }
+
+          if (!srv) {
+            compError = `Component '${c.serviceCode || c.serviceName || c.serviceId}' not found in active branch services.`;
+            break;
+          }
+          if (!srv.isActive) {
+            compError = `Cannot include deactivated service '${srv.name}' in package.`;
+            break;
+          }
+
+          resolvedComponents.push({
+            serviceId: srv.id,
+            serviceName: srv.name,
+            quantity: c.quantity ? Number(c.quantity) : 1,
+            allocationPercentage: c.allocationPercentage !== undefined && c.allocationPercentage !== '' ? Number(c.allocationPercentage) : undefined,
+          });
+        }
+
+        if (compError) {
+          rejected++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: compError });
+          continue;
+        }
+
+        await validateComponents(tx, branchId, resolvedComponents);
+        const taxTreatment = row.taxTreatment || 'BRANCH_DEFAULT';
+        const specificTaxRuleId = await assertTaxRule(tx, branchId, taxTreatment, row.specificTaxRuleId);
+
+        const p = await tx.package.create({
+          data: {
+            branchId,
+            code,
+            name,
+            description: row.description?.trim() || null,
+            price: round2(numPrice),
+            taxTreatment,
+            specificTaxRuleId,
+            isActive: row.isActive !== false,
+            components: { create: componentRows(resolvedComponents) },
+          },
+          include: packageInclude,
+        });
+
+        accepted++;
+        details.push({ rowNumber: rowNum, id: p.id, name: p.name, code: p.code, status: 'ACCEPTED' });
+      } catch (err) {
+        rejected++;
+        details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: err.message });
+      }
+    }
+
+    await auditLog(tx, {
+      userId: actor.id,
+      userName: actor.name,
+      action: 'PACKAGES_BULK_IMPORTED',
+      entity: 'Package',
+      entityId: 'bulk',
+      branchId,
+      after: { accepted, duplicates, rejected },
+    });
+
+    return { totalRows: rows.length, acceptedRows: accepted, duplicateRows: duplicates, rejectedRows: rejected, details };
+  });
+};
+

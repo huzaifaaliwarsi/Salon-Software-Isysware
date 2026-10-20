@@ -565,12 +565,14 @@ export const UnpaidInvoicesPage: React.FC = () => {
       </Dialog>
 
       {/* PRINTABLE RECEIPT MODAL */}
-      <ReceiptModal
-        isOpen={isReceiptOpen}
-        onClose={() => setIsReceiptOpen(false)}
-        invoice={receiptInvoice}
-        branch={allBranches.find((b) => b.id === receiptInvoice?.branchId) || null}
-      />
+      {isReceiptOpen && receiptInvoice && (
+        <ReceiptModal
+          isOpen={isReceiptOpen}
+          onClose={() => setIsReceiptOpen(false)}
+          invoice={receiptInvoice}
+          branch={allBranches.find((b) => b.id === receiptInvoice?.branchId) || null}
+        />
+      )}
     </div>
   );
 };

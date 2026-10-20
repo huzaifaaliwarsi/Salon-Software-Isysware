@@ -31,6 +31,7 @@ const isRouteMatching = (targetHref: string, currentPath: string): boolean => {
   if (baseTarget === '/reports/operating-profit' && (currentPath === '/reports/cogs' || currentPath === '/reports/cogs-report')) return true;
   if (baseTarget === '/accounts/account-settlement' && currentPath === '/reports/settlement-history') return true;
   if (baseTarget === '/admin/branch-settings' && (currentPath === '/admin/tax-settings' || currentPath === '/admin/payment-accounts')) return true;
+  if (baseTarget === '/admin/devices' && currentPath === '/admin/device-settings') return true;
   if (baseTarget === '/admin/data-reset' && currentPath === '/admin/reset-data') return true;
   if (baseTarget === '/admin/users' && currentPath === '/admin/users-access') return true;
   return false;
@@ -71,9 +72,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }).filter(Boolean);
 
   const activeBranchName =
-    activeBranchId === 'ALL'
+    user.role === 'SUPER_ADMIN' && activeBranchId === 'ALL'
       ? 'All Branches (Consolidated)'
-      : allBranches.find((b) => b.id === activeBranchId)?.name || 'Selected Branch';
+      : allBranches.find((b) => b.id === (user.role === 'SUPER_ADMIN' ? activeBranchId : user.branchId))?.name || user.branchName || 'Assigned Branch';
 
   const handleItemClick = (href: string) => {
     navigate(href);

@@ -887,23 +887,30 @@ export const UsersAccessPage: React.FC = () => {
                   <label className="block text-xs font-medium text-slate-700 mb-1.5">
                     Branch Assignment
                   </label>
-                  <Select
-                    value={formData.branchId}
-                    onValueChange={(val) => setFormData({ ...formData, branchId: val })}
-                    disabled={selectedUser?.role === 'SUPER_ADMIN'}
-                  >
-                    <SelectTrigger className="h-10 text-xs">
-                      <SelectValue placeholder="Branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All Branches</SelectItem>
-                      {branches.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {isSuperAdmin ? (
+                    <Select
+                      value={formData.branchId}
+                      onValueChange={(val) => setFormData({ ...formData, branchId: val })}
+                      disabled={selectedUser?.role === 'SUPER_ADMIN'}
+                    >
+                      <SelectTrigger className="h-10 text-xs">
+                        <SelectValue placeholder="Branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All Branches</SelectItem>
+                        {branches.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="h-10 px-3 flex items-center bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
+                      <Lock className="w-3.5 h-3.5 mr-1.5 text-slate-400" />
+                      <span className="truncate">{user.branchName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -33,6 +33,7 @@ import {
   attendancePolicyRoutes,
   systemRoutes,
 } from './modules/settings/settings.routes.js';
+import deviceRoutes from './modules/devices/device.routes.js';
 
 const router = Router();
 
@@ -88,5 +89,6 @@ router.use('/dashboard',          dashboardRoutes);       // Step 19
 router.use('/reports',            reportRoutes);          // Step 20–21
 router.use('/audit-events',       auditRoutes);           // Step 22
 router.use('/ledger',             ledgerRoutes);          // Step 22
+router.use('/devices',            deviceRoutes);          // Step 23 Hardware Integration
 
 export default router;

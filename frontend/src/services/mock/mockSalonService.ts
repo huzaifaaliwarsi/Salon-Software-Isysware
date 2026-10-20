@@ -11,6 +11,12 @@ import {
 } from '../salonService';
 import {
   StaffAllowance,
+  Device,
+  DeviceLog,
+  CreateDeviceInput,
+  UpdateDeviceInput,
+  TestConnectionResult,
+  SyncDeviceResult,
   PayrollAdjustment,
   SalaryAdvance,
   MonthlyPaySummary,
@@ -29,6 +35,7 @@ import {
   OvertimeRecord,
   ServiceItem,
   PackageItem,
+  PackageComponent,
   ServiceCategory,
   TaxRule,
   InvoiceLineItem,
@@ -37,6 +44,9 @@ import {
   PaymentRecord,
   CreatePOSInvoiceInput,
   CollectOutstandingPaymentInput,
+  RefundInvoiceInput,
+  RefundInvoiceResult,
+  InvoiceRefundDTO,
   IdempotencyRecord,
   Client,
   ExpenseStatus,
@@ -54,6 +64,7 @@ import {
   CreateLeaveInput,
   CSVAttendanceImportRow,
   CSVAttendanceImportResult,
+  CatalogueImportResult,
   CreateOvertimeInput,
   UpdateOvertimeInput,
   AttendanceStatus,
@@ -282,12 +293,20 @@ class MockSalonService implements SalonServiceContract {
 
   // --- BRANCH MANAGEMENT ---
 
-  async getBranches(): Promise<Branch[]> {
+  async getBranches(actor?: User): Promise<Branch[]> {
+    const authenticatedActor = actor || mockAuthService.getCurrentSession()?.user;
     const store = mockStorage.getStore();
+    if (authenticatedActor && authenticatedActor.role !== 'SUPER_ADMIN') {
+      return store.branches.filter((b) => b.id === authenticatedActor.branchId);
+    }
     return [...store.branches];
   }
 
-  async getBranch(id: string): Promise<Branch | null> {
+  async getBranch(id: string, actor?: User): Promise<Branch | null> {
+    const authenticatedActor = actor || mockAuthService.getCurrentSession()?.user;
+    if (authenticatedActor && authenticatedActor.role !== 'SUPER_ADMIN' && authenticatedActor.branchId !== id) {
+      return null;
+    }
     const store = mockStorage.getStore();
     const branch = store.branches.find((b) => b.id === id);
     return branch ? { ...branch } : null;
@@ -2065,6 +2084,229 @@ class MockSalonService implements SalonServiceContract {
     return { ...pkg };
   }
 
+  async bulkImportServices(branchId: string, rows: any[], actor?: User): Promise<CatalogueImportResult> {
+    const authenticatedActor = this.getAuthenticatedActor(actor);
+    if (authenticatedActor.role !== 'SUPER_ADMIN' && authenticatedActor.role !== 'ADMIN') {
+      throw new Error('Access Denied: Only Administrators can import services.');
+    }
+    const store = mockStorage.getStore();
+    const effectiveBranchId = authenticatedActor.role === 'ADMIN' ? authenticatedActor.branchId : branchId;
+    if (!effectiveBranchId || effectiveBranchId === 'ALL') {
+      throw new Error('Please select an explicit branch for importing services.');
+    }
+
+    let acceptedRows = 0;
+    let duplicateRows = 0;
+    let rejectedRows = 0;
+    const details: CatalogueImportResult['details'] = [];
+
+    const existingCodes = new Set(store.services.filter((s) => s.branchId === effectiveBranchId).map((s) => s.code.toUpperCase()));
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 1;
+      try {
+        const name = (row.name || '').trim();
+        if (!name) {
+          rejectedRows++;
+          details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: 'Service name is missing.' });
+          continue;
+        }
+
+        const numPrice = Number(row.price);
+        if (isNaN(numPrice) || numPrice < 0) {
+          rejectedRows++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: 'Price must be a non-negative number.' });
+          continue;
+        }
+
+        let code = row.code && row.code.trim() ? row.code.trim().toUpperCase() : null;
+        if (code) {
+          if (existingCodes.has(code)) {
+            duplicateRows++;
+            details.push({ rowNumber: rowNum, name, code, status: 'DUPLICATE', reason: `Service code '${code}' already exists.` });
+            continue;
+          }
+        } else {
+          code = nextReference(store, 'SVR');
+        }
+        existingCodes.add(code);
+
+        const categoryName = (row.category || 'General').trim();
+        let cat = store.serviceCategories.find((c) => c.branchId === effectiveBranchId && c.name.toLowerCase() === categoryName.toLowerCase());
+        if (!cat) {
+          cat = {
+            id: `cat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+            branchId: effectiveBranchId,
+            name: categoryName,
+            isActive: true,
+          };
+          store.serviceCategories.push(cat);
+        } else if (!cat.isActive) {
+          cat.isActive = true;
+        }
+
+        const duration = row.durationMinutes ? Math.round(Number(row.durationMinutes)) : 30;
+        const newService: ServiceItem = {
+          id: `srv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          branchId: effectiveBranchId,
+          code,
+          name,
+          category: cat.name,
+          durationMinutes: duration > 0 ? duration : 30,
+          price: roundCurrency(numPrice),
+          description: row.description?.trim(),
+          taxTreatment: row.taxTreatment || 'BRANCH_DEFAULT',
+          specificTaxRuleId: row.specificTaxRuleId,
+          isActive: row.isActive !== false,
+        };
+
+        store.services.push(newService);
+        acceptedRows++;
+        details.push({ rowNumber: rowNum, id: newService.id, name: newService.name, code: newService.code, status: 'ACCEPTED' });
+      } catch (err: any) {
+        rejectedRows++;
+        details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: err.message });
+      }
+    }
+
+    mockStorage.saveStore(store);
+    return { totalRows: rows.length, acceptedRows, duplicateRows, rejectedRows, details };
+  }
+
+  async bulkImportPackages(branchId: string, rows: any[], actor?: User): Promise<CatalogueImportResult> {
+    const authenticatedActor = this.getAuthenticatedActor(actor);
+    if (authenticatedActor.role !== 'SUPER_ADMIN' && authenticatedActor.role !== 'ADMIN') {
+      throw new Error('Access Denied: Only Administrators can import packages.');
+    }
+    const store = mockStorage.getStore();
+    const effectiveBranchId = authenticatedActor.role === 'ADMIN' ? authenticatedActor.branchId : branchId;
+    if (!effectiveBranchId || effectiveBranchId === 'ALL') {
+      throw new Error('Please select an explicit branch for importing packages.');
+    }
+
+    let acceptedRows = 0;
+    let duplicateRows = 0;
+    let rejectedRows = 0;
+    const details: CatalogueImportResult['details'] = [];
+
+    const existingCodes = new Set(store.packages.filter((p) => p.branchId === effectiveBranchId).map((p) => p.code.toUpperCase()));
+    const branchServices = store.services.filter((s) => s.branchId === effectiveBranchId);
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 1;
+      try {
+        const name = (row.name || '').trim();
+        if (!name) {
+          rejectedRows++;
+          details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: 'Package name is missing.' });
+          continue;
+        }
+
+        const numPrice = Number(row.price);
+        if (isNaN(numPrice) || numPrice < 0) {
+          rejectedRows++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: 'Price must be a non-negative number.' });
+          continue;
+        }
+
+        let code = row.code && row.code.trim() ? row.code.trim().toUpperCase() : null;
+        if (code) {
+          if (existingCodes.has(code)) {
+            duplicateRows++;
+            details.push({ rowNumber: rowNum, name, code, status: 'DUPLICATE', reason: `Package code '${code}' already exists.` });
+            continue;
+          }
+        } else {
+          code = nextReference(store, 'PKG');
+        }
+        existingCodes.add(code);
+
+        if (!row.components || !Array.isArray(row.components) || row.components.length === 0) {
+          rejectedRows++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: 'Package must have at least one component service.' });
+          continue;
+        }
+
+        const resolvedComponents: PackageComponent[] = [];
+        let compError = null;
+
+        for (const c of row.components) {
+          const srv = branchServices.find((s) =>
+            (c.serviceId && s.id === c.serviceId) ||
+            (c.serviceCode && s.code.toUpperCase() === c.serviceCode.trim().toUpperCase()) ||
+            (c.serviceName && s.name.toLowerCase() === c.serviceName.trim().toLowerCase())
+          );
+
+          if (!srv) {
+            compError = `Component '${c.serviceCode || c.serviceName || c.serviceId}' not found in active branch services.`;
+            break;
+          }
+          if (!srv.isActive) {
+            compError = `Cannot include deactivated service '${srv.name}' in package.`;
+            break;
+          }
+
+          resolvedComponents.push({
+            serviceId: srv.id,
+            serviceCode: srv.code,
+            serviceName: srv.name,
+            unitPrice: srv.price,
+            quantity: c.quantity ? Number(c.quantity) : 1,
+            allocationPercentage: c.allocationPercentage !== undefined && c.allocationPercentage !== '' ? roundCurrency(Number(c.allocationPercentage)) : 0,
+          });
+        }
+
+        if (compError) {
+          rejectedRows++;
+          details.push({ rowNumber: rowNum, name, status: 'REJECTED', reason: compError });
+          continue;
+        }
+
+        // Compute equal allocations if not supplied or not 100%
+        const hasSupplied = resolvedComponents.every((c) => c.allocationPercentage > 0);
+        const sumSupplied = resolvedComponents.reduce((acc, c) => acc + c.allocationPercentage, 0);
+        if (!hasSupplied || Math.abs(sumSupplied - 100) > 0.01) {
+          const count = resolvedComponents.length;
+          const base = Math.floor((100 / count) * 100) / 100;
+          let acc = 0;
+          resolvedComponents.forEach((c, idx) => {
+            if (idx === count - 1) {
+              c.allocationPercentage = roundCurrency(100 - acc);
+            } else {
+              c.allocationPercentage = base;
+              acc += base;
+            }
+          });
+        }
+
+        const newPkg: PackageItem = {
+          id: `pkg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          branchId: effectiveBranchId,
+          code,
+          name,
+          description: row.description?.trim(),
+          price: roundCurrency(numPrice),
+          taxTreatment: row.taxTreatment || 'BRANCH_DEFAULT',
+          specificTaxRuleId: row.specificTaxRuleId,
+          isActive: row.isActive !== false,
+          components: resolvedComponents,
+        };
+
+        store.packages.push(newPkg);
+        acceptedRows++;
+        details.push({ rowNumber: rowNum, id: newPkg.id, name: newPkg.name, code: newPkg.code, status: 'ACCEPTED' });
+      } catch (err: any) {
+        rejectedRows++;
+        details.push({ rowNumber: rowNum, name: row.name, status: 'REJECTED', reason: err.message });
+      }
+    }
+
+    mockStorage.saveStore(store);
+    return { totalRows: rows.length, acceptedRows, duplicateRows, rejectedRows, details };
+  }
+
   // --- PHASE 2B: CATEGORIES ---
 
   async getServiceCategories(branchId: string): Promise<ServiceCategory[]> {
@@ -3536,6 +3778,102 @@ class MockSalonService implements SalonServiceContract {
       if (normQueryPhone && i.clientPhone.replace(/\D/g, '') === normQueryPhone) return true;
       return false;
     });
+  }
+
+  async refundInvoice(invoiceId: string, input: RefundInvoiceInput, actor?: User): Promise<RefundInvoiceResult> {
+    const authenticatedActor = this.getAuthenticatedActor(actor);
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(authenticatedActor.role)) {
+      throw new Error('Access Denied: Only administrators can approve refunds and voids.');
+    }
+    const store = mockStorage.getStore();
+    const invoiceIndex = store.invoices.findIndex((inv) => inv.id === invoiceId);
+    if (invoiceIndex === -1) {
+      throw new Error(`Invoice '${invoiceId}' not found.`);
+    }
+    const inv = store.invoices[invoiceIndex];
+    if (inv.lifecycle === 'VOIDED' || inv.lifecycle === 'REFUNDED') {
+      throw new Error(`Invoice '${inv.invoiceNumber}' is already ${inv.lifecycle?.toLowerCase()}.`);
+    }
+
+    const isVoid = input.type === 'VOID';
+    const refundNumber = isVoid ? `VOID-${Date.now().toString().slice(-6)}` : `RFD-${Date.now().toString().slice(-6)}`;
+    const today = new Date().toISOString().slice(0, 10);
+
+    let netReversed = 0;
+    let taxReversed = 0;
+
+    const linesToProcess = isVoid
+      ? (inv.lines || inv.lineItems || []).map((l) => ({ lineId: l.id, quantity: l.quantity, restock: 'RESALABLE' as const }))
+      : (input.lines || []);
+
+    const refundLines = linesToProcess.map((r) => {
+      const line = (inv.lines || inv.lineItems || []).find((l) => l.id === r.lineId);
+      const qty = r.quantity;
+      const lineNet = line ? ((line.netSales ?? 0) / (line.quantity || 1)) * qty : 0;
+      const lineTax = line ? ((line.tax ?? 0) / (line.quantity || 1)) * qty : 0;
+      netReversed += lineNet;
+      taxReversed += lineTax;
+      return {
+        lineId: r.lineId,
+        quantity: qty,
+        net: lineNet,
+        tax: lineTax,
+        restock: (r.restock || 'RESALABLE') as 'RESALABLE' | 'DAMAGED' | 'NONE',
+      };
+    });
+
+    const totalReversed = netReversed + taxReversed;
+    const cashOut = Math.min(inv.amountPaid, totalReversed);
+    const newAmountPaid = Math.max(0, inv.amountPaid - cashOut);
+    const newAmountDue = Math.max(0, inv.total - totalReversed - newAmountPaid);
+
+    const refundDTO: InvoiceRefundDTO = {
+      id: `rfd_${Date.now()}`,
+      refundNumber,
+      type: input.type,
+      refundDate: today,
+      netReversed,
+      taxReversed,
+      tipReversed: 0,
+      cashOut,
+      receivableCancelled: Math.max(0, inv.amountDue - newAmountDue),
+      method: input.refundMethod || 'CASH',
+      reason: input.reason,
+      byName: authenticatedActor.name,
+      createdAt: new Date().toISOString(),
+      lines: refundLines,
+    };
+
+    const newLifecycle = isVoid ? 'VOIDED' : (refundLines.length >= (inv.lines || inv.lineItems || []).length ? 'REFUNDED' : 'PARTIALLY_REFUNDED');
+    const updatedInvoice: Invoice = {
+      ...inv,
+      lifecycle: newLifecycle,
+      status: newAmountDue <= 0 ? 'PAID' : (newAmountPaid > 0 ? 'PARTIAL' : 'UNPAID'),
+      amountPaid: newAmountPaid,
+      amountDue: newAmountDue,
+      refunds: [...(inv.refunds || []), refundDTO],
+    };
+
+    store.invoices[invoiceIndex] = updatedInvoice;
+    mockStorage.saveStore(store);
+
+    return {
+      invoice: updatedInvoice,
+      refund: {
+        refundNumber,
+        type: input.type,
+        netReversed,
+        taxReversed,
+        tipReversed: 0,
+        cashOut,
+      },
+    };
+  }
+
+  async getInvoiceRefunds(invoiceId: string): Promise<InvoiceRefundDTO[]> {
+    const store = mockStorage.getStore();
+    const inv = store.invoices.find((i) => i.id === invoiceId);
+    return inv?.refunds || [];
   }
 
   // ==========================================
@@ -12063,6 +12401,215 @@ class MockSalonService implements SalonServiceContract {
 
   async markAllAttendance(): Promise<{ markedCount: number; skippedCount: number; markedNames: string[]; skippedNames: string[] }> {
     return { markedCount: 0, skippedCount: 0, markedNames: [], skippedNames: [] };
+  }
+
+  // ── Step 23 · Hardware & Device Integration (Mock) ────────────────────────
+  async getDevices(branchId?: string | 'ALL', _actor?: any, query?: { deviceType?: string; status?: string; search?: string }): Promise<Device[]> {
+    const store = mockStorage.getStore();
+    let devices: Device[] = store?.devices || [];
+    if (devices.length === 0) {
+      devices = [
+        {
+          id: 'dev-zkteco-01',
+          branchId: 'b-lhe',
+          branchName: 'Lahore Gulberg Branch',
+          branchCode: 'LHE',
+          name: 'Front Desk Biometric Terminal',
+          deviceType: 'BIOMETRIC_ATTENDANCE',
+          brand: 'ZKTeco',
+          model: 'iClock 880',
+          serialNumber: 'ZK-LHE-98210',
+          connectionType: 'ETHERNET_LAN',
+          ipAddress: '192.168.1.201',
+          port: 4370,
+          macAddress: '00:1A:79:B2:34:56',
+          baudRate: null,
+          communicationKey: '••••••••',
+          status: 'ONLINE',
+          isActive: true,
+          lastPingAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+          lastSyncAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+          lastSyncStatus: 'Verified 18 active employee biometric punch logs.',
+          config: { autoPush: true, bellTiming: '09:00' },
+          logsCount: 24,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'dev-printer-01',
+          branchId: 'b-lhe',
+          branchName: 'Lahore Gulberg Branch',
+          branchCode: 'LHE',
+          name: 'POS Counter Receipt Printer',
+          deviceType: 'POS_PRINTER',
+          brand: 'Epson',
+          model: 'TM-T88VI',
+          serialNumber: 'EP-5829104',
+          connectionType: 'ETHERNET_LAN',
+          ipAddress: '192.168.1.202',
+          port: 9100,
+          macAddress: '00:26:AB:44:89:12',
+          baudRate: null,
+          communicationKey: null,
+          status: 'ONLINE',
+          isActive: true,
+          lastPingAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+          lastSyncAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+          lastSyncStatus: 'Printer ready, roll status OK.',
+          config: { paperWidth: 80, autoCut: true, drawerKick: true },
+          logsCount: 12,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+      if (store) {
+        store.devices = devices;
+        mockStorage.saveStore(store);
+      }
+    }
+    if (branchId && branchId !== 'ALL') {
+      devices = devices.filter((d: Device) => d.branchId === branchId);
+    }
+    if (query?.deviceType) {
+      devices = devices.filter((d: Device) => d.deviceType === query.deviceType);
+    }
+    if (query?.status) {
+      devices = devices.filter((d: Device) => d.status === query.status);
+    }
+    if (query?.search) {
+      const q = query.search.toLowerCase();
+      devices = devices.filter((d: Device) =>
+        d.name.toLowerCase().includes(q) ||
+        d.brand.toLowerCase().includes(q) ||
+        d.model.toLowerCase().includes(q) ||
+        (d.ipAddress && d.ipAddress.includes(q))
+      );
+    }
+    return devices;
+  }
+
+  async getDevice(id: string, _actor?: any): Promise<Device | null> {
+    const store = mockStorage.getStore();
+    const device = (store?.devices || []).find((d: Device) => d.id === id);
+    return device || null;
+  }
+
+  async createDevice(input: CreateDeviceInput, actor?: any): Promise<Device> {
+    const store = mockStorage.getStore();
+    const newDevice: Device = {
+      id: `dev-${Date.now()}`,
+      branchId: input.branchId || actor?.branchId || 'b-lhe',
+      branchName: 'Selected Branch',
+      branchCode: 'CUR',
+      name: input.name,
+      deviceType: input.deviceType,
+      brand: input.brand,
+      model: input.model,
+      serialNumber: input.serialNumber || null,
+      connectionType: input.connectionType || 'ETHERNET_LAN',
+      ipAddress: input.ipAddress || null,
+      port: input.port || null,
+      macAddress: input.macAddress || null,
+      baudRate: input.baudRate || null,
+      communicationKey: input.communicationKey ? '••••••••' : null,
+      status: 'OFFLINE',
+      isActive: input.isActive ?? true,
+      lastPingAt: null,
+      lastSyncAt: null,
+      lastSyncStatus: null,
+      config: input.config || null,
+      logsCount: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    if (store) {
+      store.devices = [newDevice, ...(store.devices || [])];
+      mockStorage.saveStore(store);
+    }
+    return newDevice;
+  }
+
+  async updateDevice(id: string, input: UpdateDeviceInput, _actor?: any): Promise<Device> {
+    const store = mockStorage.getStore();
+    const device = (store?.devices || []).find((d: Device) => d.id === id);
+    if (!device) throw new Error(`Device '${id}' not found.`);
+    Object.assign(device, input, { updatedAt: new Date().toISOString() });
+    if (store) mockStorage.saveStore(store);
+    return device;
+  }
+
+  async toggleDeviceStatus(id: string, _actor?: any): Promise<Device> {
+    const store = mockStorage.getStore();
+    const device = (store?.devices || []).find((d: Device) => d.id === id);
+    if (!device) throw new Error(`Device '${id}' not found.`);
+    device.isActive = !device.isActive;
+    device.status = device.isActive ? 'ONLINE' : 'OFFLINE';
+    device.updatedAt = new Date().toISOString();
+    if (store) mockStorage.saveStore(store);
+    return device;
+  }
+
+  async deleteDevice(id: string, _actor?: any): Promise<{ success: boolean; message: string }> {
+    const store = mockStorage.getStore();
+    if (store && store.devices) {
+      store.devices = store.devices.filter((d: Device) => d.id !== id);
+      mockStorage.saveStore(store);
+    }
+    return { success: true, message: 'Device removed successfully.' };
+  }
+
+  async testDeviceConnection(id: string, _options?: any, _actor?: any): Promise<TestConnectionResult> {
+    const store = mockStorage.getStore();
+    const device = (store?.devices || []).find((d: Device) => d.id === id);
+    const now = new Date().toISOString();
+    if (device) {
+      device.status = 'ONLINE';
+      device.lastPingAt = now;
+      device.lastSyncStatus = 'Connection verified (Latency: 28ms)';
+      if (store) mockStorage.saveStore(store);
+    }
+    return {
+      connected: true,
+      latencyMs: 28,
+      status: 'ONLINE',
+      message: 'Hardware connection established. Ping round-trip latency: 28ms.',
+      diagnostics: { host: device?.ipAddress || '192.168.1.201', port: device?.port || 4370 },
+    };
+  }
+
+  async syncDevice(id: string, _options?: any, _actor?: any): Promise<SyncDeviceResult> {
+    const store = mockStorage.getStore();
+    const device = (store?.devices || []).find((d: Device) => d.id === id);
+    const now = new Date().toISOString();
+    const summary = 'Device logs buffer synchronized with branch records.';
+    if (device) {
+      device.status = 'ONLINE';
+      device.lastSyncAt = now;
+      device.lastSyncStatus = summary;
+      if (store) mockStorage.saveStore(store);
+    }
+    return {
+      success: true,
+      deviceId: id,
+      syncedAt: now,
+      status: 'ONLINE',
+      message: summary,
+      details: { recordsProcessed: 12 },
+    };
+  }
+
+  async getDeviceLogs(id: string, _actor?: any, _limit?: number): Promise<DeviceLog[]> {
+    return [
+      {
+        id: 'log-1',
+        deviceId: id,
+        branchId: 'b-lhe',
+        eventType: 'TEST_PING',
+        status: 'SUCCESS',
+        message: 'Socket ping verified latency: 28ms',
+        createdAt: new Date().toISOString(),
+      },
+    ];
   }
 
   async resetTestData(params?: { branchId?: string; wipeCatalogue?: boolean; wipeInventory?: boolean; wipeClients?: boolean; wipeStaff?: boolean; wipeSuppliers?: boolean }): Promise<{ success: boolean; message: string; branchId: string; resetAt: string }> {

@@ -4,12 +4,12 @@ import * as service from './branches.service.js';
 import { asyncHandler } from '../../lib/asyncHandler.js';
 import { notFound } from '../../lib/AppError.js';
 
-export const list = asyncHandler(async (_req, res) => {
-  res.json({ data: await service.listBranches() });
+export const list = asyncHandler(async (req, res) => {
+  res.json({ data: await service.listBranches(req.user) });
 });
 
 export const getOne = asyncHandler(async (req, res) => {
-  const branch = await service.getBranch(req.params.id);
+  const branch = await service.getBranch(req.params.id, req.user);
   if (!branch) throw notFound('BRANCH_NOT_FOUND', `Branch '${req.params.id}' not found.`);
   res.json({ data: branch });
 });

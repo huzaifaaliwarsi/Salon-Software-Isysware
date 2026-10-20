@@ -18,6 +18,7 @@ export const getService    = send(async (req) => {
   return svc;
 });
 export const createService = send((req) => s.createService(req.body, req.user), 201);
+export const bulkImportServices = send((req) => s.bulkImportServices(req.body, req.user));
 export const updateService = send((req) => s.updateService(req.params.id, req.body, req.user));
 export const toggleService = send((req) => s.toggleService(req.params.id, req.user));
 
@@ -28,5 +29,7 @@ export const getPackage    = send(async (req) => {
   return p;
 });
 export const createPackage = send((req) => s.createPackage(req.body, req.user), 201);
+export const bulkImportPackages = send((req) => s.bulkImportPackages(req.body, req.user));
 export const updatePackage = send((req) => s.updatePackage(req.params.id, req.body, req.user));
 export const togglePackage = send((req) => s.togglePackage(req.params.id, req.user));
+

@@ -130,7 +130,9 @@ export const AppRouter: React.FC = () => {
       pathname === '/admin/tax-settings' ||
       pathname === '/admin/payment-accounts' ||
       pathname === '/admin/data-reset' ||
-      pathname === '/admin/reset-data'
+      pathname === '/admin/reset-data' ||
+      pathname === '/admin/devices' ||
+      pathname === '/admin/device-settings'
     ) {
       return <BranchSettingsPage />;
     }

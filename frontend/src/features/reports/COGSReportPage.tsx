@@ -47,7 +47,7 @@ export const COGSReportPage: React.FC = () => {
 
   // Filter Form State
   const [selectedBranch, setSelectedBranch] = useState<string>(
-    activeBranchId || user.branchId || 'ALL'
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
   );
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>('THIS_MONTH');
   const [customFrom, setCustomFrom] = useState<string>(defaultMonth.from);

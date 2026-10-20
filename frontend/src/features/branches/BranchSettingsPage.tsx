@@ -10,6 +10,7 @@ import {
   Branch,
 } from '@/types/salon';
 import { AccessDeniedView } from '@/features/scaffold/AccessDeniedView';
+import { DeviceIntegrationView } from './components/DeviceIntegrationView';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateTaxAndTotals, roundCurrency } from '@/lib/taxCalculations';
 import {
@@ -80,6 +81,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Clock,
+  Cpu,
 } from 'lucide-react';
 
 export const BranchSettingsPage: React.FC = () => {
@@ -99,9 +101,10 @@ export const BranchSettingsPage: React.FC = () => {
     : (user.branchId as string);
 
   const isResetPath = pathname === '/admin/data-reset' || pathname === '/admin/reset-data';
+  const isDevicePath = pathname === '/admin/devices' || pathname === '/admin/device-settings';
   const [selectedBranchId, setSelectedBranchId] = useState<string>(initialBranchId);
-  const [activeTab, setActiveTab] = useState<'PAYMENT_ACCOUNTS' | 'TAX_SETTINGS' | 'DATA_RESET'>(
-    isResetPath ? 'DATA_RESET' : 'PAYMENT_ACCOUNTS'
+  const [activeTab, setActiveTab] = useState<'PAYMENT_ACCOUNTS' | 'TAX_SETTINGS' | 'DATA_RESET' | 'DEVICE_INTEGRATION'>(
+    isResetPath ? 'DATA_RESET' : isDevicePath ? 'DEVICE_INTEGRATION' : 'PAYMENT_ACCOUNTS'
   );
 
   // Simple Branch Tax settings state
@@ -113,8 +116,10 @@ export const BranchSettingsPage: React.FC = () => {
   useEffect(() => {
     if (isResetPath) {
       setActiveTab('DATA_RESET');
+    } else if (isDevicePath) {
+      setActiveTab('DEVICE_INTEGRATION');
     }
-  }, [isResetPath]);
+  }, [isResetPath, isDevicePath]);
 
   // Test data reset states
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -641,49 +646,40 @@ export const BranchSettingsPage: React.FC = () => {
 
       {/* TABS NAVIGATION */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <TabsList className="bg-slate-100/80 p-1">
-            <TabsTrigger value="PAYMENT_ACCOUNTS" className="text-xs gap-2 py-1.5 px-4">
-              <Landmark className="w-3.5 h-3.5 text-[#2254E1]" />
-              Named Payment Accounts ({paymentAccounts.length})
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
+          <TabsList className="bg-slate-100 p-1 rounded-xl inline-flex h-auto gap-1 border border-slate-200/60">
+            <TabsTrigger
+              value="PAYMENT_ACCOUNTS"
+              className="text-xs gap-2 py-2 px-3.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs font-medium data-[state=active]:font-bold transition-all"
+            >
+              <Landmark className="w-3.5 h-3.5" />
+              Payment Accounts ({paymentAccounts.length})
             </TabsTrigger>
-            <TabsTrigger value="TAX_SETTINGS" className="text-xs gap-2 py-1.5 px-4">
-              <Percent className="w-3.5 h-3.5 text-[#2254E1]" />
-              Branch Tax Settings & Live Preview
+            <TabsTrigger
+              value="TAX_SETTINGS"
+              className="text-xs gap-2 py-2 px-3.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs font-medium data-[state=active]:font-bold transition-all"
+            >
+              <Percent className="w-3.5 h-3.5" />
+              Branch Tax Settings
+            </TabsTrigger>
+            <TabsTrigger
+              value="DEVICE_INTEGRATION"
+              className="text-xs gap-2 py-2 px-3.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs font-medium data-[state=active]:font-bold transition-all"
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              Hardware & Devices
             </TabsTrigger>
             <TabsTrigger
               value="DATA_RESET"
-              className="text-xs gap-2 py-1.5 px-4 text-rose-700 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-800"
+              className="text-xs gap-2 py-2 px-3.5 rounded-lg text-rose-700 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-800 data-[state=active]:shadow-xs font-medium data-[state=active]:font-bold transition-all"
             >
               <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-              Data Reset (Testing)
+              Data Reset
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 text-xs font-semibold gap-1.5"
-              leftIcon={<Clock className="w-3.5 h-3.5 text-indigo-600" />}
-              onClick={() => navigate('/admin/attendance-settings')}
-            >
-              Attendance Settings (Auto-Absent)
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 text-xs font-semibold gap-1.5"
-              leftIcon={<RotateCcw className="w-3.5 h-3.5 text-rose-600" />}
-              onClick={() => {
-                setResetConfirmationText('');
-                setIsResetModalOpen(true);
-              }}
-            >
-              Reset Test Data
-            </Button>
-
+          {/* Contextual Action Button for Current Tab */}
+          <div className="flex items-center gap-2">
             {activeTab === 'PAYMENT_ACCOUNTS' && (
               <Button
                 variant="primary"
@@ -700,6 +696,7 @@ export const BranchSettingsPage: React.FC = () => {
                   });
                   setIsAddAccountModalOpen(true);
                 }}
+                className="shadow-xs"
               >
                 Add Payment Account
               </Button>
@@ -720,6 +717,7 @@ export const BranchSettingsPage: React.FC = () => {
                   });
                   setIsAddTaxRuleModalOpen(true);
                 }}
+                className="shadow-xs"
               >
                 Add Tax Rule
               </Button>
@@ -732,36 +730,64 @@ export const BranchSettingsPage: React.FC = () => {
           <div className="space-y-5 mt-4">
             {/* KPI Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card padding="sm" className="bg-white border-slate-200">
-                <span className="text-[11px] text-slate-500 font-medium block">Total Active Accounts</span>
-                <span className="text-xl font-semibold text-slate-900 mt-1 block">
-                  {accountMetrics.total} accounts
-                </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">Configured for {currentBranch?.name}</span>
+              <Card padding="sm" className="bg-white border-slate-200/90 shadow-xs relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium block">Total Active Accounts</span>
+                    <span className="text-xl font-bold text-slate-900 mt-1 block">
+                      {accountMetrics.total} {accountMetrics.total === 1 ? 'Account' : 'Accounts'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Configured for {currentBranch?.name}</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                </div>
               </Card>
 
-              <Card padding="sm" className="bg-white border-slate-200">
-                <span className="text-[11px] text-slate-500 font-medium block">Commercial Bank Checking</span>
-                <span className="text-xl font-semibold text-[#2254E1] mt-1 block">
-                  {accountMetrics.bankCount} active
-                </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">Corporate bank accounts</span>
+              <Card padding="sm" className="bg-white border-slate-200/90 shadow-xs relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium block">Commercial Bank Checking</span>
+                    <span className="text-xl font-bold text-[#2254E1] mt-1 block">
+                      {accountMetrics.bankCount} {accountMetrics.bankCount === 1 ? 'Corporate Account' : 'Corporate Accounts'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Active settlement channels</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#2254E1] flex items-center justify-center shrink-0">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                </div>
               </Card>
 
-              <Card padding="sm" className="bg-white border-slate-200">
-                <span className="text-[11px] text-slate-500 font-medium block">Card POS Terminals</span>
-                <span className="text-xl font-semibold text-purple-700 mt-1 block">
-                  {accountMetrics.posCount} terminals
-                </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">Physical card readers</span>
+              <Card padding="sm" className="bg-white border-slate-200/90 shadow-xs relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium block">Card POS Terminals</span>
+                    <span className="text-xl font-bold text-purple-700 mt-1 block">
+                      {accountMetrics.posCount} {accountMetrics.posCount === 1 ? 'Terminal' : 'Terminals'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Physical card readers</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                </div>
               </Card>
 
-              <Card padding="sm" className="bg-white border-slate-200">
-                <span className="text-[11px] text-slate-500 font-medium block">Total Electronic Balances</span>
-                <span className="text-xl font-semibold text-emerald-700 mt-1 block tabular-nums">
-                  {formatCurrency(accountMetrics.totalBalance)}
-                </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">Sum of active accounts</span>
+              <Card padding="sm" className="bg-white border-slate-200/90 shadow-xs relative overflow-hidden">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium block">Total Electronic Balances</span>
+                    <span className="text-xl font-bold text-emerald-700 mt-1 block tabular-nums">
+                      {formatCurrency(accountMetrics.totalBalance)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Sum of active accounts</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                </div>
               </Card>
             </div>
 
@@ -814,7 +840,7 @@ export const BranchSettingsPage: React.FC = () => {
                       <TableHead className="text-xs font-semibold">Identifier / IBAN</TableHead>
                       <TableHead className="text-xs font-semibold text-right">Current Ledger Balance</TableHead>
                       <TableHead className="text-xs font-semibold">Status</TableHead>
-                      <TableHead className="w-12 text-center text-xs font-semibold">Actions</TableHead>
+                      <TableHead className="min-w-[70px] text-center text-xs font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1150,6 +1176,17 @@ export const BranchSettingsPage: React.FC = () => {
                 </div>
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* --- TAB 4: HARDWARE & DEVICE INTEGRATION --- */}
+        {activeTab === 'DEVICE_INTEGRATION' && (
+          <div className="mt-4">
+            <DeviceIntegrationView
+              branchId={selectedBranchId}
+              branchName={currentBranch?.name}
+              onRefresh={loadBranchSettings}
+            />
           </div>
         )}
       </Tabs>

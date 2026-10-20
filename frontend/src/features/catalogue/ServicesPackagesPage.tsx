@@ -78,7 +78,9 @@ import {
   Trash2,
   X,
   Loader2,
+  Upload,
 } from 'lucide-react';
+import { BulkUploadCatalogueModal } from './components/BulkUploadCatalogueModal';
 
 export const ServicesPackagesPage: React.FC = () => {
   const { user, activeBranchId, allBranches } = useAuth();
@@ -141,6 +143,10 @@ export const ServicesPackagesPage: React.FC = () => {
   const [isStaffPreviewModalOpen, setIsStaffPreviewModalOpen] = useState(false);
   const [previewPackage, setPreviewPackage] = useState<PackageItem | null>(null);
   const [previewStaffAssignments, setPreviewStaffAssignments] = useState<Record<string, string>>({});
+
+  // Bulk CSV Upload Modal state
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [bulkUploadType, setBulkUploadType] = useState<'SERVICES' | 'PACKAGES'>('SERVICES');
 
   // Feedback states
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -711,6 +717,17 @@ export const ServicesPackagesPage: React.FC = () => {
                   Manage Categories
                 </Button>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Upload className="w-3.5 h-3.5 text-[#2254E1]" />}
+                  onClick={() => {
+                    setBulkUploadType('SERVICES');
+                    setIsBulkUploadModalOpen(true);
+                  }}
+                >
+                  Bulk Upload (CSV)
+                </Button>
+                <Button
                   variant="primary"
                   size="sm"
                   leftIcon={<Plus className="w-3.5 h-3.5" />}
@@ -737,26 +754,39 @@ export const ServicesPackagesPage: React.FC = () => {
                 </Button>
               </>
             ) : (
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Plus className="w-3.5 h-3.5" />}
-                onClick={() => {
-                  setPackageFormData({
-                    code: generateNextPackageCode(allPackages.length > 0 ? allPackages : packages),
-                    name: '',
-                    description: '',
-                    price: 0,
-                    taxTreatment: 'BRANCH_DEFAULT',
-                    specificTaxRuleId: '',
-                    isActive: true,
-                    components: [],
-                  });
-                  setIsAddPackageModalOpen(true);
-                }}
-              >
-                Add Package
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Upload className="w-3.5 h-3.5 text-[#2254E1]" />}
+                  onClick={() => {
+                    setBulkUploadType('PACKAGES');
+                    setIsBulkUploadModalOpen(true);
+                  }}
+                >
+                  Bulk Upload (CSV)
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Plus className="w-3.5 h-3.5" />}
+                  onClick={() => {
+                    setPackageFormData({
+                      code: generateNextPackageCode(allPackages.length > 0 ? allPackages : packages),
+                      name: '',
+                      description: '',
+                      price: 0,
+                      taxTreatment: 'BRANCH_DEFAULT',
+                      specificTaxRuleId: '',
+                      isActive: true,
+                      components: [],
+                    });
+                    setIsAddPackageModalOpen(true);
+                  }}
+                >
+                  Add Package
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -1685,6 +1715,17 @@ export const ServicesPackagesPage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* --- MODAL: BULK UPLOAD CATALOGUE (SERVICES & PACKAGES) --- */}
+      <BulkUploadCatalogueModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={() => setIsBulkUploadModalOpen(false)}
+        initialType={bulkUploadType}
+        branchId={selectedBranchId}
+        existingServices={allServices.length > 0 ? allServices : services}
+        existingPackages={allPackages.length > 0 ? allPackages : packages}
+        onSuccess={loadBranchCatalogue}
+      />
     </div>
   );
 };

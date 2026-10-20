@@ -53,7 +53,7 @@ export const AttendanceOvertimeReportPage: React.FC = () => {
 
   // Filter Form State
   const [selectedBranch, setSelectedBranch] = useState<string>(
-    activeBranchId || user.branchId || 'ALL'
+    isSuperAdmin ? (activeBranchId || 'ALL') : (user.branchId || '')
   );
   const [selectedStaffId, setSelectedStaffId] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -374,6 +374,7 @@ export const AttendanceOvertimeReportPage: React.FC = () => {
               <select
                 className={selectClass}
                 value={selectedBranch}
+                disabled={!isSuperAdmin}
                 onChange={(e) => {
                   setSelectedBranch(e.target.value);
                   setSelectedStaffId('ALL');
