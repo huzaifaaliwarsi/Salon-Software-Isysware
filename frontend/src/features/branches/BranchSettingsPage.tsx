@@ -662,20 +662,6 @@ export const BranchSettingsPage: React.FC = () => {
               <Percent className="w-3.5 h-3.5" />
               Branch Tax Settings
             </TabsTrigger>
-            <TabsTrigger
-              value="DEVICE_INTEGRATION"
-              className="text-xs gap-2 py-2 px-3.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2254E1] data-[state=active]:shadow-xs font-medium data-[state=active]:font-bold transition-all"
-            >
-              <Cpu className="w-3.5 h-3.5" />
-              Hardware & Devices
-            </TabsTrigger>
-            <TabsTrigger
-              value="DATA_RESET"
-              className="text-xs gap-2 py-2 px-3.5 rounded-lg text-rose-700 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-800 data-[state=active]:shadow-xs font-medium data-[state=active]:font-bold transition-all"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-              Data Reset
-            </TabsTrigger>
           </TabsList>
 
           {/* Contextual Action Button for Current Tab */}

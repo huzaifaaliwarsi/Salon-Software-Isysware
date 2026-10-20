@@ -79,6 +79,7 @@ import {
   X,
   Loader2,
   Upload,
+  Download,
 } from 'lucide-react';
 import { BulkUploadCatalogueModal } from './components/BulkUploadCatalogueModal';
 
@@ -281,6 +282,94 @@ export const ServicesPackagesPage: React.FC = () => {
       0
     );
   }, [packageFormData.components]);
+
+  // ── Real CSV Export Handlers ───────────────────────────────────────────────
+  const escapeCsvCell = (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (/[",\n\r]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const handleExportServicesCsv = () => {
+    const listToExport = filteredServices.length > 0 ? filteredServices : (services.length > 0 ? services : allServices);
+    if (listToExport.length === 0) {
+      toast.warning('No services found to export.');
+      return;
+    }
+
+    const branchName = allBranches.find((b) => b.id === selectedBranchId)?.name || 'Branch';
+    const headers = ['Name', 'Category', 'Price', 'Duration', 'Code', 'Description', 'TaxTreatment', 'Status'];
+    const rows = listToExport.map((s) => [
+      s.name,
+      s.category || 'General',
+      s.price,
+      s.durationMinutes,
+      s.code || '',
+      s.description || '',
+      s.taxTreatment || 'BRANCH_DEFAULT',
+      s.isActive ? 'Active' : 'Inactive',
+    ]);
+
+    const csvContent = '\uFEFF' + [
+      headers.map(escapeCsvCell).join(','),
+      ...rows.map((row) => row.map(escapeCsvCell).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Services_${branchName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${listToExport.length} real services to CSV.`);
+  };
+
+  const handleExportPackagesCsv = () => {
+    const listToExport = filteredPackages.length > 0 ? filteredPackages : (packages.length > 0 ? packages : allPackages);
+    if (listToExport.length === 0) {
+      toast.warning('No packages found to export.');
+      return;
+    }
+
+    const branchName = allBranches.find((b) => b.id === selectedBranchId)?.name || 'Branch';
+    const headers = ['Name', 'Price', 'Components', 'Code', 'Description', 'TaxTreatment', 'Status'];
+    const rows = listToExport.map((p) => {
+      const comps = (p.components || [])
+        .map((c) => `${c.serviceName}:${c.quantity || 1}:${c.allocationPercentage || 0}`)
+        .join(';');
+      return [
+        p.name,
+        p.price,
+        comps,
+        p.code || '',
+        p.description || '',
+        p.taxTreatment || 'BRANCH_DEFAULT',
+        p.isActive ? 'Active' : 'Inactive',
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [
+      headers.map(escapeCsvCell).join(','),
+      ...rows.map((row) => row.map(escapeCsvCell).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Packages_${branchName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${listToExport.length} real packages to CSV.`);
+  };
 
   // Handler: Add category
   const handleCreateCategory = async (e: React.FormEvent) => {
@@ -719,6 +808,15 @@ export const ServicesPackagesPage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  leftIcon={<Download className="w-3.5 h-3.5 text-slate-600" />}
+                  onClick={handleExportServicesCsv}
+                  title="Export filtered/active services to CSV"
+                >
+                  Export CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   leftIcon={<Upload className="w-3.5 h-3.5 text-[#2254E1]" />}
                   onClick={() => {
                     setBulkUploadType('SERVICES');
@@ -755,6 +853,15 @@ export const ServicesPackagesPage: React.FC = () => {
               </>
             ) : (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Download className="w-3.5 h-3.5 text-slate-600" />}
+                  onClick={handleExportPackagesCsv}
+                  title="Export filtered/active packages to CSV"
+                >
+                  Export CSV
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

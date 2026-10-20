@@ -147,30 +147,84 @@ export const BulkUploadCatalogueModal: React.FC<BulkUploadCatalogueModalProps> =
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ── CSV Templates ──────────────────────────────────────────────────────────
+  // ── CSV Escaping & Helpers ────────────────────────────────────────────────
+  const escapeCell = (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (/[",\n\r]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  // ── CSV Export / Templates ────────────────────────────────────────────────
   const downloadServicesTemplate = () => {
-    const headers = 'Name,Category,Price,Duration,Code,Description,Status';
-    const sampleRows = [
-      'Hair Cut & Style,Hair Services,1500,45,HAIR-01,Standard hair cut and styling,Active',
-      'Beard Grooming,Grooming,800,30,GRM-01,Beard trim and shape up,Active',
-      'Hydra Facial,Skin Care,4500,60,SKN-01,Deep skin cleansing facial,Active',
-      'Classic Manicure,Nails,1200,30,NL-01,Basic nail cleaning and polish,Active',
-      'Blow Dry & Finish,Hair Services,1800,30,HAIR-02,Professional blow dry styling,Active',
-    ];
-    const csv = [headers, ...sampleRows].join('\n');
-    downloadFile(csv, 'services_bulk_import_template.csv');
+    const branchServices = existingServices.filter((s) => !branchId || s.branchId === branchId);
+    const targetServices = branchServices.length > 0 ? branchServices : existingServices;
+
+    const headers = ['Name', 'Category', 'Price', 'Duration', 'Code', 'Description', 'TaxTreatment', 'Status'];
+    let rows: string[][] = [];
+
+    if (targetServices.length > 0) {
+      rows = targetServices.map((s) => [
+        s.name,
+        s.category || 'General',
+        String(s.price),
+        String(s.durationMinutes),
+        s.code || '',
+        s.description || '',
+        s.taxTreatment || 'BRANCH_DEFAULT',
+        s.isActive ? 'Active' : 'Inactive',
+      ]);
+    } else {
+      rows = [
+        ['Hair Cut & Style', 'Hair Services', '1500', '45', 'HAIR-01', 'Standard hair cut and styling', 'BRANCH_DEFAULT', 'Active'],
+        ['Beard Grooming', 'Grooming', '800', '30', 'GRM-01', 'Beard trim and shape up', 'BRANCH_DEFAULT', 'Active'],
+      ];
+    }
+
+    const csvContent = '\uFEFF' + [
+      headers.map(escapeCell).join(','),
+      ...rows.map((r) => r.map(escapeCell).join(',')),
+    ].join('\n');
+
+    downloadFile(csvContent, targetServices.length > 0 ? 'services_catalogue_export.csv' : 'services_bulk_import_template.csv');
   };
 
   const downloadPackagesTemplate = () => {
-    const headers = 'Name,Price,Components,Code,Description,Status';
-    // Components format: "Service1:Quantity:Allocation%;Service2:Quantity:Allocation%" or simple "Service1;Service2"
-    const sampleRows = [
-      '"Bridal Glow",12000,"Hydra Facial;Classic Manicure;Hair Cut & Style",PKG-01,"Complete bridal pamper package",Active',
-      '"Groom Special",4500,"Hair Cut & Style:1:60;Beard Grooming:1:40",PKG-02,"Hair cut and beard styling package",Active',
-      '"Express Makeover",6000,"Hydra Facial:1:50;Blow Dry & Finish:1:50",PKG-03,"Quick refreshing package",Active',
-    ];
-    const csv = [headers, ...sampleRows].join('\n');
-    downloadFile(csv, 'packages_bulk_import_template.csv');
+    const branchPackages = existingPackages.filter((p) => !branchId || p.branchId === branchId);
+    const targetPackages = branchPackages.length > 0 ? branchPackages : existingPackages;
+
+    const headers = ['Name', 'Price', 'Components', 'Code', 'Description', 'TaxTreatment', 'Status'];
+    let rows: string[][] = [];
+
+    if (targetPackages.length > 0) {
+      rows = targetPackages.map((p) => {
+        const comps = (p.components || [])
+          .map((c) => `${c.serviceName}:${c.quantity || 1}:${c.allocationPercentage || 0}`)
+          .join(';');
+        return [
+          p.name,
+          String(p.price),
+          comps,
+          p.code || '',
+          p.description || '',
+          p.taxTreatment || 'BRANCH_DEFAULT',
+          p.isActive ? 'Active' : 'Inactive',
+        ];
+      });
+    } else {
+      rows = [
+        ['Bridal Glow', '12000', 'Hydra Facial:1:50;Classic Manicure:1:50', 'PKG-01', 'Complete bridal pamper package', 'BRANCH_DEFAULT', 'Active'],
+      ];
+    }
+
+    const csvContent = '\uFEFF' + [
+      headers.map(escapeCell).join(','),
+      ...rows.map((r) => r.map(escapeCell).join(',')),
+    ].join('\n');
+
+    downloadFile(csvContent, targetPackages.length > 0 ? 'packages_catalogue_export.csv' : 'packages_bulk_import_template.csv');
   };
 
   const downloadFile = (content: string, filename: string) => {

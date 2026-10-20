@@ -60,7 +60,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#F5F7FB] text-[#0B1020]">
+    <div className={`min-h-screen flex bg-[#F5F7FB] text-[#0B1020] ${pathname === '/pos' ? 'lg:h-screen lg:overflow-hidden' : ''}`}>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block shrink-0 sticky top-0 h-screen z-20">
         <Sidebar isCollapsed={isSidebarCollapsed} />
@@ -73,7 +73,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       />
 
       {/* Main Viewport */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${pathname === '/pos' ? 'h-screen max-h-screen overflow-hidden' : ''}`}>
         <Header
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -81,7 +81,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           breadcrumbs={generateBreadcrumbs()}
         />
 
-        <main className={`flex-1 w-full min-w-0 ${pathname === '/pos' ? 'p-2 sm:p-2.5 pb-6 sm:pb-7 min-h-0 flex flex-col lg:h-[calc(100vh-4rem)] lg:overflow-hidden' : 'px-3 sm:px-5 lg:px-6 py-3 sm:py-5'}`}>
+        <main className={`flex-1 w-full min-w-0 ${pathname === '/pos' ? 'p-2 sm:p-2.5 min-h-0 flex flex-col overflow-hidden' : 'px-3 sm:px-5 lg:px-6 py-3 sm:py-5'}`}>
           {children}
         </main>
       </div>

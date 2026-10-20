@@ -1677,7 +1677,7 @@ export const POSBillingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-full h-auto lg:h-full flex flex-col gap-2 font-sans overflow-y-auto lg:overflow-hidden pb-20 lg:pb-0">
+    <div className="w-full h-full min-h-0 flex flex-col gap-2 font-sans overflow-hidden">
       {/* 1. Consolidated Executive Top Header Bar */}
       <div className="shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white px-3.5 py-2 rounded-2xl border border-slate-200/90 shadow-2xs">
         {/* Left: Branding & Active Branch */}
@@ -1889,9 +1889,9 @@ export const POSBillingPage: React.FC = () => {
       </div>
 
       {/* 2. Main Desktop Grid: Left Catalogue (lg:col-span-7), Right Current Sale Card (lg:col-span-5) */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 lg:grid-rows-1 gap-2.5 overflow-hidden">
         {/* Left Column: Search, Category Filter Pills & Product Cards (lg:col-span-7) */}
-        <div className="lg:col-span-7 flex flex-col h-full overflow-hidden space-y-1.5">
+        <div className="lg:col-span-7 flex flex-col h-full min-h-0 overflow-hidden space-y-1.5">
           {/* Search Input Bar */}
           <div className="relative shrink-0">
             <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
@@ -2068,8 +2068,8 @@ export const POSBillingPage: React.FC = () => {
         </div>
 
         {/* Right Column: Current Sale Card (lg:col-span-5) */}
-        <div id="pos-cart-panel" className="lg:col-span-5 flex flex-col h-full overflow-hidden">
-          <Card className="w-full h-full flex flex-col justify-between p-3 sm:p-3.5 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-hidden transition-all">
+        <div id="pos-cart-panel" className="lg:col-span-5 flex flex-col h-full min-h-0 overflow-hidden">
+          <Card className="w-full h-full min-h-0 flex flex-col justify-between p-3.5 bg-white border border-slate-200/90 shadow-2xs rounded-2xl overflow-hidden transition-all">
             {/* Top Zone: Header + Cart Items */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
               {/* Sale Card Header */}
@@ -2079,9 +2079,9 @@ export const POSBillingPage: React.FC = () => {
                     <ShoppingCart className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="font-bold text-slate-900 text-xs tracking-tight">Current Sale</h3>
-                      <Badge variant="neutral" className="text-[10px] font-bold bg-blue-50 text-[#2254E1] border-blue-200 py-0 px-1.5">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm tracking-tight">Current Sale</h3>
+                      <Badge variant="neutral" className="text-[10px] font-bold bg-blue-50 text-[#2254E1] border-blue-200 py-0.5 px-2">
                         {currentCartCount} item{currentCartCount !== 1 ? 's' : ''}
                       </Badge>
                     </div>
@@ -2156,64 +2156,64 @@ export const POSBillingPage: React.FC = () => {
 
               {/* Cart Items List OR Clean Empty State with Dedicated Scroller */}
               {cart.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-1 py-4 px-4 text-center">
-                  <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-1.5 border border-blue-100">
-                    <ShoppingCart className="w-4 h-4 opacity-75" />
+                <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200/90 text-xs my-2 py-6 px-4 text-center">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#2254E1] mb-2 border border-blue-100">
+                    <ShoppingCart className="w-5 h-5 opacity-75" />
                   </div>
-                  <span className="font-bold text-slate-700 text-xs">Sale Card is empty</span>
-                  <span className="text-[10px] text-slate-400 mt-0.5 max-w-[200px]">Click any service, product, or package on the left catalogue to add</span>
+                  <span className="font-bold text-slate-700 text-xs sm:text-sm">Sale Card is empty</span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 max-w-[220px]">Click any service, product, or package on the left catalogue to add</span>
                 </div>
               ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 my-1 pr-1 scrollbar-thin">
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-2 py-2 pr-1.5 pos-cart-scroller">
                   {cart.map((ci) => (
                     <div
                       key={ci.cartInstanceId}
-                      className="p-2 bg-slate-50/80 rounded-xl border border-slate-200/70 space-y-1.5 text-xs"
+                      className="p-2.5 sm:p-3 bg-slate-50/80 hover:bg-slate-50/95 rounded-xl border border-slate-200/80 transition-all space-y-2"
                     >
-                      <div className="flex items-start justify-between gap-1.5">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <span className="font-bold text-slate-900 truncate text-[11px]">{ci.item.name}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 truncate text-xs sm:text-[13px]">{ci.item.name}</span>
                             {ci.type === 'PACKAGE' ? (
-                              <Badge variant="neutral" className="text-[8px] bg-blue-100 text-blue-800 py-0">
+                              <Badge variant="neutral" className="text-[9px] bg-purple-50 text-purple-700 border-purple-200 py-0 px-1.5 font-bold">
                                 Pkg
                               </Badge>
                             ) : ci.type === 'PRODUCT' ? (
-                              <Badge variant="neutral" className="text-[8px] bg-blue-100 text-blue-800 py-0">
+                              <Badge variant="neutral" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 py-0 px-1.5 font-bold">
                                 Prd
                               </Badge>
                             ) : null}
                           </div>
-                          <span className="font-mono text-[10px] text-slate-400">
+                          <span className="font-mono text-[11px] text-slate-400 font-medium">
                             {formatCurrency(getCatalogueSellingPrice(ci.item))}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           {/* Quantity Adjuster */}
-                          <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg p-0.5">
+                          <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs">
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleUpdateQuantity(ci.cartInstanceId, -1)}
-                              className="w-4.5 h-4.5 h-auto p-0"
+                              className="w-5.5 h-5.5 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
                             >
-                              <Minus className="w-2.5 h-2.5 text-slate-600" />
+                              <Minus className="w-3 h-3" />
                             </Button>
-                            <span className="font-mono font-bold px-1 text-[11px] text-slate-900">
+                            <span className="font-mono font-bold px-1.5 text-xs text-slate-900 min-w-5 text-center">
                               {ci.quantity}
                             </span>
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleUpdateQuantity(ci.cartInstanceId, 1)}
-                              className="w-4.5 h-4.5 h-auto p-0"
+                              className="w-5.5 h-5.5 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded"
                             >
-                              <Plus className="w-2.5 h-2.5 text-slate-600" />
+                              <Plus className="w-3 h-3" />
                             </Button>
                           </div>
 
-                          <span className="font-mono font-bold text-slate-900 w-16 text-right text-xs">
+                          <span className="font-mono font-bold text-slate-900 w-20 text-right text-xs sm:text-[13px]">
                             {formatCurrency(getCatalogueSellingPrice(ci.item) * ci.quantity)}
                           </span>
 
@@ -2221,34 +2221,36 @@ export const POSBillingPage: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleRemoveItem(ci.cartInstanceId)}
-                            className="w-5 h-5 text-slate-400 hover:text-rose-600 p-0"
+                            className="w-6 h-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md p-0 transition-colors"
+                            title="Remove item"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>
 
                       {/* Staff Assignment */}
                       {ci.type === 'SERVICE' || ci.type === 'PRODUCT' ? (
-                        <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-200/60">
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            {ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
+                          <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
+                            <User className="w-3 h-3 text-slate-400" />
+                            <span>{ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}</span>
                           </span>
                           <Select
                             value={ci.staffId || 'unassigned'}
                             onValueChange={(val) => handleAssignStaff(ci.cartInstanceId, val)}
                           >
                             <SelectTrigger
-                              className={`w-[150px] text-[10px] h-6 bg-white transition-colors ${
+                              className={`w-[160px] text-xs h-7.5 bg-white transition-all rounded-lg shadow-2xs ${
                                 !ci.staffId || ci.staffId === 'unassigned'
-                                  ? 'border-amber-400 text-amber-800 bg-amber-50/60 font-semibold'
-                                  : 'border-slate-200 text-slate-800'
+                                  ? 'border-slate-300 text-slate-600 hover:border-slate-400'
+                                  : 'border-blue-300 bg-blue-50/40 text-blue-900 font-semibold'
                               }`}
                             >
-                              <SelectValue placeholder="Staff..." />
+                              <SelectValue placeholder="Select Staff..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="unassigned" className="text-xs text-amber-700 italic font-medium">
+                              <SelectItem value="unassigned" className="text-xs text-slate-500 italic">
                                 -- Select Staff --
                               </SelectItem>
                               <SelectItem value="house" className="text-xs font-semibold text-slate-700">
@@ -2264,9 +2266,9 @@ export const POSBillingPage: React.FC = () => {
                         </div>
                       ) : (
                         /* Package Multi-Staff Allocation */
-                        <div className="pt-1 border-t border-slate-200/60 space-y-1">
+                        <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
                           <div className="flex items-center justify-between flex-wrap gap-1">
-                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                               <Users className="w-3 h-3 text-[#2254E1]" />
                               <span>Staff ({ci.assignedStaff?.length || 0}):</span>
                             </span>
@@ -2276,7 +2278,7 @@ export const POSBillingPage: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => handleEqualizeStaffPackageAmounts(ci.cartInstanceId)}
-                                  className="text-[9px] font-medium text-[#2254E1] hover:underline cursor-pointer"
+                                  className="text-[10px] font-semibold text-[#2254E1] hover:underline cursor-pointer"
                                 >
                                   Split Evenly
                                 </button>
@@ -2285,7 +2287,7 @@ export const POSBillingPage: React.FC = () => {
                           </div>
 
                           {ci.assignedStaff && ci.assignedStaff.length > 0 && (
-                            <div className="space-y-0.5 bg-white p-1 rounded-lg border border-slate-200">
+                            <div className="space-y-1 bg-white p-1.5 rounded-lg border border-slate-200">
                               {ci.assignedStaff.map((st) => {
                                 const lineTotalAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
                                 const currentAmount = st.allocatedAmount ?? (ci.assignedStaff?.length === 1 ? lineTotalAmount : Math.round(lineTotalAmount / (ci.assignedStaff?.length || 1)));
@@ -2293,9 +2295,9 @@ export const POSBillingPage: React.FC = () => {
                                 return (
                                   <div
                                     key={st.staffId}
-                                    className="flex items-center justify-between gap-1 text-[11px] py-0.2"
+                                    className="flex items-center justify-between gap-1.5 text-xs py-0.5"
                                   >
-                                    <span className="font-semibold text-slate-800 truncate text-[10px]">{st.staffName}</span>
+                                    <span className="font-semibold text-slate-800 truncate text-[11px]">{st.staffName}</span>
                                     <div className="flex items-center gap-1">
                                       <input
                                         type="number"
@@ -2309,14 +2311,14 @@ export const POSBillingPage: React.FC = () => {
                                             Number(e.target.value) || 0
                                           )
                                         }
-                                        className="w-14 h-5 px-1 text-right font-mono font-bold text-[10px] bg-slate-50 border border-slate-200 rounded"
+                                        className="w-16 h-6 px-1.5 text-right font-mono font-bold text-xs bg-slate-50 border border-slate-200 rounded-md"
                                       />
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveStaffFromPackage(ci.cartInstanceId, st.staffId)}
-                                        className="p-0.2 text-slate-400 hover:text-rose-600 rounded"
+                                        className="p-1 text-slate-400 hover:text-rose-600 rounded"
                                       >
-                                        <X className="w-2.5 h-2.5" />
+                                        <X className="w-3 h-3" />
                                       </button>
                                     </div>
                                   </div>
@@ -2333,9 +2335,9 @@ export const POSBillingPage: React.FC = () => {
                                   if (val) handleAddStaffToPackage(ci.cartInstanceId, val);
                                 }}
                               >
-                                <SelectTrigger className="text-[10px] h-5 bg-blue-50/60 border-blue-200 text-[#2254E1] px-2 font-medium">
+                                <SelectTrigger className="text-xs h-6 bg-blue-50/60 border-blue-200 text-[#2254E1] px-2 font-medium rounded-md">
                                   <div className="flex items-center gap-1 min-w-0">
-                                    <Plus className="w-2.5 h-2.5 text-[#2254E1] shrink-0" />
+                                    <Plus className="w-3 h-3 text-[#2254E1] shrink-0" />
                                     <SelectValue placeholder="Add Staff" />
                                   </div>
                                 </SelectTrigger>
@@ -2365,23 +2367,23 @@ export const POSBillingPage: React.FC = () => {
             </div>
 
             {/* Bottom Zone: Client Info, Financial Controls & Checkout */}
-            <div className="shrink-0 space-y-2 pt-1.5 border-t border-slate-100 mt-auto">
+            <div className="shrink-0 space-y-2.5 pt-2 border-t border-slate-100 mt-auto">
               {cart.length === 0 ? (
                 /* Clean placeholder when cart is empty */
-                <div className="space-y-2 pt-1">
+                <div className="space-y-2.5 pt-1">
                   <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">Net Payable</span>
-                      <span className="text-[9px] text-slate-400">Cart is empty</span>
+                      <span className="text-[10px] text-slate-400">Cart is empty</span>
                     </div>
-                    <span className="font-mono font-extrabold text-base text-slate-400">
+                    <span className="font-mono font-extrabold text-lg text-slate-400">
                       {formatCurrency(0)}
                     </span>
                   </div>
 
                   <Button
                     disabled
-                    className="w-full bg-slate-100 text-slate-400 font-bold h-9 text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-slate-200/60 mb-1"
+                    className="w-full bg-slate-100 text-slate-400 font-bold h-10 text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-slate-200/60 mb-0.5"
                   >
                     <CreditCard className="w-4 h-4 opacity-40" />
                     <span>Select Items to Checkout</span>
@@ -2389,11 +2391,11 @@ export const POSBillingPage: React.FC = () => {
                 </div>
               ) : (
                 /* Active Cart Summary & Checkout */
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {/* Client Identification Row */}
                   {selectedClient ? (
-                    <div className="h-8 px-3 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between text-xs text-slate-800">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="h-8.5 px-3 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between text-xs text-slate-800">
+                      <div className="flex items-center gap-2 min-w-0">
                         <UserCheck className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />
                         <span className="font-bold text-slate-900 truncate text-xs">{selectedClient.name}</span>
                         <span className="text-[10px] text-slate-500 font-mono">({selectedClient.phone})</span>
@@ -2408,34 +2410,40 @@ export const POSBillingPage: React.FC = () => {
                           className="text-slate-400 hover:text-rose-600 p-0.5 cursor-pointer transition-colors ml-1"
                           title="Switch to Walk-in"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        type="text"
-                        placeholder="Customer Name (Walk-in)"
-                        value={clientName}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setClientName(val);
-                          if (val.trim()) setIsWalkIn(false);
-                        }}
-                        className="text-xs h-7.5 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400"
-                      />
-                      <Input
-                        type="tel"
-                        placeholder="Phone (Optional)"
-                        value={clientPhone}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setClientPhone(val);
-                          if (val.trim()) setIsWalkIn(false);
-                        }}
-                        className="text-xs h-7.5 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400"
-                      />
+                      <div className="relative">
+                        <User className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                        <Input
+                          type="text"
+                          placeholder="Customer Name (Walk-in)"
+                          value={clientName}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setClientName(val);
+                            if (val.trim()) setIsWalkIn(false);
+                          }}
+                          className="pl-8 text-xs h-8 bg-white border-slate-200 rounded-xl font-medium placeholder:text-slate-400 focus:border-[#2254E1]"
+                        />
+                      </div>
+                      <div className="relative">
+                        <Phone className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                        <Input
+                          type="tel"
+                          placeholder="Phone (Optional)"
+                          value={clientPhone}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setClientPhone(val);
+                            if (val.trim()) setIsWalkIn(false);
+                          }}
+                          className="pl-8 text-xs h-8 bg-white border-slate-200 rounded-xl font-mono placeholder:text-slate-400 focus:border-[#2254E1]"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -2446,18 +2454,18 @@ export const POSBillingPage: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                           <Tag className="w-3 h-3 text-[#2254E1]" />
-                          Discount
+                          <span>Discount</span>
                         </label>
                         <button
                           type="button"
                           onClick={() => setDiscountType(discountType === 'FIXED' ? 'PERCENTAGE' : 'FIXED')}
-                          className="text-[10px] font-extrabold text-[#2254E1] hover:underline cursor-pointer"
+                          className="text-[10px] font-bold text-[#2254E1] hover:text-blue-800 hover:underline cursor-pointer transition-colors"
                         >
                           {discountType === 'FIXED' ? '% Switch' : 'PKR Switch'}
                         </button>
                       </div>
-                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-7.5">
-                        <span className="px-2.5 text-[10px] font-bold bg-blue-50 text-[#2254E1] border-r border-slate-200 h-full flex items-center shrink-0">
+                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8 focus-within:border-[#2254E1] focus-within:ring-2 focus-within:ring-[#2254E1]/10 transition-all">
+                        <span className="px-2.5 text-[10px] font-bold bg-slate-50 text-slate-600 border-r border-slate-200 h-full flex items-center shrink-0">
                           {discountType === 'FIXED' ? 'PKR' : '%'}
                         </span>
                         <input
@@ -2466,7 +2474,7 @@ export const POSBillingPage: React.FC = () => {
                           placeholder="0"
                           value={discountValue || ''}
                           onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
                         />
                       </div>
                     </div>
@@ -2476,20 +2484,20 @@ export const POSBillingPage: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                           <Coins className="w-3 h-3 text-amber-600" />
-                          Staff Tip
+                          <span>Staff Tip</span>
                         </label>
                         {tipAmount > 0 && (
                           <button
                             type="button"
                             onClick={() => setTipAmount(0)}
-                            className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 cursor-pointer"
+                            className="text-[10px] font-semibold text-slate-400 hover:text-rose-600 cursor-pointer transition-colors"
                           >
                             Clear
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-7.5">
-                        <span className="px-2.5 text-[10px] font-bold bg-amber-50 text-amber-700 border-r border-slate-200 h-full flex items-center shrink-0">
+                      <div className="flex items-center rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs h-8 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/10 transition-all">
+                        <span className="px-2.5 text-[10px] font-bold bg-amber-50/70 text-amber-700 border-r border-slate-200 h-full flex items-center shrink-0">
                           PKR
                         </span>
                         <input
@@ -2498,17 +2506,17 @@ export const POSBillingPage: React.FC = () => {
                           placeholder="0"
                           value={tipAmount || ''}
                           onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
-                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                          className="w-full h-full text-right px-2.5 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* 2. Itemized Breakdown */}
-                  <div className="space-y-1 pt-1.5 border-t border-slate-100 text-xs">
+                  <div className="space-y-1 py-1.5 border-t border-slate-100 text-xs">
                     <div className="flex items-center justify-between text-slate-500">
                       <span className="text-[11px] font-medium">Subtotal:</span>
-                      <span className="font-mono text-slate-800 text-[11px]">{formatCurrency(calculations.grossSubtotal)}</span>
+                      <span className="font-mono text-slate-800 text-[11px] font-semibold">{formatCurrency(calculations.grossSubtotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-slate-500">
@@ -2545,11 +2553,11 @@ export const POSBillingPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Net Payable Highlight Box (Royal Blue Theme) */}
-                  <div className="px-3.5 py-1.5 bg-blue-50/80 border border-blue-200/90 rounded-xl flex items-center justify-between">
+                  {/* Net Payable Highlight Box */}
+                  <div className="px-3.5 py-2 bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-blue-50/90 border border-blue-200/90 rounded-xl flex items-center justify-between shadow-2xs">
                     <div>
-                      <span className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wide block">Net Payable</span>
-                      <span className="text-[9px] text-blue-600">Total amount due</span>
+                      <span className="text-[10px] font-extrabold text-blue-950 uppercase tracking-wider block">Net Payable</span>
+                      <span className="text-[10px] text-blue-600 font-medium">Total amount due</span>
                     </div>
                     <div className="text-right">
                       <span className="font-mono font-extrabold text-xl text-[#2254E1] tracking-tight">
@@ -2561,11 +2569,13 @@ export const POSBillingPage: React.FC = () => {
                   {/* Collect Payment & Complete Sale Button */}
                   <Button
                     onClick={handleOpenCheckout}
-                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] text-white font-bold h-9.5 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0 mb-1.5"
+                    className="w-full bg-[#2254E1] hover:bg-[#1B44B8] active:scale-[0.99] text-white font-bold h-10 text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-between px-3.5 cursor-pointer transition-all shrink-0 mb-0.5"
                   >
-                    <CreditCard className="w-4 h-4" />
-                    <span>Collect Payment & Complete Sale</span>
-                    <span className="ml-auto font-mono text-xs font-black bg-white/20 px-2.5 py-0.5 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      <span>Collect Payment & Complete Sale</span>
+                    </div>
+                    <span className="font-mono text-xs font-black bg-white/20 px-2.5 py-0.5 rounded-lg">
                       {formatCurrency(calculations.fullInvoiceTotal)}
                     </span>
                   </Button>
