@@ -338,13 +338,52 @@ export const postInvoice = async (input, actor, idempotencyKey, request) => {
         });
       };
 
-      if (d.c.type === 'SERVICE') await earn(d.staff, d.net);
+      if (d.c.type === 'SERVICE') {
+        const rawAssigned = d.c.assignedStaff && d.c.assignedStaff.length > 0
+          ? d.c.assignedStaff.filter((s) => s.staffId && s.staffId !== 'house' && s.staffId !== 'unassigned')
+          : null;
+
+        if (rawAssigned && rawAssigned.length > 0) {
+          const assignedStaffList = rawAssigned.map((s) => {
+            const staff = requireStaff(s.staffId, d.catalogue.name);
+            return {
+              ...s,
+              id: staff.id,
+              name: staff.name,
+              commissionRate: staff.commissionRate,
+              staff,
+            };
+          });
+
+          const hasCustomAllocation = assignedStaffList.some(
+            (s) => typeof s.allocatedAmount === 'number' && s.allocatedAmount > 0
+          );
+          const discountRatio = (d.discount && d.discount.greaterThan(0) && d.unitPrice && d.unitPrice.greaterThan(0))
+            ? d.net.dividedBy(d.unitPrice.times(d.c.quantity))
+            : toDec(1);
+
+          if (hasCustomAllocation) {
+            for (const st of assignedStaffList) {
+              const customAmount = typeof st.allocatedAmount === 'number' && st.allocatedAmount > 0 ? toDec(st.allocatedAmount) : toDec(0);
+              const staffNet = round2(customAmount.times(discountRatio));
+              await earn(st.staff, staffNet);
+            }
+          } else {
+            const shares = splitWithRemainder(d.net, assignedStaffList.map(() => toDec(1)));
+            for (const [si, st] of assignedStaffList.entries()) {
+              await earn(st.staff, shares[si]);
+            }
+          }
+        } else {
+          await earn(d.staff, d.net);
+        }
+      }
 
       if (d.c.type === 'PACKAGE') {
         const rawAssigned = d.c.assignedStaff && d.c.assignedStaff.length > 0
-          ? d.c.assignedStaff
+          ? d.c.assignedStaff.filter((s) => s.staffId && s.staffId !== 'house' && s.staffId !== 'unassigned')
           : null;
-        const assignedStaffList = rawAssigned
+        const assignedStaffList = rawAssigned && rawAssigned.length > 0
           ? rawAssigned.map((s) => {
               const staff = requireStaff(s.staffId, d.catalogue.name);
               return {
@@ -357,22 +396,30 @@ export const postInvoice = async (input, actor, idempotencyKey, request) => {
             })
           : (d.c.packageComponents?.length && d.c.packageComponents.some((pc) => pc.staffId && pc.staffId !== d.staff.id)
               ? null
-              : [{ staffId: d.staff.id, id: d.staff.id, name: d.staff.name, commissionRate: d.staff.commissionRate, staff: d.staff, allocatedAmount: d.net.toNumber() }]);
+              : (d.staff && d.staff.id !== 'house' && d.staff.id !== 'unassigned'
+                  ? [{ staffId: d.staff.id, id: d.staff.id, name: d.staff.name, commissionRate: d.staff.commissionRate, staff: d.staff, allocatedAmount: d.net.toNumber() }]
+                  : []));
 
         if (assignedStaffList && assignedStaffList.length > 0) {
-          // Check if custom allocated amounts/shares are specified (e.g. 500, 300, 200)
+          // Check if custom allocated amounts/shares are specified (e.g. 1000, 500)
           const hasCustomAllocation = assignedStaffList.some(
             (s) => typeof s.allocatedAmount === 'number' && s.allocatedAmount > 0
           );
-          const rawWeights = hasCustomAllocation
-            ? assignedStaffList.map((s) => toDec(s.allocatedAmount || 0))
-            : assignedStaffList.map(() => toDec(1));
-          const sumWeights = rawWeights.reduce((s, w) => s.plus(w), toDec(0));
-          const weights = sumWeights.isZero() ? assignedStaffList.map(() => toDec(1)) : rawWeights;
+          const discountRatio = (d.discount && d.discount.greaterThan(0) && d.unitPrice && d.unitPrice.greaterThan(0))
+            ? d.net.dividedBy(d.unitPrice.times(d.c.quantity))
+            : toDec(1);
 
-          const shares = splitWithRemainder(d.net, weights);
-          for (const [si, st] of assignedStaffList.entries()) {
-            await earn(st.staff, shares[si]);
+          if (hasCustomAllocation) {
+            for (const st of assignedStaffList) {
+              const customAmount = typeof st.allocatedAmount === 'number' && st.allocatedAmount > 0 ? toDec(st.allocatedAmount) : toDec(0);
+              const staffNet = round2(customAmount.times(discountRatio));
+              await earn(st.staff, staffNet);
+            }
+          } else {
+            const shares = splitWithRemainder(d.net, assignedStaffList.map(() => toDec(1)));
+            for (const [si, st] of assignedStaffList.entries()) {
+              await earn(st.staff, shares[si]);
+            }
           }
 
           const comps = [...d.catalogue.components].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -386,7 +433,7 @@ export const postInvoice = async (input, actor, idempotencyKey, request) => {
               },
             });
           }
-        } else {
+        } else if (d.c.packageComponents?.length && d.c.packageComponents.some((pc) => pc.staffId && pc.staffId !== d.staff.id)) {
           // Fallback legacy per-component split
           const comps = [...d.catalogue.components].sort((a, b) => a.sortOrder - b.sortOrder);
           const shares = splitWithRemainder(d.net, comps.map((k) => toDec(k.allocationPercentage)));

@@ -86,6 +86,67 @@ function evaluateStaffCommission(staff, startDate, endDate, invoices, consumedLi
           commissionEarned: isVoided ? -earned : earned
         });
       }
+
+      if (item.assignedStaff && item.assignedStaff.length > 0) {
+        const assignedStaffList = item.assignedStaff;
+        const isStaffAssigned = assignedStaffList.some((st) => st.staffId === staff.id);
+        if (isStaffAssigned) {
+          const numStaff = assignedStaffList.length;
+          const lineGross = (item.unitPrice || 0) * (item.quantity || 1);
+          let discountAllocation = typeof item.discountAllocated === 'number' ? item.discountAllocated : 0;
+          if (!discountAllocation && inv.discount && inv.subtotal > 0) {
+            discountAllocation = roundCurrency((lineGross / inv.subtotal) * inv.discount);
+          }
+          const netSales =
+            typeof item.netSales === 'number'
+              ? item.netSales
+              : roundCurrency(lineGross - discountAllocation);
+
+          const staffEntry = assignedStaffList.find((st) => st.staffId === staff.id);
+          const hasCustom = typeof staffEntry?.allocatedAmount === 'number' && staffEntry.allocatedAmount > 0;
+          const discountRatio = lineGross > 0 ? netSales / lineGross : 1;
+          const staffShareGross = hasCustom ? staffEntry.allocatedAmount : roundCurrency(lineGross / numStaff);
+          const staffShareNet = hasCustom ? roundCurrency(staffEntry.allocatedAmount * discountRatio) : roundCurrency(netSales / numStaff);
+          const staffShareDiscount = roundCurrency(Math.max(0, staffShareGross - staffShareNet));
+
+          const rawRate = typeof staffEntry?.staffCommissionRate === 'number'
+            ? staffEntry.staffCommissionRate
+            : (staff.commissionRate || 0);
+          const effectiveRatePercent = rawRate > 0 && rawRate <= 1 ? roundCurrency(rawRate * 100) : rawRate;
+          const earned = roundCurrency(staffShareNet * (effectiveRatePercent / 100));
+
+          const lineKey = item.id || item.lineInstanceId || `idx-${itemIdx}-${item.itemId || 'pkg'}`;
+          const attributionId = `${inv.id}-pkg-${lineKey}-${staff.id}`;
+          if (!consumedLineItemIds.has(attributionId)) {
+            if (isVoided) {
+              refundAdjustments -= earned;
+            } else {
+              attributedNetSales += staffShareNet;
+              grossCommissionEarned += earned;
+              servicesCompletedCount += (item.quantity || 1);
+            }
+            newlyConsumedIds.push(attributionId);
+            attributionLines.push({
+              id: attributionId,
+              invoiceId: inv.id,
+              invoiceNumber: inv.invoiceNumber,
+              date: inv.date,
+              clientName: inv.clientName,
+              serviceOrPackageId: item.itemId || item.id,
+              serviceOrPackageName: item.name,
+              itemType: item.type || 'PACKAGE',
+              isPackageComponent: false,
+              componentPackageName: item.name,
+              cataloguePrice: staffShareGross,
+              discountAllocation: staffShareDiscount,
+              netAttributedAmount: isVoided ? -staffShareNet : staffShareNet,
+              commissionRatePercent: effectiveRatePercent,
+              commissionEarned: isVoided ? -earned : earned,
+            });
+          }
+        }
+      }
+
       const comps = item.packageComponents || item.components;
       if (item.type === "PACKAGE" && Array.isArray(comps)) {
         comps.forEach((comp, compIdx) => {

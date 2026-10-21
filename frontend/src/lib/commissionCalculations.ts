@@ -83,8 +83,8 @@ export function evaluateStaffCommission(
     const isVoided = !!(inv.notes && inv.notes.toLowerCase().includes('void'));
 
     (inv.lineItems || []).forEach((item, itemIdx) => {
-      // 1. Direct Service
-      if (item.type === 'SERVICE' && item.staffId === staff.id) {
+      // 1. Direct Service (without custom multi-staff allocation)
+      if (item.type === 'SERVICE' && (!item.assignedStaff || item.assignedStaff.length === 0) && item.staffId === staff.id) {
         const lineKey = item.id || (item as any).lineInstanceId || `idx-${itemIdx}-${item.itemId || 'svc'}`;
         const attributionId = `${inv.id}-li-${lineKey}`;
         if (consumedLineItemIds.has(attributionId)) {
@@ -137,8 +137,8 @@ export function evaluateStaffCommission(
         });
       }
 
-      // 2. Bundled Package (Multi-staff divided or legacy component-assigned)
-      if (item.type === 'PACKAGE') {
+      // 2. Bundled Package or Multi-Staff Service (Multi-staff divided or custom allocated)
+      if (item.type === 'PACKAGE' || (item.type === 'SERVICE' && item.assignedStaff && item.assignedStaff.length > 0)) {
         const assignedStaffList = item.assignedStaff && item.assignedStaff.length > 0
           ? item.assignedStaff
           : undefined;
@@ -157,12 +157,14 @@ export function evaluateStaffCommission(
                 ? item.netSales
                 : roundCurrency(lineGross - discountAllocation);
 
-            // Split package revenue and discount equally among all assigned staff
-            const staffShareNet = roundCurrency(netPackageSales / numStaff);
-            const staffShareGross = roundCurrency(lineGross / numStaff);
-            const staffShareDiscount = roundCurrency(discountAllocation / numStaff);
-
             const staffEntry = assignedStaffList.find((st: any) => st.staffId === staff.id);
+            const customAmount = typeof staffEntry?.allocatedAmount === 'number' && staffEntry.allocatedAmount > 0 ? staffEntry.allocatedAmount : null;
+            const hasCustom = customAmount !== null;
+            const discountRatio = lineGross > 0 ? netPackageSales / lineGross : 1;
+            const staffShareGross: number = hasCustom ? customAmount : roundCurrency(lineGross / numStaff);
+            const staffShareNet: number = hasCustom ? roundCurrency(customAmount * discountRatio) : roundCurrency(netPackageSales / numStaff);
+            const staffShareDiscount: number = roundCurrency(Math.max(0, staffShareGross - staffShareNet));
+
             const rawRate = typeof staffEntry?.staffCommissionRate === 'number'
               ? staffEntry.staffCommissionRate
               : (staff.commissionRate || 0);

@@ -945,25 +945,30 @@ export const POSBillingPage: React.FC = () => {
         if (currentStaff.some((s) => s.staffId === staffId)) return ci;
 
         const totalLineAmount = getCatalogueSellingPrice(ci.item) * ci.quantity;
-        const newStaffList = [
-          ...currentStaff,
-          {
-            staffId: staff.id,
-            staffName: staff.name,
-            staffCommissionRate: staff.commissionRate,
-            allocatedAmount: 0,
-          },
-        ];
 
-        // Evenly divide totalLineAmount across all staff members so it always sums to totalLineAmount
-        const count = newStaffList.length;
-        const equalShare = Math.floor(totalLineAmount / count);
-        const remainder = totalLineAmount - equalShare * count;
-
-        const updatedStaff = newStaffList.map((s, idx) => ({
-          ...s,
-          allocatedAmount: equalShare + (idx === 0 ? remainder : 0),
-        }));
+        let updatedStaff;
+        if (currentStaff.length === 0) {
+          updatedStaff = [
+            {
+              staffId: staff.id,
+              staffName: staff.name,
+              staffCommissionRate: staff.commissionRate,
+              allocatedAmount: totalLineAmount,
+            },
+          ];
+        } else {
+          const currentAllocated = currentStaff.reduce((sum, s) => sum + (s.allocatedAmount ?? 0), 0);
+          const remainder = Math.max(0, totalLineAmount - currentAllocated);
+          updatedStaff = [
+            ...currentStaff,
+            {
+              staffId: staff.id,
+              staffName: staff.name,
+              staffCommissionRate: staff.commissionRate,
+              allocatedAmount: remainder > 0 ? remainder : Math.floor(totalLineAmount / (currentStaff.length + 1)),
+            },
+          ];
+        }
 
         return {
           ...ci,
@@ -992,58 +997,14 @@ export const POSBillingPage: React.FC = () => {
         const targetStaff = currentStaff.find((s) => s.staffId === staffId);
         if (!targetStaff) return ci;
 
-        // Strictly clamp amount between 0 and totalLineAmount ("packag price sa uper nhi jaega")
+        // Strictly clamp amount between 0 and totalLineAmount
         const clampedAmount = Math.max(0, Math.min(Math.round(amount), totalLineAmount));
-        const otherStaff = currentStaff.filter((s) => s.staffId !== staffId);
-
-        if (otherStaff.length === 0) {
-          // If only 1 staff member, they always get 100% of package price
-          return {
-            ...ci,
-            assignedStaff: [{ ...targetStaff, allocatedAmount: totalLineAmount }],
-          };
-        }
-
-        // The remaining balance that must be distributed across other staff
-        const remainingBalance = totalLineAmount - clampedAmount;
-
-        if (otherStaff.length === 1) {
-          // Exactly 2 staff: (e.g. package=1500, staff1=1000 => staff2=500)
-          const updatedStaff = currentStaff.map((s) => {
-            if (s.staffId === staffId) return { ...s, allocatedAmount: clampedAmount };
-            return { ...s, allocatedAmount: remainingBalance };
-          });
-          return { ...ci, assignedStaff: updatedStaff };
-        }
-
-        // More than 2 staff: distribute remainingBalance among other staff proportionally
-        const currentOtherTotal = otherStaff.reduce(
-          (sum, s) => sum + (s.allocatedAmount ?? 0),
-          0
-        );
-
-        let allocatedSoFar = 0;
-        const newOtherAllocations = new Map<string, number>();
-
-        otherStaff.forEach((s, idx) => {
-          if (idx === otherStaff.length - 1) {
-            newOtherAllocations.set(s.staffId, Math.max(0, remainingBalance - allocatedSoFar));
-          } else {
-            let share = 0;
-            if (currentOtherTotal > 0) {
-              share = Math.round(remainingBalance * ((s.allocatedAmount ?? 0) / currentOtherTotal));
-            } else {
-              share = Math.floor(remainingBalance / otherStaff.length);
-            }
-            share = Math.max(0, Math.min(share, remainingBalance - allocatedSoFar));
-            allocatedSoFar += share;
-            newOtherAllocations.set(s.staffId, share);
-          }
-        });
 
         const updatedStaff = currentStaff.map((s) => {
-          if (s.staffId === staffId) return { ...s, allocatedAmount: clampedAmount };
-          return { ...s, allocatedAmount: newOtherAllocations.get(s.staffId) ?? 0 };
+          if (s.staffId === staffId) {
+            return { ...s, allocatedAmount: clampedAmount };
+          }
+          return s;
         });
 
         return {
@@ -1545,18 +1506,49 @@ export const POSBillingPage: React.FC = () => {
       }
 
       // Sanitize cart items so lines without assigned staff fallback cleanly to 'house' (No Staff / Salon)
-      const sanitizedCart = cart.map((ci) => ({
-        ...ci,
-        staffId: (!ci.staffId || ci.staffId === 'unassigned') ? 'house' : ci.staffId,
-        staffName: (!ci.staffName || ci.staffId === 'house' || ci.staffId === 'unassigned') ? 'House / Salon' : ci.staffName,
-        assignedStaff: (ci.assignedStaff && ci.assignedStaff.length > 0)
-          ? ci.assignedStaff.map((as) => ({
-              ...as,
-              staffId: (!as.staffId || as.staffId === 'unassigned') ? 'house' : as.staffId,
-              staffName: (!as.staffName || as.staffId === 'house' || as.staffId === 'unassigned') ? 'House / Salon' : as.staffName,
-            }))
-          : [{ staffId: 'house', staffName: 'House / Salon', staffCommissionRate: 0, allocatedAmount: getCatalogueSellingPrice(ci.item) * ci.quantity }],
-      }));
+      const sanitizedCart = cart.map((ci) => {
+        const lineTotal = getCatalogueSellingPrice(ci.item) * ci.quantity;
+        const validAssigned = (ci.assignedStaff || []).filter(
+          (as) => as.staffId && as.staffId !== 'unassigned'
+        );
+
+        let finalAssignedStaff = validAssigned;
+        if (finalAssignedStaff.length === 0) {
+          if (ci.staffId && ci.staffId !== 'house' && ci.staffId !== 'unassigned') {
+            finalAssignedStaff = [
+              {
+                staffId: ci.staffId,
+                staffName: ci.staffName || 'Stylist',
+                staffCommissionRate: ci.staffCommissionRate || 0,
+                allocatedAmount: lineTotal,
+              },
+            ];
+          } else {
+            finalAssignedStaff = [
+              {
+                staffId: 'house',
+                staffName: 'House / Salon',
+                staffCommissionRate: 0,
+                allocatedAmount: lineTotal,
+              },
+            ];
+          }
+        } else {
+          finalAssignedStaff = finalAssignedStaff.map((as) => ({
+            ...as,
+            allocatedAmount: typeof as.allocatedAmount === 'number' ? as.allocatedAmount : Math.floor(lineTotal / finalAssignedStaff.length),
+          }));
+        }
+
+        const primary = finalAssignedStaff[0];
+        return {
+          ...ci,
+          staffId: primary.staffId,
+          staffName: finalAssignedStaff.map((s) => s.staffName).join(', '),
+          staffCommissionRate: primary.staffCommissionRate || 0,
+          assignedStaff: finalAssignedStaff,
+        };
+      });
 
       // Input payload
       const payload: CreatePOSInvoiceInput = {
@@ -1873,13 +1865,11 @@ export const POSBillingPage: React.FC = () => {
                 </div>
 
                 {/* Staff Assignment */}
-                {ci.type === 'SERVICE' || ci.type === 'PRODUCT' ? (
+                {ci.type === 'PRODUCT' ? (
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
                     <span className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5 shrink-0">
                       <User className="w-3.5 h-3.5 text-slate-400" />
-                      <span>
-                        {ci.type === 'PRODUCT' ? 'Sales Staff:' : 'Stylist:'}
-                      </span>
+                      <span>Sales Staff:</span>
                     </span>
                     <Select
                       value={ci.staffId || 'unassigned'}
@@ -1906,7 +1896,7 @@ export const POSBillingPage: React.FC = () => {
                     </Select>
                   </div>
                 ) : (
-                  /* Package Multi-Staff Allocation */
+                  /* Package & Service Multi-Staff Allocation */
                   <div className="pt-2 border-t border-slate-200/60 space-y-1.5">
                     <div className="flex items-center justify-between flex-wrap gap-1">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">

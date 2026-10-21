@@ -8821,15 +8821,12 @@ class MockSalonService implements SalonServiceContract {
                 const lineNet = typeof item.netSales === 'number' ? item.netSales : (lineGross - (item.discountAllocated || 0));
                 const lineDisc = item.discountAllocated || 0;
 
-                const totalAllocated = item.assignedStaff.reduce((sum: number, as: any) => sum + (Number(as.allocatedAmount) || 0), 0);
-                const hasCustom = totalAllocated > 0;
-                const ratio = hasCustom
-                  ? (Number(staffEntry.allocatedAmount) || 0) / totalAllocated
-                  : 1 / numStaff;
-
-                const staffShareNet = roundCurrency(lineNet * ratio);
-                const staffShareGross = roundCurrency(lineGross * ratio);
-                const staffShareDisc = roundCurrency(lineDisc * ratio);
+                const customAmount = typeof staffEntry.allocatedAmount === 'number' && staffEntry.allocatedAmount > 0 ? staffEntry.allocatedAmount : null;
+                const hasCustom = customAmount !== null;
+                const discountRatio = lineGross > 0 ? lineNet / lineGross : 1;
+                const staffShareGross: number = hasCustom ? customAmount : roundCurrency(lineGross / numStaff);
+                const staffShareNet: number = hasCustom ? roundCurrency(customAmount * discountRatio) : roundCurrency(lineNet / numStaff);
+                const staffShareDisc: number = roundCurrency(Math.max(0, staffShareGross - staffShareNet));
 
                 const rawCompRate = typeof staffEntry.staffCommissionRate === 'number'
                   ? staffEntry.staffCommissionRate
