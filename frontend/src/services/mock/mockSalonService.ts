@@ -376,8 +376,8 @@ class MockSalonService implements SalonServiceContract {
 
   async updateBranch(id: string, branchData: Partial<Branch>, actor?: User): Promise<Branch> {
     const authenticatedActor = this.getAuthenticatedActor(actor);
-    if (authenticatedActor.role !== 'SUPER_ADMIN') {
-      throw new Error('Access Denied: Only Super Administrators can edit salon branches.');
+    if (authenticatedActor.role !== 'SUPER_ADMIN' && authenticatedActor.branchId !== id) {
+      throw new Error('Access Denied: You do not have permission to edit other branches.');
     }
 
     const store = mockStorage.getStore();
@@ -406,6 +406,7 @@ class MockSalonService implements SalonServiceContract {
       address: branchData.address?.trim() || existing.address,
       city: branchData.city?.trim() || existing.city,
       timezone: branchData.timezone || existing.timezone,
+      logoUrl: branchData.logoUrl !== undefined ? branchData.logoUrl : existing.logoUrl,
       taxEnabled: branchData.taxEnabled ?? existing.taxEnabled,
       taxRate: branchData.taxRate ?? existing.taxRate,
       defaultTaxRuleId: branchData.defaultTaxRuleId !== undefined ? branchData.defaultTaxRuleId : existing.defaultTaxRuleId,

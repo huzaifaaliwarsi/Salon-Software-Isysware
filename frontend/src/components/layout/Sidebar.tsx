@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from '../../context/RouterContext';
 import { NAVIGATION_GROUPS } from '../../config/navigation';
 import { NavIcon } from './NavIcon';
-import { Scissors, AlertCircle, Building2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Scissors, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -30,7 +30,7 @@ const isRouteMatching = (targetHref: string, currentPath: string): boolean => {
   if (baseTarget === '/reports/attendance' && (currentPath === '/reports/attendance-overtime' || currentPath === '/reports/overtime')) return true;
   if (baseTarget === '/reports/operating-profit' && (currentPath === '/reports/cogs' || currentPath === '/reports/cogs-report')) return true;
   if (baseTarget === '/accounts/account-settlement' && currentPath === '/reports/settlement-history') return true;
-  if (baseTarget === '/admin/branch-settings' && (currentPath === '/admin/tax-settings' || currentPath === '/admin/payment-accounts')) return true;
+  if (baseTarget === '/admin/branch-settings' && (currentPath === '/admin/branch-settings' || currentPath === '/admin/salon-profile')) return true;
   if (baseTarget === '/admin/devices' && currentPath === '/admin/device-settings') return true;
   if (baseTarget === '/admin/data-reset' && currentPath === '/admin/reset-data') return true;
   if (baseTarget === '/admin/users' && currentPath === '/admin/users-access') return true;
@@ -42,9 +42,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   className = '',
   onNavigate,
 }) => {
-  const { user, activeBranchId, allBranches } = useAuth();
+  const { user, allBranches, activeBranchId } = useAuth();
   const { pathname, navigate } = useRouter();
   const [expandedMenus, setExpandedMenus] = React.useState<Record<string, boolean>>({});
+
+  const currentBranch =
+    allBranches.find((b) => b.id === (user?.role === 'SUPER_ADMIN' && activeBranchId !== 'ALL' ? activeBranchId : user?.branchId)) ||
+    allBranches[0];
+
+  const brandName = currentBranch?.name || user?.branchName || 'SalonOS';
+  const logoUrl = currentBranch?.logoUrl;
 
   const toggleSubMenu = (itemId: string, defaultOpen: boolean) => {
     setExpandedMenus((prev) => ({
@@ -71,11 +78,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return { ...group, items: visibleItems };
   }).filter(Boolean);
 
-  const activeBranchName =
-    user.role === 'SUPER_ADMIN' && activeBranchId === 'ALL'
-      ? 'All Branches (Consolidated)'
-      : allBranches.find((b) => b.id === (user.role === 'SUPER_ADMIN' ? activeBranchId : user.branchId))?.name || user.branchName || 'Assigned Branch';
-
   const handleItemClick = (href: string) => {
     navigate(href);
     if (onNavigate) {
@@ -92,51 +94,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="h-16 flex items-center px-4 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-3 overflow-hidden cursor-pointer" onClick={() => handleItemClick('/dashboard')}>
-          <div className="w-9 h-9 rounded-xl bg-[#2254E1] flex items-center justify-center text-white shrink-0 shadow-xs">
-            <Scissors className="w-5 h-5 -rotate-45" />
-          </div>
+          {logoUrl ? (
+            <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center p-1 shrink-0 shadow-xs overflow-hidden">
+              <img src={logoUrl} alt={brandName} className="w-full h-full object-contain" />
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-[#2254E1] flex items-center justify-center text-white shrink-0 shadow-xs">
+              <Scissors className="w-5 h-5 -rotate-45" />
+            </div>
+          )}
           {!isCollapsed && (
             <div className="overflow-hidden">
               <div className="flex items-center gap-1.5">
-                <span className="text-base font-bold text-slate-900 tracking-tight">iSysware</span>
-                <span className="text-[10px] font-bold text-[#2254E1] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                  SalonOS
+                <span className="text-sm font-bold text-slate-900 tracking-tight truncate max-w-[190px]" title={brandName}>
+                  {brandName}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate">Multi-Branch System</p>
+              <p className="text-[11px] text-slate-400 truncate">
+                {currentBranch?.city ? `${currentBranch.city} Branch` : 'Management System'}
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Active Branch Notice Banner */}
-      {!isCollapsed && (
-        <div className="px-3.5 pt-3 pb-1">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-            <div className="flex items-center gap-2.5">
-              <Building2 className="w-4 h-4 text-[#2254E1] shrink-0" />
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-slate-800 truncate leading-tight">
-                  {activeBranchName}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
-                  {user.role === 'SUPER_ADMIN'
-                    ? activeBranchId === 'ALL'
-                      ? 'Consolidated read mode'
-                      : 'Active single branch'
-                    : 'Assigned branch scope'}
-                </p>
-              </div>
-            </div>
-            {activeBranchId === 'ALL' && user.role === 'SUPER_ADMIN' && (
-              <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-start gap-1 text-[11px] text-amber-700">
-                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                <span>Transactions require single branch.</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Navigation Scrollable Body */}
       <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-5">
@@ -231,21 +212,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           );
         })}
-      </div>
-
-      {/* Footer Role Badge */}
-      <div className="p-3 border-t border-slate-100 shrink-0">
-        <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200/60">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-          {!isCollapsed && (
-            <div className="overflow-hidden">
-              <p className="text-[11px] font-semibold text-slate-800 truncate">
-                {user.role.replace('_', ' ')}
-              </p>
-              <p className="text-[10px] text-slate-400 truncate">Active Portal</p>
-            </div>
-          )}
-        </div>
       </div>
     </aside>
   );

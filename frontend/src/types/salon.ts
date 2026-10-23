@@ -31,6 +31,7 @@ export interface Branch {
   assignedAdminName?: string;
   taxRegistrationNumber?: string; // Optional official provincial tax registration (e.g. PRA-LHE-7392014-9)
   taxAuthority?: string;
+  logoUrl?: string | null;
 }
 
 export type PaymentAccountType = 'BANK' | 'EASYPAISA' | 'JAZZCASH' | 'OTHER';

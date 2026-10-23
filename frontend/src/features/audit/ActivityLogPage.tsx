@@ -110,19 +110,12 @@ export const ActivityLogPage: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" dot>
-              Security & Compliance
-            </Badge>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs text-slate-600 font-medium">{currentBranchName}</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <ShieldAlert className="w-6 h-6 text-[#2254E1]" />
             Audit & Activity Log
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Immutable system audit trail tracking logins, invoice modifications, expense approvals, and staff records.
+          <p className="text-xs text-slate-500 mt-1">
+            Immutable system audit trail tracking logins, invoice modifications, expense approvals, and staff records for {currentBranchName}.
           </p>
         </div>
 

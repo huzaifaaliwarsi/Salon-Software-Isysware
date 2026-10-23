@@ -744,15 +744,10 @@ export const ServicesPackagesPage: React.FC = () => {
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary">Operational Management</Badge>
-            <span className="text-slate-400">·</span>
-            <span className="text-xs text-slate-500 font-medium">Phase 2B Catalogue</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Services & Package Catalogue
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Configure standalone treatments, bundled packages, and multi-stylist allocation.
           </p>
         </div>

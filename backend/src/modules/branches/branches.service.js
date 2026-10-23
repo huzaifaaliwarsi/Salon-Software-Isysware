@@ -74,6 +74,7 @@ export const createBranch = async (input, actor) => {
         currency: input.currency || 'PKR',
         taxRegistrationNumber: input.taxRegistrationNumber || null,
         taxAuthority:          input.taxAuthority || null,
+        logoUrl:               input.logoUrl || null,
         taxEnabled:       false,
         taxRate:          0,
         openingCashFloat: 0,
@@ -89,6 +90,10 @@ export const createBranch = async (input, actor) => {
 };
 
 export const updateBranch = async (id, input, actor) => {
+  if (actor && actor.role !== 'SUPER_ADMIN' && actor.branchId !== id) {
+    throw forbidden('FORBIDDEN', 'Access Denied: You do not have permission to modify other branches.');
+  }
+
   if (input.isActive === false) {
     // Deactivation must go through the blocker check.
     await deactivateBranch(id, actor);
@@ -105,6 +110,11 @@ export const updateBranch = async (id, input, actor) => {
     if (input.email !== undefined) data.email = input.email || null;
     if (input.taxRegistrationNumber !== undefined) data.taxRegistrationNumber = input.taxRegistrationNumber || null;
     if (input.taxAuthority !== undefined) data.taxAuthority = input.taxAuthority || null;
+    if (input.logoUrl !== undefined) {
+      data.logoUrl = (input.logoUrl && typeof input.logoUrl === 'string' && input.logoUrl.trim().length > 0)
+        ? input.logoUrl.trim()
+        : null;
+    }
     if (input.isActive === true) data.isActive = true;
 
     const branch = await tx.branch.update({ where: { id }, data });

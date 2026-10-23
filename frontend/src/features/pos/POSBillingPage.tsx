@@ -1389,6 +1389,59 @@ export const POSBillingPage: React.FC = () => {
     setIsCheckoutOpen(true);
   };
 
+  // Smart Split Payment helpers (Auto-balances cash share with digital splits)
+  const handleAddSplitOnlineRow = () => {
+    if (paymentAccounts.length === 0) {
+      toast.warning('No active branch payment accounts available.');
+      return;
+    }
+    const currentOnlineTotal = splitOnlinePayments.reduce((s, p) => s + (p.amount || 0), 0);
+    const remainingForThisRow = Math.max(0, roundCurrency(calculations.fullInvoiceTotal - currentOnlineTotal));
+    const updated = [
+      ...splitOnlinePayments,
+      { paymentAccountId: paymentAccounts[0]?.id || '', amount: remainingForThisRow },
+    ];
+    setSplitOnlinePayments(updated);
+    const newOnlineTotal = updated.reduce((s, p) => s + (p.amount || 0), 0);
+    const newCashShare = Math.max(0, roundCurrency(calculations.fullInvoiceTotal - newOnlineTotal));
+    setSplitCashAmount(newCashShare);
+    setSplitCashTendered(newCashShare);
+  };
+
+  const handleUpdateSplitOnlineRow = (idx: number, field: 'paymentAccountId' | 'amount', val: any) => {
+    const updated = [...splitOnlinePayments];
+    if (field === 'paymentAccountId') {
+      updated[idx].paymentAccountId = val;
+    } else {
+      updated[idx].amount = Math.max(0, parseFloat(val) || 0);
+    }
+    setSplitOnlinePayments(updated);
+
+    if (field === 'amount') {
+      const newOnlineTotal = updated.reduce((s, p) => s + (p.amount || 0), 0);
+      const newCashShare = Math.max(0, roundCurrency(calculations.fullInvoiceTotal - newOnlineTotal));
+      setSplitCashAmount(newCashShare);
+      setSplitCashTendered(newCashShare);
+    }
+  };
+
+  const handleRemoveSplitOnlineRow = (idx: number) => {
+    const updated = splitOnlinePayments.filter((_, i) => i !== idx);
+    setSplitOnlinePayments(updated);
+    const newOnlineTotal = updated.reduce((s, p) => s + (p.amount || 0), 0);
+    const newCashShare = Math.max(0, roundCurrency(calculations.fullInvoiceTotal - newOnlineTotal));
+    setSplitCashAmount(newCashShare);
+    setSplitCashTendered(newCashShare);
+  };
+
+  const handleAutoBalanceSplit = () => {
+    const onlineTotal = splitOnlinePayments.reduce((s, p) => s + (p.amount || 0), 0);
+    const balancedCash = Math.max(0, roundCurrency(calculations.fullInvoiceTotal - onlineTotal));
+    setSplitCashAmount(balancedCash);
+    setSplitCashTendered(balancedCash);
+    toast.info(`Cash share balanced to PKR ${balancedCash}`);
+  };
+
   // Submit and Post POS Invoice
   const handlePostInvoice = async () => {
     if (!currentBranch || cart.length === 0) return;
@@ -1446,15 +1499,16 @@ export const POSBillingPage: React.FC = () => {
       } else if (checkoutMode === 'SPLIT') {
         // Cash component
         const cAmount = roundCurrency(splitCashAmount || 0);
-        const cTendered = roundCurrency(splitCashTendered || cAmount);
+        const cTendered = roundCurrency(splitCashTendered !== undefined && splitCashTendered !== null ? splitCashTendered : cAmount);
+        const actualCashRetained = Math.min(cAmount, cTendered);
         const cChange = Math.max(0, roundCurrency(cTendered - cAmount));
 
-        if (cAmount > 0) {
-          const bAlloc = Math.min(cAmount, billTotal);
-          const tAlloc = Math.min(Math.max(0, roundCurrency(cAmount - bAlloc)), tipAmount);
+        if (actualCashRetained > 0) {
+          const bAlloc = Math.min(actualCashRetained, billTotal);
+          const tAlloc = Math.min(Math.max(0, roundCurrency(actualCashRetained - bAlloc)), tipAmount);
           payments.push({
             method: 'CASH',
-            amount: cAmount,
+            amount: actualCashRetained,
             billAllocation: bAlloc,
             tipAllocation: tAlloc,
             cashTendered: cTendered,
@@ -1491,7 +1545,7 @@ export const POSBillingPage: React.FC = () => {
       }
 
       // Check if partial or unpaid: customer name & phone are required
-      const retainedTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+      const retainedTotal = roundCurrency(payments.reduce((sum, p) => sum + p.amount, 0));
       const isDueRemaining = (calculations.fullInvoiceTotal - retainedTotal) > 0.01;
 
       if (isDueRemaining) {
@@ -2653,7 +2707,7 @@ export const POSBillingPage: React.FC = () => {
 
       {/* 4. Checkout & Payment Modal */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto font-sans p-5 sm:p-6">
+        <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto font-sans p-4 sm:p-5">
           <DialogHeader className="pb-1">
             <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-[#2254E1]" />
@@ -2663,22 +2717,26 @@ export const POSBillingPage: React.FC = () => {
 
           <div className="space-y-3 py-1">
             {/* Client & Invoice Summary Card */}
-            <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between text-xs">
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-[#2254E1] flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200">
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-[#2254E1] flex items-center justify-center font-bold text-xs shrink-0 border border-blue-100">
                   <User className="w-4 h-4" />
                 </div>
                 <div>
                   <span className="font-bold text-slate-900 block text-xs">
                     {clientName?.trim() || selectedClient?.name || 'Walk-in Customer'}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    {clientPhone?.trim() || selectedClient?.phone || 'No phone number provided'}
-                  </span>
+                  {clientPhone?.trim() && clientPhone !== 'N/A' ? (
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {clientPhone}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">Walk-in</span>
+                  )}
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Payable Total</span>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Bill</span>
                 <span className="font-mono font-extrabold text-base text-[#2254E1]">
                   {formatCurrency(calculations.fullInvoiceTotal)}
                 </span>
@@ -2726,238 +2784,354 @@ export const POSBillingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Client Details Required for Outstanding Credit/Partial Payment */}
+            {/* Live Settlement Calculations & Customer Credit Validation */}
             {(() => {
+              const splitOnlineTotal = splitOnlinePayments.reduce((s, p) => s + (p.amount || 0), 0);
+              const splitCashShare = splitCashAmount || 0;
+              const splitCashGiven = splitCashTendered !== undefined && splitCashTendered !== null ? splitCashTendered : splitCashShare;
+              const splitCashRetained = Math.min(splitCashShare, splitCashGiven);
+              const splitTotalPaid = roundCurrency(splitOnlineTotal + splitCashRetained);
+
               const currentRetained = checkoutMode === 'CASH'
                 ? Math.min(cashTenderedInput || 0, calculations.fullInvoiceTotal)
                 : checkoutMode === 'ONLINE'
                 ? Math.min(onlineAmountInput || 0, calculations.fullInvoiceTotal)
-                : Math.min((splitCashAmount || 0) + splitOnlinePayments.reduce((s, p) => s + (p.amount || 0), 0), calculations.fullInvoiceTotal);
-              const currentDue = Math.max(0, Math.round((calculations.fullInvoiceTotal - currentRetained) * 100) / 100);
+                : splitTotalPaid;
 
-              if (currentDue > 0 && (isWalkIn || !clientName || clientName === 'Walk-in Customer' || !clientPhone || clientPhone.replace(/\D/g, '').length < 10)) {
-                return (
-                  <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>Client details required for outstanding ledger:</span>
+              const currentDue = Math.max(0, roundCurrency(calculations.fullInvoiceTotal - currentRetained));
+              const currentChange = checkoutMode === 'CASH'
+                ? Math.max(0, roundCurrency((cashTenderedInput || 0) - calculations.fullInvoiceTotal))
+                : checkoutMode === 'ONLINE'
+                ? 0
+                : Math.max(0, roundCurrency(splitCashGiven - splitCashShare));
+
+              const isNamedClientValid =
+                !isWalkIn &&
+                Boolean(clientName && clientName.trim() && clientName.trim().toLowerCase() !== 'walk-in customer' && clientName.trim().toLowerCase() !== 'walk-in') &&
+                Boolean(clientPhone && clientPhone.replace(/\D/g, '').length >= 10);
+
+              return (
+                <div className="space-y-3">
+                  {/* Customer Details when there are Remaining Dues */}
+                  {currentDue > 0 && !isNamedClientValid && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-950 text-xs">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>Customer Details (Udhaar / Khata)</span>
+                        </div>
+                        <span className="text-[11px] font-mono font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+                          Due: {formatCurrency(currentDue)}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-amber-900 block mb-1">Customer Name *</label>
+                          <Input
+                            placeholder="e.g. Nadia Butt"
+                            value={clientName === 'Walk-in Customer' ? '' : clientName}
+                            onChange={(e) => {
+                              setClientName(e.target.value);
+                              setIsWalkIn(false);
+                            }}
+                            className="text-xs h-8 bg-white border-amber-300 font-medium focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-amber-900 block mb-1">Phone Number *</label>
+                          <Input
+                            placeholder="03001234567"
+                            value={clientPhone === 'N/A' ? '' : clientPhone}
+                            onChange={(e) => {
+                              setClientPhone(e.target.value);
+                              setIsWalkIn(false);
+                            }}
+                            className="text-xs h-8 bg-white border-amber-300 font-mono font-medium focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                  )}
+
+                  {currentDue > 0 && isNamedClientValid && (
+                    <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="font-bold text-blue-950 truncate">
+                          Khata: <span className="font-normal text-blue-800">{clientName} ({clientPhone})</span>
+                        </span>
+                      </div>
+                      <Badge variant="neutral" className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-mono font-bold shrink-0">
+                        Due: {formatCurrency(currentDue)}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Payment Method Selector Tabs */}
+                  <Tabs value={checkoutMode} onValueChange={(val: any) => setCheckoutMode(val)}>
+                    <TabsList className="grid grid-cols-3 bg-slate-100 p-1 h-9 w-full">
+                      <TabsTrigger value="CASH" className="text-xs font-semibold cursor-pointer">
+                        <Banknote className="w-3.5 h-3.5 mr-1" />
+                        Cash
+                      </TabsTrigger>
+                      <TabsTrigger value="ONLINE" className="text-xs font-semibold cursor-pointer">
+                        <CreditCard className="w-3.5 h-3.5 mr-1" />
+                        Online
+                      </TabsTrigger>
+                      <TabsTrigger value="SPLIT" className="text-xs font-semibold cursor-pointer">
+                        <Coins className="w-3.5 h-3.5 mr-1" />
+                        Split Payment
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+
+                  {/* CASH MODE */}
+                  {checkoutMode === 'CASH' && (
+                    <div className="space-y-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
                       <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Cash Received (PKR)
+                        </label>
                         <Input
-                          placeholder="Customer Name *"
-                          value={clientName === 'Walk-in Customer' ? '' : clientName}
-                          onChange={(e) => {
-                            setClientName(e.target.value);
-                            setIsWalkIn(false);
-                          }}
-                          className="text-xs h-7 bg-white font-medium"
+                          type="number"
+                          min="0"
+                          value={cashTenderedInput || ''}
+                          onChange={(e) => setCashTenderedInput(parseFloat(e.target.value) || 0)}
+                          className="text-sm font-mono font-bold bg-white h-9"
+                          placeholder="0"
                         />
                       </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-200 text-xs">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200">
+                          <span className="text-[10px] text-slate-500 block">Paid Amount</span>
+                          <span className="font-mono font-bold text-slate-900">
+                            {formatCurrency(Math.min(cashTenderedInput || 0, calculations.fullInvoiceTotal))}
+                          </span>
+                        </div>
+                        <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] text-emerald-700 block">Change</span>
+                          <span className="font-mono font-bold text-emerald-800">
+                            {formatCurrency(Math.max(0, (cashTenderedInput || 0) - calculations.fullInvoiceTotal))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ONLINE MODE */}
+                  {checkoutMode === 'ONLINE' && (
+                    <div className="space-y-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
                       <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Payment Account
+                        </label>
+                        <Select
+                          value={selectedOnlineAccountId}
+                          onValueChange={(val) => setSelectedOnlineAccountId(val)}
+                        >
+                          <SelectTrigger className="text-xs bg-white h-9">
+                            <SelectValue placeholder="Select Account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentAccounts.map((acc) => (
+                              <SelectItem key={acc.id} value={acc.id} className="text-xs">
+                                {acc.name} ({acc.accountIdentifier || acc.providerName})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Amount Received (PKR)
+                        </label>
                         <Input
-                          placeholder="Phone (10+ digits) *"
-                          value={clientPhone === 'N/A' ? '' : clientPhone}
-                          onChange={(e) => {
-                            setClientPhone(e.target.value);
-                            setIsWalkIn(false);
-                          }}
-                          className="text-xs h-7 bg-white font-medium font-mono"
+                          type="number"
+                          min="0"
+                          max={calculations.fullInvoiceTotal}
+                          value={onlineAmountInput || ''}
+                          onChange={(e) => setOnlineAmountInput(parseFloat(e.target.value) || 0)}
+                          className="text-sm font-mono font-bold bg-white h-9"
+                          placeholder="0"
                         />
                       </div>
                     </div>
+                  )}
+
+                  {/* SPLIT MODE */}
+                  {checkoutMode === 'SPLIT' && (
+                    <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-xs">Cash Payment</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleAutoBalanceSplit}
+                            className="text-[11px] h-6 px-2 text-[#2254E1] hover:bg-blue-50 cursor-pointer font-bold"
+                            title="Auto-fill remaining balance into cash"
+                          >
+                            Auto-Balance
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-700 block mb-1">
+                              Cash Share (PKR)
+                            </label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={splitCashAmount || ''}
+                              onChange={(e) => setSplitCashAmount(parseFloat(e.target.value) || 0)}
+                              className="text-xs h-8 bg-white font-mono font-bold"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-700 block mb-1">
+                              Cash Received (PKR)
+                            </label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={splitCashTendered !== undefined && splitCashTendered !== null ? splitCashTendered : ''}
+                              onChange={(e) => setSplitCashTendered(parseFloat(e.target.value) || 0)}
+                              className="text-xs h-8 bg-white font-mono font-bold"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* If customer gave more physical cash than cash share */}
+                        {(() => {
+                          const cashShare = splitCashAmount || 0;
+                          const cashGiven = splitCashTendered !== undefined && splitCashTendered !== null ? splitCashTendered : cashShare;
+                          if (cashGiven > cashShare) {
+                            return (
+                              <div className="text-[11px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-1 rounded border border-emerald-200 flex items-center justify-between">
+                                <span>Change to return:</span>
+                                <span className="font-mono font-bold">{formatCurrency(cashGiven - cashShare)}</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+
+                      {/* Digital Splits */}
+                      <div className="space-y-2 pt-2 border-t border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-800 text-xs">Digital / Bank Accounts</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={handleAddSplitOnlineRow}
+                            className="text-xs h-6 px-2 font-semibold text-[#2254E1] border-blue-200 hover:bg-blue-50 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add Account
+                          </Button>
+                        </div>
+
+                        {splitOnlinePayments.length === 0 && (
+                          <div className="text-center py-2 text-[11px] text-slate-400 bg-white rounded-lg border border-dashed border-slate-200">
+                            No digital accounts added.
+                          </div>
+                        )}
+
+                        {splitOnlinePayments.map((op, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-slate-200 shadow-2xs">
+                            <Select
+                              value={op.paymentAccountId}
+                              onValueChange={(val) => handleUpdateSplitOnlineRow(idx, 'paymentAccountId', val)}
+                            >
+                              <SelectTrigger className="text-xs h-8 flex-1">
+                                <SelectValue placeholder="Select Account" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentAccounts.map((acc) => (
+                                  <SelectItem key={acc.id} value={acc.id} className="text-xs">
+                                    {acc.name} ({acc.accountIdentifier || acc.providerName})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            <div className="relative w-28">
+                              <span className="absolute left-2 top-2 text-[10px] font-bold text-slate-400">PKR</span>
+                              <Input
+                                type="number"
+                                placeholder="0"
+                                value={op.amount || ''}
+                                onChange={(e) => handleUpdateSplitOnlineRow(idx, 'amount', e.target.value)}
+                                className="pl-8 text-xs h-8 font-mono font-bold"
+                              />
+                            </div>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveSplitOnlineRow(idx)}
+                              className="w-7 h-7 text-rose-500 hover:bg-rose-50 p-0 cursor-pointer"
+                              title="Remove"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Settlement Summary */}
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-slate-600 font-medium">
+                      <span>Total Bill:</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs">
+                        {formatCurrency(calculations.fullInvoiceTotal)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600 font-medium">
+                      <span>Total Paid:</span>
+                      <span className="font-mono font-bold text-emerald-700 text-xs">
+                        {formatCurrency(currentRetained)}
+                      </span>
+                    </div>
+
+                    {currentChange > 0 && (
+                      <div className="flex items-center justify-between text-emerald-800 bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-300 font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Change to Return:
+                        </span>
+                        <span className="font-mono text-xs">{formatCurrency(currentChange)}</span>
+                      </div>
+                    )}
+
+                    {currentDue > 0 && (
+                      <div className="flex items-center justify-between text-amber-900 bg-amber-50 px-2 py-1.5 rounded-lg border border-amber-300 font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> Remaining Due (Udhaar):
+                        </span>
+                        <span className="font-mono text-xs">{formatCurrency(currentDue)}</span>
+                      </div>
+                    )}
                   </div>
-                );
-              }
-              return null;
+
+                  {/* Posting Error Banner */}
+                  {postingError && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-800">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span className="font-semibold">{postingError}</span>
+                    </div>
+                  )}
+                </div>
+              );
             })()}
-
-            {/* Payment Method Selector Tabs */}
-            <Tabs value={checkoutMode} onValueChange={(val: any) => setCheckoutMode(val)}>
-              <TabsList className="grid grid-cols-3 bg-slate-100 p-1 h-10 w-full">
-                <TabsTrigger value="CASH" className="text-xs font-semibold">
-                  <Banknote className="w-3.5 h-3.5 mr-1" />
-                  Cash
-                </TabsTrigger>
-                <TabsTrigger value="ONLINE" className="text-xs font-semibold">
-                  <CreditCard className="w-3.5 h-3.5 mr-1" />
-                  Online
-                </TabsTrigger>
-                <TabsTrigger value="SPLIT" className="text-xs font-semibold">
-                  <Coins className="w-3.5 h-3.5 mr-1" />
-                  Split Payment
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* CASH MODE */}
-            {checkoutMode === 'CASH' && (
-              <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Cash Tendered / Received (PKR)
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={cashTenderedInput || ''}
-                    onChange={(e) => setCashTenderedInput(parseFloat(e.target.value) || 0)}
-                    className="text-sm font-mono font-bold bg-white h-10"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
-                  <div className="bg-white p-2 rounded border border-slate-200">
-                    <span className="text-[10px] text-slate-500 block">Cash Retained</span>
-                    <span className="font-mono font-bold text-slate-900">
-                      {formatCurrency(Math.min(cashTenderedInput || 0, calculations.fullInvoiceTotal))}
-                    </span>
-                  </div>
-                  <div className="bg-emerald-50 p-2 rounded border border-emerald-200">
-                    <span className="text-[10px] text-emerald-700 block">Change to Return</span>
-                    <span className="font-mono font-bold text-emerald-800">
-                      {formatCurrency(Math.max(0, (cashTenderedInput || 0) - calculations.fullInvoiceTotal))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ONLINE MODE */}
-            {checkoutMode === 'ONLINE' && (
-              <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Active Branch Payment Account
-                  </label>
-                  <Select
-                    value={selectedOnlineAccountId}
-                    onValueChange={(val) => setSelectedOnlineAccountId(val)}
-                  >
-                    <SelectTrigger className="text-xs bg-white h-9">
-                      <SelectValue placeholder="Select Account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentAccounts.map((acc) => (
-                        <SelectItem key={acc.id} value={acc.id} className="text-xs">
-                          {acc.name} ({acc.accountIdentifier || acc.providerName})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Amount Received via Digital Transfer (PKR)
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={calculations.fullInvoiceTotal}
-                    value={onlineAmountInput || ''}
-                    onChange={(e) => setOnlineAmountInput(parseFloat(e.target.value) || 0)}
-                    className="text-sm font-mono font-bold bg-white h-10"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* SPLIT MODE */}
-            {checkoutMode === 'SPLIT' && (
-              <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div className="space-y-2">
-                  <span className="font-bold text-slate-900 block text-xs">Cash Split Component</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-slate-500">Retained Cash</label>
-                      <Input
-                        type="number"
-                        value={splitCashAmount || ''}
-                        onChange={(e) => setSplitCashAmount(parseFloat(e.target.value) || 0)}
-                        className="text-xs h-8 bg-white font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-500">Cash Tendered</label>
-                      <Input
-                        type="number"
-                        value={splitCashTendered || ''}
-                        onChange={(e) => setSplitCashTendered(parseFloat(e.target.value) || 0)}
-                        className="text-xs h-8 bg-white font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Online Split Rows */}
-                <div className="space-y-2 pt-2 border-t border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 text-xs">Digital Account Splits</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setSplitOnlinePayments((prev) => [
-                          ...prev,
-                          { paymentAccountId: paymentAccounts[0]?.id || '', amount: 0 },
-                        ])
-                      }
-                      className="text-xs h-7 px-2"
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> Add Account Row
-                    </Button>
-                  </div>
-
-                  {splitOnlinePayments.map((op, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded border border-slate-200">
-                      <Select
-                        value={op.paymentAccountId}
-                        onValueChange={(val) => {
-                          const updated = [...splitOnlinePayments];
-                          updated[idx].paymentAccountId = val;
-                          setSplitOnlinePayments(updated);
-                        }}
-                      >
-                        <SelectTrigger className="text-xs h-8 flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {paymentAccounts.map((acc) => (
-                            <SelectItem key={acc.id} value={acc.id} className="text-xs">
-                              {acc.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <Input
-                        type="number"
-                        placeholder="Amount"
-                        value={op.amount || ''}
-                        onChange={(e) => {
-                          const updated = [...splitOnlinePayments];
-                          updated[idx].amount = parseFloat(e.target.value) || 0;
-                          setSplitOnlinePayments(updated);
-                        }}
-                        className="w-28 text-xs h-8 font-mono"
-                      />
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setSplitOnlinePayments((prev) => prev.filter((_, i) => i !== idx))
-                        }
-                        className="w-6 h-6 text-rose-500 hover:bg-rose-50 p-0"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">

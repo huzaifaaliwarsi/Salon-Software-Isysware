@@ -9,13 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { BranchOperationalSections } from './components/BranchOperationalSections';
 import { ScissorLoader } from '@/components/ui/ScissorLoader';
 import {
-  Building2,
   RefreshCw,
   ArrowRight,
 } from 'lucide-react';
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { activeBranchId, switchBranch, allBranches, demoDate } = useAuth();
+  const { activeBranchId, switchBranch, demoDate } = useAuth();
   const { navigate } = useRouter();
 
   const [data, setData] = useState<SuperAdminDashboardData | null>(null);
@@ -79,18 +78,12 @@ export const SuperAdminDashboard: React.FC = () => {
       {/* Title & Scope Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" dot>
-              Executive Console
-            </Badge>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs text-slate-600 font-medium">
-              {data.isConsolidated ? 'Consolidated Multi-Location View' : `Filtered: ${data.activeBranchName}`}
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Executive Financial & Operations Overview
           </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            {data.isConsolidated ? 'Consolidated multi-location analytics and real-time enterprise performance.' : `Operational performance and financials for ${data.activeBranchName}.`}
+          </p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -113,28 +106,6 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Compact Consolidated Notice */}
-      {data.isConsolidated && (
-        <div className="px-4 py-2.5 rounded-lg bg-blue-50/70 border border-blue-200/80 flex flex-wrap items-center justify-between gap-3 text-xs text-blue-900">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-[#2254E1] shrink-0" />
-            <span>
-              <strong>Consolidated View:</strong> Aggregating all {allBranches.length} branches. Recording transactions requires selecting an individual branch.
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {allBranches.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => switchBranch(b.id)}
-                className="px-2.5 py-1 text-xs font-medium rounded bg-white text-[#2254E1] border border-blue-200 hover:bg-blue-50 cursor-pointer transition-colors"
-              >
-                Focus {b.code}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Shared Branch Operational Sections */}
       <BranchOperationalSections

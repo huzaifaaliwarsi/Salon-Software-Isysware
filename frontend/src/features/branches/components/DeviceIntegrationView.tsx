@@ -79,11 +79,13 @@ interface DeviceIntegrationViewProps {
   branchId: string;
   branchName?: string;
   onRefresh?: () => void;
+  branchSwitcher?: React.ReactNode;
 }
 
 export const DeviceIntegrationView: React.FC<DeviceIntegrationViewProps> = ({
   branchId,
   branchName,
+  branchSwitcher,
 }) => {
   const { user } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
@@ -436,23 +438,17 @@ export const DeviceIntegrationView: React.FC<DeviceIntegrationViewProps> = ({
       {/* HEADER BAR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" className="gap-1.5 py-0.5">
-              <Cpu className="w-3 h-3" />
-              Hardware Integration
-            </Badge>
-            <span className="text-slate-400">·</span>
-            <span className="text-xs text-slate-500 font-medium">Branch Subnet & Peripherals</span>
-          </div>
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 mt-1">
-            Connected Devices & Terminals: {branchName || 'Current Branch'}
-          </h2>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <Cpu className="w-6 h-6 text-[#2254E1]" />
+            Connected Devices & Terminals
+          </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Configure ZKTeco biometric punch terminals, ESC/POS thermal printers, barcode scanners, and payment card readers.
+            Configure ZKTeco biometric punch terminals, ESC/POS thermal printers, barcode scanners, and payment card readers for {branchName || 'this branch'}.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {branchSwitcher}
           <Button
             variant="outline"
             size="sm"

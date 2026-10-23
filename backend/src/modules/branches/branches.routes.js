@@ -14,7 +14,7 @@ router.get('/',    c.list);
 router.get('/:id', c.getOne);
 
 router.post('/',                         authorize('SUPER_ADMIN'), validate(createBranchSchema), c.create);
-router.put('/:id',                       authorize('SUPER_ADMIN'), validate(updateBranchSchema), c.update);
+router.put('/:id',                       authorize('SUPER_ADMIN', 'ADMIN'), validate(updateBranchSchema), c.update);
 router.post('/:id/assign-admin',         authorize('SUPER_ADMIN'), validate(assignAdminSchema),  c.assignAdmin);
 router.get('/:id/deactivation-blockers', authorize('SUPER_ADMIN'), c.blockers);
 router.post('/:id/deactivate',           authorize('SUPER_ADMIN'), c.deactivate);

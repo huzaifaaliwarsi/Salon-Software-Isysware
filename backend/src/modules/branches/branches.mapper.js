@@ -23,4 +23,5 @@ export const toBranchDTO = (b, adminNames) => ({
   assignedAdminName: b.assignedAdminId ? adminNames?.get(b.assignedAdminId) : undefined,
   taxRegistrationNumber: opt(b.taxRegistrationNumber),
   taxAuthority:          opt(b.taxAuthority),
+  logoUrl:               opt(b.logoUrl),
 });

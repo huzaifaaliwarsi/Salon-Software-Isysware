@@ -472,9 +472,21 @@ export const NAVIGATION_GROUPS: NavGroup[] = [
         description: 'Branch profile, hours, default tax rules and attendance shift timings',
         children: [
           {
-            id: 'branch-settings-child',
-            label: 'Branch Settings & Tax Rules',
+            id: 'salon-profile-child',
+            label: 'Salon Profile & Branding',
             href: '/admin/branch-settings',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+          {
+            id: 'payment-accounts-child',
+            label: 'Payment Accounts',
+            href: '/admin/payment-accounts',
+            allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
+          },
+          {
+            id: 'tax-settings-child',
+            label: 'Branch Tax Settings',
+            href: '/admin/tax-settings',
             allowedRoles: ['SUPER_ADMIN', 'ADMIN'],
           },
           {

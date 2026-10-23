@@ -15,6 +15,7 @@ export const createBranchSchema = z.object({
   currency: optText,
   taxRegistrationNumber: optText,
   taxAuthority:          optText,
+  logoUrl:               z.string().nullable().optional(),
 }).passthrough(); // frontend also sends taxRate/openingCashFloat/isActive — ignored on create by design
 
 export const updateBranchSchema = z.object({
@@ -27,6 +28,7 @@ export const updateBranchSchema = z.object({
   timezone: optText,
   taxRegistrationNumber: z.string().trim().nullable().optional(),
   taxAuthority:          z.string().trim().nullable().optional(),
+  logoUrl:               z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 }).passthrough();
 

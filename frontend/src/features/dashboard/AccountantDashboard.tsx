@@ -60,20 +60,12 @@ export const AccountantDashboard: React.FC = () => {
       {/* Title & Role Scope Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" dot>
-              Sales & Billing Counter
-            </Badge>
-            <span className="text-xs text-slate-400">·</span>
-            <div className="flex items-center gap-1 text-xs font-semibold text-slate-700">
-              <Building2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>{data.branch.name}</span>
-              <Lock className="w-3 h-3 text-slate-400 ml-1" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
-            Sales & Billing (Cash Drawer & Settlement)
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            Sales & Billing Counter ({data.branch.name})
           </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Daily register settlement, invoice reconciliations, and cash custody.
+          </p>
         </div>
 
         <div className="flex items-center gap-2.5">

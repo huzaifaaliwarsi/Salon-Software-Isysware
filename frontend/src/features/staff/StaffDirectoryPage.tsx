@@ -759,10 +759,7 @@ export const StaffDirectoryPage: React.FC = () => {
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Staff & Compensation Directory</h1>
-            <Badge variant="primary">SalonOS Staff v3</Badge>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Staff & Compensation Directory</h1>
           <p className="text-xs text-slate-500 mt-1">
             Manage employee profiles, 5 compensation structures, working schedules, and attendance deduction rules.
           </p>

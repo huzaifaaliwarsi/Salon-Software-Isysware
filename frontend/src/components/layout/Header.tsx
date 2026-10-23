@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from '@/context/RouterContext';
-import { DEMO_CREDENTIALS } from '@/config/constants';
-import { getDefaultRouteForRole } from '@/lib/permissions';
 import { salonService } from '@/services';
 import {
   DropdownMenu,
@@ -42,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileDrawer,
   breadcrumbs,
 }) => {
-  const { user, activeBranchId, allBranches, switchBranch, logout, login, demoDate, setDemoDate } = useAuth();
+  const { user, activeBranchId, allBranches, switchBranch, logout, demoDate, setDemoDate } = useAuth();
   const { navigate } = useRouter();
 
   const [notifications, setNotifications] = useState<Array<{
@@ -95,18 +93,6 @@ export const Header: React.FC<HeaderProps> = ({
     navigate('/');
   };
 
-  const handleSwitchAccount = async (targetEmail: string) => {
-    const cred = DEMO_CREDENTIALS.find((c) => c.email.toLowerCase() === targetEmail.toLowerCase());
-    if (cred) {
-      const session = await login({
-        portal: cred.portal,
-        identifier: cred.email,
-        password: cred.password,
-        rememberMe: false,
-      });
-      navigate(getDefaultRouteForRole(session.user.role));
-    }
-  };
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -423,33 +409,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Fast Account Switcher */}
-            <div className="px-3 py-2">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Switch Active Portal Role
-              </p>
-              <div className="space-y-1">
-                {DEMO_CREDENTIALS.map((cred) => {
-                  const isCurrent = cred.email.toLowerCase() === user?.email.toLowerCase();
-                  return (
-                    <DropdownMenuItem
-                      key={cred.email}
-                      onClick={() => handleSwitchAccount(cred.email)}
-                      className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-md text-xs ${isCurrent ? 'bg-blue-50 text-[#2254E1] font-semibold' : 'text-slate-600'
-                        }`}
-                    >
-                      <div className="truncate">
-                        <span className="font-medium">{cred.label}</span>
-                        <span className="text-[10px] text-slate-400 block truncate">{cred.email}</span>
-                      </div>
-                      {isCurrent && <Check className="w-3.5 h-3.5 text-[#2254E1] shrink-0" />}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </div>
-            </div>
 
-            <DropdownMenuSeparator />
 
             {/* Clear Operational Data */}
             {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (

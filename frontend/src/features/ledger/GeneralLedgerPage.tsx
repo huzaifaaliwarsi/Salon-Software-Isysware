@@ -98,19 +98,12 @@ export const GeneralLedgerPage: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" dot>
-              Financial Accounting
-            </Badge>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs text-slate-600 font-medium">{currentBranchName}</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-[#2254E1]" />
             General Ledger & Cash-Bank Movements
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Real-time double-entry audit movements across physical tills, bank accounts, and merchant wallets.
+          <p className="text-xs text-slate-500 mt-1">
+            Real-time double-entry audit movements across physical tills, bank accounts, and merchant wallets for {currentBranchName}.
           </p>
         </div>
 

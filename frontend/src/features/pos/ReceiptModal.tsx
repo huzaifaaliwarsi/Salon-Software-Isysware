@@ -338,11 +338,21 @@ We look forward to serving you again.`;
 
             {/* Header Brand */}
             <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300">
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2254E1] text-white font-bold text-xs mb-1">
-                iS
-              </div>
+              {branch?.logoUrl ? (
+                <div className="flex justify-center mb-1.5">
+                  <img
+                    src={branch.logoUrl}
+                    alt={branch.name}
+                    className="h-12 max-w-[160px] object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#2254E1] text-white font-bold text-xs mb-1">
+                  {(branch?.name || 'iS').slice(0, 2).toUpperCase()}
+                </div>
+              )}
               <h2 className="font-bold text-sm tracking-tight text-slate-900">
-                {branch?.name || 'iSysware Salon'}
+                {branch?.name || 'Salon & Spa'}
               </h2>
               <p className="text-[11px] text-slate-500">{branch?.address}, {branch?.city}</p>
               <p className="text-[11px] text-slate-500">Tel: {branch?.phone || '+92 42 3578-9101'}</p>

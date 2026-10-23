@@ -53,56 +53,33 @@ export const DeviceIntegrationPage: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans">
-      {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" className="gap-1">
-              <Cpu className="w-3 h-3" />
-              Hardware & Device Integration
-            </Badge>
-            <span className="text-slate-400">·</span>
-            <span className="text-xs text-slate-500 font-medium">Biometric & POS Hardware</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1">
-            Device Integration: {currentBranch?.name || 'Assigned Branch'}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure ZKTeco/Hikvision biometric attendance terminals, network sync parameters, and physical POS peripherals.
-          </p>
-        </div>
-
-        {/* Super Admin Branch Switcher */}
-        {isSuperAdmin && (
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-slate-400" />
-              Branch Context:
-            </span>
-            <Select value={selectedBranchId} onValueChange={(val) => setSelectedBranchId(val)}>
-              <SelectTrigger className="w-56 h-9 text-xs">
-                <SelectValue placeholder="Select Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {allBranches.map((b) => (
-                  <SelectItem key={b.id} value={b.id} className="text-xs">
-                    {b.name} ({b.code})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      {/* DEDICATED HARDWARE VIEW WITHOUT UNRELATED TABS */}
-      <div>
-        <DeviceIntegrationView
-          branchId={selectedBranchId}
-          branchName={currentBranch?.name}
-          onRefresh={() => loadBranchInfo(selectedBranchId)}
-        />
-      </div>
+      <DeviceIntegrationView
+        branchId={selectedBranchId}
+        branchName={currentBranch?.name}
+        onRefresh={() => loadBranchInfo(selectedBranchId)}
+        branchSwitcher={
+          isSuperAdmin ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                Branch:
+              </span>
+              <Select value={selectedBranchId} onValueChange={(val) => setSelectedBranchId(val)}>
+                <SelectTrigger className="w-48 sm:w-56 h-9 text-xs">
+                  <SelectValue placeholder="Select Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allBranches.map((b) => (
+                    <SelectItem key={b.id} value={b.id} className="text-xs">
+                      {b.name} ({b.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : undefined
+        }
+      />
     </div>
   );
 };

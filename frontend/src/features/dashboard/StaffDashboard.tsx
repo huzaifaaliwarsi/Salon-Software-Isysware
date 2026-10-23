@@ -86,22 +86,11 @@ export const StaffDashboard: React.FC = () => {
       {/* Title & Personal Isolation Scope */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <Badge variant="primary" dot>
-              Personal Stylist Portal
-            </Badge>
-            <span className="text-xs text-slate-400">·</span>
-            <div className="flex items-center gap-1 text-xs font-medium text-slate-700">
-              <Building2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>{data.branch.name}</span>
-              <Lock className="w-3 h-3 text-slate-400 ml-0.5" />
-            </div>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
             Welcome, {data.staffMember.name}
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {data.staffMember.roleTitle} · Personal Performance, Attendance & Earnings
+          <p className="text-xs text-slate-500 mt-1">
+            {data.staffMember.roleTitle} · Personal Performance, Attendance & Earnings for {data.branch.name}
           </p>
         </div>
 
